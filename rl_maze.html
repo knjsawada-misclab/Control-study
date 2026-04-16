@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>強化学習 - ロボット迷路探索</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  h1 {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+    color: #38bdf8;
+    letter-spacing: 0.05em;
+  }
+  .subtitle {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin-bottom: 16px;
+  }
+  .main-layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* ===== MAZE CANVAS ===== */
+  #mazeCanvas {
+    border: 2px solid #334155;
+    border-radius: 10px;
+    display: block;
+    background: #1e293b;
+  }
+
+  /* ===== SIDE PANEL ===== */
+  .side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 260px;
+  }
+
+  .panel-box {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .panel-box h3 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    margin-bottom: 10px;
+  }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .stat-item {
+    background: #0f172a;
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #38bdf8;
+  }
+  .stat-label {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    margin-top: 2px;
+  }
+
+  /* Controls */
+  .btn-row {
+    display: flex;
+    gap: 8px;
+  }
+  button {
+    border: none;
+    border-radius: 7px;
+    padding: 9px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex: 1;
+  }
+  #btnStart {
+    background: #0ea5e9;
+    color: white;
+  }
+  #btnStart:hover { background: #38bdf8; }
+  #btnStart.running {
+    background: #f59e0b;
+    color: #0f172a;
+  }
+  #btnStart.running:hover { background: #fbbf24; }
+  #btnReset {
+    background: #334155;
+    color: #cbd5e1;
+  }
+  #btnReset:hover { background: #475569; }
+
+  /* Sliders */
+  .slider-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .slider-item label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-bottom: 4px;
+  }
+  .slider-item label span {
+    color: #38bdf8;
+    font-weight: 600;
+  }
+  input[type=range] {
+    width: 100%;
+    accent-color: #38bdf8;
+    cursor: pointer;
+  }
+
+  /* Chart */
+  #chartCanvas {
+    width: 100%;
+    height: 120px;
+    display: block;
+  }
+
+  /* Legend */
+  .legend-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 10px;
+    font-size: 0.78rem;
+    align-items: center;
+  }
+  .legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+
+  /* Mode selector */
+  .mode-row {
+    display: flex;
+    gap: 6px;
+  }
+  .mode-btn {
+    flex: 1;
+    font-size: 0.75rem;
+    padding: 6px 8px;
+    background: #0f172a;
+    color: #94a3b8;
+    border: 1px solid #334155;
+    border-radius: 6px;
+  }
+  .mode-btn.active {
+    background: #0c4a6e;
+    color: #38bdf8;
+    border-color: #0ea5e9;
+  }
+
+  .info-text {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    line-height: 1.5;
+  }
+  .highlight {
+    color: #38bdf8;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<h1>🤖 強化学習 — ロボット迷路探索</h1>
+<p class="subtitle">Q学習（Q-Learning）アルゴリズムによる自律的な経路発見</p>
+
+<div class="main-layout">
+  <!-- MAZE CANVAS -->
+  <canvas id="mazeCanvas"></canvas>
+
+  <!-- SIDE PANEL -->
+  <div class="side-panel">
+
+    <!-- Stats -->
+    <div class="panel-box">
+      <h3>📊 学習統計</h3>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value" id="statEpisode">0</div>
+          <div class="stat-label">エピソード数</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="statSteps">0</div>
+          <div class="stat-label">ステップ数</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="statReward">0</div>
+          <div class="stat-label">累積報酬</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="statEpsilon">1.00</div>
+          <div class="stat-label">ε (探索率)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="panel-box">
+      <h3>⚙️ コントロール</h3>
+      <div class="btn-row">
+        <button id="btnStart">▶ 学習開始</button>
+        <button id="btnReset">⟳ リセット</button>
+      </div>
+    </div>
+
+    <!-- Visualization Mode -->
+    <div class="panel-box">
+      <h3>🎨 可視化モード</h3>
+      <div class="mode-row">
+        <button class="mode-btn active" id="modeQ" onclick="setMode('q')">Q値アロー</button>
+        <button class="mode-btn" id="modeHeat" onclick="setMode('heat')">価値ヒートマップ</button>
+        <button class="mode-btn" id="modePolicy" onclick="setMode('policy')">最適方策</button>
+      </div>
+    </div>
+
+    <!-- Parameters -->
+    <div class="panel-box">
+      <h3>🔧 ハイパーパラメータ</h3>
+      <div class="slider-row">
+        <div class="slider-item">
+          <label>学習率 α <span id="lblAlpha">0.1</span></label>
+          <input type="range" id="slAlpha" min="0.01" max="1" step="0.01" value="0.1"
+            oninput="document.getElementById('lblAlpha').textContent=parseFloat(this.value).toFixed(2)">
+        </div>
+        <div class="slider-item">
+          <label>割引率 γ <span id="lblGamma">0.95</span></label>
+          <input type="range" id="slGamma" min="0.1" max="0.99" step="0.01" value="0.95"
+            oninput="document.getElementById('lblGamma').textContent=parseFloat(this.value).toFixed(2)">
+        </div>
+        <div class="slider-item">
+          <label>速度 <span id="lblSpeed">中</span></label>
+          <input type="range" id="slSpeed" min="1" max="5" step="1" value="3"
+            oninput="updateSpeedLabel(this.value)">
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="panel-box">
+      <h3>📈 報酬の推移</h3>
+      <canvas id="chartCanvas"></canvas>
+    </div>
+
+    <!-- Legend -->
+    <div class="panel-box">
+      <h3>🗺️ 凡例</h3>
+      <div class="legend-grid">
+        <span class="legend-color" style="background:#facc15"></span><span>🤖 ロボット</span>
+        <span class="legend-color" style="background:#22c55e"></span><span>🏁 ゴール</span>
+        <span class="legend-color" style="background:#3b82f6"></span><span>🚀 スタート</span>
+        <span class="legend-color" style="background:#374151"></span><span>🧱 壁</span>
+        <span class="legend-color" style="background:linear-gradient(to right,#0f172a,#ef4444)"></span><span>Q値（高→赤）</span>
+      </div>
+      <p class="info-text" style="margin-top:8px">
+        各マスの矢印は4方向（↑↓←→）のQ値を示します。<br>
+        矢印の<span class="highlight">長さ・明るさ</span>がQ値の大きさを表します。
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// =============================================
+// MAZE DEFINITION
+// =============================================
+const ROWS = 10, COLS = 12;
+const CELL = 52;
+
+// 0=通路, 1=壁
+const MAZE_TEMPLATE = [
+  [1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,1,0,0,0,0,0,0,1],
+  [1,0,1,0,1,0,1,1,1,1,0,1],
+  [1,0,1,0,0,0,1,0,0,0,0,1],
+  [1,0,1,1,1,1,1,0,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,1],
+  [1,1,1,0,1,1,1,1,1,0,1,1],
+  [1,0,0,0,1,0,0,0,1,0,0,1],
+  [1,0,1,0,0,0,1,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1],
+];
+
+const START = { r: 1, c: 1 };
+const GOAL  = { r: 8, c: 10 };
+
+// =============================================
+// Q-LEARNING
+// =============================================
+const ACTIONS = [
+  { dr: -1, dc: 0, label: '↑' },
+  { dr:  1, dc: 0, label: '↓' },
+  { dr:  0, dc:-1, label: '←' },
+  { dr:  0, dc: 1, label: '→' },
+];
+const N_ACTIONS = 4;
+
+let Q = {};            // Q[r][c][a]
+let epsilon = 1.0;
+let episode = 0;
+let totalSteps = 0;
+let cumReward = 0;
+let robotPos = { ...START };
+let stepInEpisode = 0;
+let rewardHistory = [];  // per-episode total reward
+let epReward = 0;
+
+function initQ() {
+  Q = {};
+  for (let r = 0; r < ROWS; r++) {
+    Q[r] = {};
+    for (let c = 0; c < COLS; c++) {
+      Q[r][c] = new Float64Array(N_ACTIONS);
+    }
+  }
+  epsilon = 1.0;
+  episode = 0;
+  totalSteps = 0;
+  cumReward = 0;
+  rewardHistory = [];
+  epReward = 0;
+  robotPos = { ...START };
+  stepInEpisode = 0;
+}
+initQ();
+
+function chooseAction(r, c) {
+  if (Math.random() < epsilon) {
+    // epsilon-greedy: random
+    return Math.floor(Math.random() * N_ACTIONS);
+  }
+  // greedy
+  let qRow = Q[r][c];
+  let best = 0;
+  for (let a = 1; a < N_ACTIONS; a++) {
+    if (qRow[a] > qRow[best]) best = a;
+  }
+  return best;
+}
+
+function step() {
+  let { r, c } = robotPos;
+  const alpha = parseFloat(document.getElementById('slAlpha').value);
+  const gamma = parseFloat(document.getElementById('slGamma').value);
+
+  const a = chooseAction(r, c);
+  const { dr, dc } = ACTIONS[a];
+  const nr = r + dr, nc = c + dc;
+
+  let reward, nextR = r, nextC = c;
+  if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS || MAZE_TEMPLATE[nr][nc] === 1) {
+    // 壁に当たる
+    reward = -1;
+  } else if (nr === GOAL.r && nc === GOAL.c) {
+    // ゴール到着
+    reward = 100;
+    nextR = nr; nextC = nc;
+  } else {
+    reward = -0.1;
+    nextR = nr; nextC = nc;
+  }
+
+  // Q更新
+  const maxNextQ = Math.max(...Q[nextR][nextC]);
+  const done = (nextR === GOAL.r && nextC === GOAL.c);
+  Q[r][c][a] += alpha * (reward + (done ? 0 : gamma * maxNextQ) - Q[r][c][a]);
+
+  robotPos = { r: nextR, c: nextC };
+  totalSteps++;
+  stepInEpisode++;
+  epReward += reward;
+  cumReward += reward;
+
+  if (done || stepInEpisode > 500) {
+    episode++;
+    rewardHistory.push(epReward);
+    epReward = 0;
+    robotPos = { ...START };
+    stepInEpisode = 0;
+    // epsilon decay
+    epsilon = Math.max(0.01, epsilon * 0.997);
+  }
+}
+
+// =============================================
+// CANVAS SETUP
+// =============================================
+const canvas = document.getElementById('mazeCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width  = COLS * CELL;
+canvas.height = ROWS * CELL;
+
+let vizMode = 'q'; // 'q', 'heat', 'policy'
+function setMode(m) {
+  vizMode = m;
+  ['modeQ','modeHeat','modePolicy'].forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById(m === 'q' ? 'modeQ' : m === 'heat' ? 'modeHeat' : 'modePolicy').classList.add('active');
+  drawAll();
+}
+
+function getMaxQ(r, c) {
+  return Math.max(...Q[r][c]);
+}
+
+function getGlobalMaxQ() {
+  let mx = 0;
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (MAZE_TEMPLATE[r][c] === 0) mx = Math.max(mx, getMaxQ(r, c));
+  return mx || 1;
+}
+
+function drawAll() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const globalMax = getGlobalMaxQ();
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const x = c * CELL, y = r * CELL;
+
+      if (MAZE_TEMPLATE[r][c] === 1) {
+        // 壁
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(x, y, CELL, CELL);
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(x+1, y+1, CELL-2, CELL-2);
+        // テクスチャ
+        ctx.fillStyle = '#2d3f52';
+        for(let i=0;i<3;i++){
+          ctx.fillRect(x+6+i*14, y+6, 4, 4);
+          ctx.fillRect(x+13+i*14, y+18, 4, 4);
+          ctx.fillRect(x+6+i*14, y+30, 4, 4);
+          ctx.fillRect(x+13+i*14, y+42, 4, 4);
+        }
+      } else {
+        // 通路の背景
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(x, y, CELL, CELL);
+        ctx.strokeStyle = '#1e293b';
+        ctx.strokeRect(x+0.5, y+0.5, CELL-1, CELL-1);
+
+        // ===== ヒートマップモード =====
+        if (vizMode === 'heat') {
+          const v = getMaxQ(r, c);
+          const norm = Math.max(0, Math.min(1, v / globalMax));
+          const col = heatColor(norm);
+          ctx.fillStyle = col;
+          ctx.globalAlpha = 0.6;
+          ctx.fillRect(x+1, y+1, CELL-2, CELL-2);
+          ctx.globalAlpha = 1;
+        }
+
+        // ===== Q値アローモード =====
+        if (vizMode === 'q') {
+          drawQArrows(r, c, x, y);
+        }
+
+        // ===== 最適方策モード =====
+        if (vizMode === 'policy') {
+          drawPolicyArrow(r, c, x, y);
+        }
+      }
+    }
+  }
+
+  // ゴール
+  drawGoal();
+  // スタート
+  drawStart();
+  // ロボット
+  drawRobot();
+}
+
+function heatColor(t) {
+  // 青 → シアン → 緑 → 黄 → 赤
+  const r = Math.round(Math.max(0, Math.min(255, t < 0.5 ? t*2*0 : (t-0.5)*2*255)));
+  const g = Math.round(Math.max(0, Math.min(255, t < 0.5 ? t*2*200 : 200-(t-0.5)*2*200)));
+  const b = Math.round(Math.max(0, Math.min(255, t < 0.25 ? 200 : (0.5-t)*4*200)));
+  return `rgb(${r},${g},${b})`;
+}
+
+function drawQArrows(r, c, x, y) {
+  const cx = x + CELL/2, cy = y + CELL/2;
+  const maxLen = CELL * 0.36;
+  const qVals = Q[r][c];
+  const maxV = Math.max(...qVals);
+  const minV = Math.min(...qVals);
+  const range = (maxV - minV) || 1;
+
+  const dirs = [
+    { dr:-1, dc: 0, ax: 0,     ay:-1  },
+    { dr: 1, dc: 0, ax: 0,     ay: 1  },
+    { dr: 0, dc:-1, ax:-1,     ay: 0  },
+    { dr: 0, dc: 1, ax: 1,     ay: 0  },
+  ];
+
+  dirs.forEach((d, a) => {
+    const q = qVals[a];
+    const norm = (q - minV) / range;
+    const len = maxLen * Math.max(0.08, norm);
+
+    // 色: 負=暗い青, 正=明るい水色〜白
+    let alpha = 0.2 + norm * 0.8;
+    const isMax = (q === maxV && maxV > minV);
+    ctx.strokeStyle = isMax ? `rgba(56,189,248,${alpha})` : `rgba(100,116,139,${alpha})`;
+    ctx.lineWidth = isMax ? 2.5 : 1.5;
+
+    const ex = cx + d.ax * len;
+    const ey = cy + d.ay * len;
+
+    drawArrow(ctx, cx, cy, ex, ey, isMax ? 7 : 5);
+  });
+}
+
+function drawPolicyArrow(r, c, x, y) {
+  const qVals = Q[r][c];
+  const maxV = Math.max(...qVals);
+  // Q値が全部0に近い場合はスキップ
+  if (maxV < 0.01) return;
+
+  let bestA = 0;
+  for (let a = 1; a < N_ACTIONS; a++) if (qVals[a] > qVals[bestA]) bestA = a;
+
+  const cx = x + CELL/2, cy = y + CELL/2;
+  const dirs = [
+    { ax: 0,  ay:-1 },
+    { ax: 0,  ay: 1 },
+    { ax:-1,  ay: 0 },
+    { ax: 1,  ay: 0 },
+  ];
+  const d = dirs[bestA];
+  const len = CELL * 0.3;
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 2.5;
+  drawArrow(ctx, cx, cy, cx + d.ax * len, cy + d.ay * len, 8);
+}
+
+function drawArrow(ctx, x1, y1, x2, y2, headSize) {
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.lineTo(x2 - headSize * Math.cos(angle - 0.4), y2 - headSize * Math.sin(angle - 0.4));
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - headSize * Math.cos(angle + 0.4), y2 - headSize * Math.sin(angle + 0.4));
+  ctx.stroke();
+}
+
+function drawGoal() {
+  const { r, c } = GOAL;
+  const x = c * CELL, y = r * CELL;
+  // 輝くゴール
+  const grd = ctx.createRadialGradient(x+CELL/2, y+CELL/2, 2, x+CELL/2, y+CELL/2, CELL*0.6);
+  grd.addColorStop(0, 'rgba(34,197,94,0.8)');
+  grd.addColorStop(1, 'rgba(34,197,94,0)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(x, y, CELL, CELL);
+
+  ctx.fillStyle = '#22c55e';
+  ctx.font = `bold ${Math.round(CELL*0.5)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🏁', x+CELL/2, y+CELL/2+2);
+}
+
+function drawStart() {
+  const { r, c } = START;
+  const x = c * CELL, y = r * CELL;
+  ctx.fillStyle = 'rgba(59,130,246,0.3)';
+  ctx.fillRect(x+1, y+1, CELL-2, CELL-2);
+  ctx.fillStyle = '#3b82f6';
+  ctx.font = `bold ${Math.round(CELL*0.45)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🚀', x+CELL/2, y+CELL/2+2);
+}
+
+function drawRobot() {
+  const { r, c } = robotPos;
+  const x = c * CELL, y = r * CELL;
+
+  // グロー
+  const grd = ctx.createRadialGradient(x+CELL/2, y+CELL/2, 2, x+CELL/2, y+CELL/2, CELL*0.55);
+  grd.addColorStop(0, 'rgba(250,204,21,0.4)');
+  grd.addColorStop(1, 'rgba(250,204,21,0)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(x, y, CELL, CELL);
+
+  ctx.font = `bold ${Math.round(CELL*0.5)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🤖', x+CELL/2, y+CELL/2+2);
+}
+
+// =============================================
+// CHART
+// =============================================
+const chartCanvas = document.getElementById('chartCanvas');
+const chartCtx = chartCanvas.getContext('2d');
+
+function drawChart() {
+  const W = chartCanvas.offsetWidth || 230;
+  const H = 120;
+  chartCanvas.width = W;
+  chartCanvas.height = H;
+  chartCtx.clearRect(0, 0, W, H);
+
+  const data = rewardHistory.slice(-80);
+  if (data.length < 2) {
+    chartCtx.fillStyle = '#475569';
+    chartCtx.font = '12px sans-serif';
+    chartCtx.textAlign = 'center';
+    chartCtx.fillText('学習開始後に表示されます', W/2, H/2);
+    return;
+  }
+
+  const minV = Math.min(...data);
+  const maxV = Math.max(...data);
+  const rangeV = (maxV - minV) || 1;
+  const pad = { l: 32, r: 8, t: 8, b: 20 };
+  const chartW = W - pad.l - pad.r;
+  const chartH = H - pad.t - pad.b;
+
+  // Grid
+  chartCtx.strokeStyle = '#1e293b';
+  chartCtx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + chartH - (i/4) * chartH;
+    chartCtx.beginPath();
+    chartCtx.moveTo(pad.l, y);
+    chartCtx.lineTo(pad.l + chartW, y);
+    chartCtx.stroke();
+    const val = minV + (i/4) * rangeV;
+    chartCtx.fillStyle = '#64748b';
+    chartCtx.font = '9px sans-serif';
+    chartCtx.textAlign = 'right';
+    chartCtx.fillText(val.toFixed(0), pad.l - 3, y + 3);
+  }
+
+  // Smoothed line (moving average 5)
+  function smooth(arr, w) {
+    return arr.map((_, i) => {
+      const s = Math.max(0, i-w), e = Math.min(arr.length, i+w+1);
+      return arr.slice(s,e).reduce((a,b)=>a+b,0) / (e-s);
+    });
+  }
+  const sData = smooth(data, 3);
+
+  // Area fill
+  const grad = chartCtx.createLinearGradient(0, pad.t, 0, pad.t + chartH);
+  grad.addColorStop(0, 'rgba(56,189,248,0.3)');
+  grad.addColorStop(1, 'rgba(56,189,248,0.02)');
+  chartCtx.beginPath();
+  sData.forEach((v, i) => {
+    const px = pad.l + (i / (sData.length-1)) * chartW;
+    const py = pad.t + chartH - ((v - minV) / rangeV) * chartH;
+    i === 0 ? chartCtx.moveTo(px, py) : chartCtx.lineTo(px, py);
+  });
+  chartCtx.lineTo(pad.l + chartW, pad.t + chartH);
+  chartCtx.lineTo(pad.l, pad.t + chartH);
+  chartCtx.closePath();
+  chartCtx.fillStyle = grad;
+  chartCtx.fill();
+
+  // Line
+  chartCtx.beginPath();
+  chartCtx.strokeStyle = '#38bdf8';
+  chartCtx.lineWidth = 1.8;
+  sData.forEach((v, i) => {
+    const px = pad.l + (i / (sData.length-1)) * chartW;
+    const py = pad.t + chartH - ((v - minV) / rangeV) * chartH;
+    i === 0 ? chartCtx.moveTo(px, py) : chartCtx.lineTo(px, py);
+  });
+  chartCtx.stroke();
+
+  // X label
+  chartCtx.fillStyle = '#64748b';
+  chartCtx.font = '9px sans-serif';
+  chartCtx.textAlign = 'center';
+  chartCtx.fillText(`エピソード (直近${data.length}件)`, pad.l + chartW/2, H - 2);
+}
+
+// =============================================
+// MAIN LOOP
+// =============================================
+const speedMap = { 1: 5, 2: 20, 3: 80, 4: 300, 5: 1000 };
+let running = false;
+let loopId = null;
+
+function updateSpeedLabel(v) {
+  const labels = { 1:'遅い', 2:'やや遅い', 3:'中', 4:'速い', 5:'超速' };
+  document.getElementById('lblSpeed').textContent = labels[v];
+}
+
+function updateStats() {
+  document.getElementById('statEpisode').textContent = episode;
+  document.getElementById('statSteps').textContent = totalSteps;
+  document.getElementById('statReward').textContent = Math.round(cumReward);
+  document.getElementById('statEpsilon').textContent = epsilon.toFixed(3);
+}
+
+function mainLoop() {
+  if (!running) return;
+  const speed = parseInt(document.getElementById('slSpeed').value);
+  const stepsPerFrame = speedMap[speed];
+  for (let i = 0; i < stepsPerFrame; i++) step();
+  drawAll();
+  updateStats();
+  drawChart();
+  loopId = requestAnimationFrame(mainLoop);
+}
+
+document.getElementById('btnStart').addEventListener('click', () => {
+  running = !running;
+  const btn = document.getElementById('btnStart');
+  if (running) {
+    btn.textContent = '⏸ 一時停止';
+    btn.classList.add('running');
+    mainLoop();
+  } else {
+    btn.textContent = '▶ 学習再開';
+    btn.classList.remove('running');
+    if (loopId) cancelAnimationFrame(loopId);
+  }
+});
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  running = false;
+  if (loopId) cancelAnimationFrame(loopId);
+  const btn = document.getElementById('btnStart');
+  btn.textContent = '▶ 学習開始';
+  btn.classList.remove('running');
+  initQ();
+  updateStats();
+  drawAll();
+  drawChart();
+});
+
+// =============================================
+// INIT
+// =============================================
+drawAll();
+drawChart();
+updateStats();
+</script>
+</body>
+</html>

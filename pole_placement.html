@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>状態フィードバック 極配置シミュレータ</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  background: #0d1117;
+  color: #c9d1d9;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+header {
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  padding: 10px 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-shrink: 0;
+}
+header h1 { font-size: 1rem; font-weight: 600; color: #58a6ff; }
+header .eq { font-size: 0.78rem; color: #8b949e; font-family: 'Courier New', monospace; }
+
+.body { display: flex; flex: 1; overflow: hidden; }
+
+/* ─── Sidebar ─────────────────────────────────────────────── */
+.sidebar {
+  width: 300px;
+  background: #161b22;
+  border-right: 1px solid #30363d;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.sidebar-inner { padding: 12px; flex: 1; }
+
+.section { margin-bottom: 14px; }
+.sec-title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #58a6ff;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #21262d;
+}
+
+/* Preset selector */
+select {
+  width: 100%;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+select:focus { outline: none; border-color: #58a6ff; }
+
+/* Matrix inputs */
+.matrix-label { font-size: 0.75rem; color: #8b949e; margin-bottom: 5px; }
+.mat-grid { display: grid; gap: 5px; margin-bottom: 8px; }
+.mat-2x2 { grid-template-columns: 1fr 1fr; }
+.mat-2x1 { grid-template-columns: 1fr; }
+.mat-1x2 { grid-template-columns: 1fr 1fr; }
+
+input[type="number"] {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  padding: 5px 6px;
+  border-radius: 5px;
+  width: 100%;
+  font-size: 0.82rem;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  transition: border-color 0.15s;
+}
+input[type="number"]:focus { outline: none; border-color: #58a6ff; background: #0d1117; }
+
+.input-label { font-size: 0.7rem; color: #6e7681; margin-bottom: 2px; }
+
+/* Pole inputs */
+.pole-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 6px; }
+.pole-field label { display: block; font-size: 0.7rem; color: #8b949e; margin-bottom: 3px; }
+
+/* Buttons */
+.btn-compute {
+  width: 100%;
+  background: #238636;
+  color: #fff;
+  border: none;
+  padding: 9px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 12px;
+}
+.btn-compute:hover { background: #2ea043; }
+.btn-compute:active { background: #196127; }
+
+/* Results */
+.result-box {
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+  padding: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.77rem;
+}
+.res-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+.res-key { color: #8b949e; }
+.res-val { color: #79c0ff; }
+.res-val.stable { color: #3fb950; }
+.res-val.unstable { color: #f85149; }
+.res-sep { border: none; border-top: 1px solid #21262d; margin: 6px 0; }
+
+.error-msg { color: #f85149; font-size: 0.78rem; margin-top: 6px; min-height: 16px; }
+
+/* Stability badge */
+.badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+.badge.stable { background: rgba(63,185,80,0.15); color: #3fb950; border: 1px solid #3fb950; }
+.badge.unstable { background: rgba(248,81,73,0.15); color: #f85149; border: 1px solid #f85149; }
+
+/* ─── Main plots area ─────────────────────────────────────── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 10px;
+  overflow: hidden;
+}
+.plots-row {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  overflow: hidden;
+}
+.plot-card {
+  flex: 1;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.plot-card.splane { flex: 0 0 auto; width: 45%; }
+.plot-card.timeplot { flex: 1; }
+
+.plot-header {
+  padding: 8px 12px 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.plot-title { font-size: 0.8rem; font-weight: 600; color: #c9d1d9; }
+.plot-sub { font-size: 0.7rem; color: #6e7681; }
+
+.legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 12px 6px;
+  flex-shrink: 0;
+}
+.leg-item { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: #8b949e; }
+.leg-icon { width: 14px; text-align: center; font-size: 0.8rem; }
+.leg-line { width: 14px; height: 2px; }
+
+canvas {
+  flex: 1;
+  width: 100%;
+  display: block;
+}
+
+/* ─── Info bar ────────────────────────────────────────────── */
+.info-bar {
+  background: #161b22;
+  border-top: 1px solid #30363d;
+  padding: 5px 16px;
+  font-size: 0.7rem;
+  color: #6e7681;
+  flex-shrink: 0;
+  display: flex;
+  gap: 20px;
+}
+.info-bar span { color: #8b949e; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>状態フィードバック 極配置シミュレータ</h1>
+  <span class="eq">ẋ = Ax + Bu, &nbsp; u = −Kx &nbsp;→&nbsp; ẋ = (A − BK)x</span>
+</header>
+
+<div class="body">
+  <!-- ── Sidebar ── -->
+  <div class="sidebar">
+    <div class="sidebar-inner">
+
+      <!-- Presets -->
+      <div class="section">
+        <div class="sec-title">プリセット</div>
+        <select id="preset" onchange="applyPreset()">
+          <option value="custom">── カスタム ──</option>
+          <option value="spring" selected>単振動子（質量-バネ）</option>
+          <option value="unstable">不安定系</option>
+          <option value="integrator">二重積分器</option>
+          <option value="pendulum">倒立振子（線形化）</option>
+        </select>
+      </div>
+
+      <!-- System matrices -->
+      <div class="section">
+        <div class="sec-title">システム行列</div>
+        <div class="matrix-label">A （2×2）</div>
+        <div class="mat-grid mat-2x2">
+          <input type="number" id="a11" value="0"  step="0.1" onchange="markCustom()">
+          <input type="number" id="a12" value="1"  step="0.1" onchange="markCustom()">
+          <input type="number" id="a21" value="-1" step="0.1" onchange="markCustom()">
+          <input type="number" id="a22" value="0"  step="0.1" onchange="markCustom()">
+        </div>
+        <div class="matrix-label">B （2×1）</div>
+        <div class="mat-grid mat-2x1">
+          <input type="number" id="b1" value="0" step="0.1" onchange="markCustom()">
+          <input type="number" id="b2" value="1" step="0.1" onchange="markCustom()">
+        </div>
+      </div>
+
+      <!-- Initial state -->
+      <div class="section">
+        <div class="sec-title">初期状態 x₀</div>
+        <div class="mat-grid mat-2x1">
+          <div>
+            <div class="input-label">x₁(0)</div>
+            <input type="number" id="x01" value="1" step="0.1">
+          </div>
+          <div>
+            <div class="input-label">x₂(0)</div>
+            <input type="number" id="x02" value="0" step="0.1">
+          </div>
+        </div>
+      </div>
+
+      <!-- Desired poles -->
+      <div class="section">
+        <div class="sec-title">目標極（複素共役対）</div>
+        <div style="font-size:0.72rem;color:#6e7681;margin-bottom:6px;">
+          p<sub>1,2</sub> = σ ± jω &nbsp; （実部 σ &lt; 0 で安定）
+        </div>
+        <div class="pole-row">
+          <div class="pole-field">
+            <label>σ（実部）</label>
+            <input type="number" id="sigma" value="-2" step="0.1">
+          </div>
+          <div class="pole-field">
+            <label>ω（虚部）</label>
+            <input type="number" id="omega" value="2" step="0.1" min="0">
+          </div>
+        </div>
+        <div style="font-size:0.7rem;color:#6e7681;" id="pole-info">
+          ωₙ = —,  ζ = —
+        </div>
+      </div>
+
+      <!-- Sim settings -->
+      <div class="section">
+        <div class="sec-title">シミュレーション</div>
+        <div class="pole-row">
+          <div class="pole-field">
+            <label>終了時刻 T [s]</label>
+            <input type="number" id="tEnd" value="5" step="0.5" min="0.5">
+          </div>
+          <div class="pole-field">
+            <label>刻み幅 dt</label>
+            <input type="number" id="dt" value="0.01" step="0.001" min="0.001" max="0.1">
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-compute" onclick="compute()">▶ 計算・更新</button>
+
+      <!-- Results -->
+      <div class="section">
+        <div class="sec-title">計算結果</div>
+        <div id="result-box" class="result-box">
+          <div style="color:#6e7681;">「計算・更新」を押してください</div>
+        </div>
+        <div id="error-msg" class="error-msg"></div>
+      </div>
+
+    </div><!-- /sidebar-inner -->
+  </div><!-- /sidebar -->
+
+  <!-- ── Main plots ── -->
+  <div class="main">
+    <div class="plots-row">
+
+      <!-- s-plane -->
+      <div class="plot-card splane">
+        <div class="plot-header">
+          <span class="plot-title">複素平面（s 平面）</span>
+          <span class="plot-sub">左半平面 = 安定</span>
+        </div>
+        <div class="legend">
+          <div class="leg-item"><span class="leg-icon" style="color:#f85149;">✕</span> 開ループ極</div>
+          <div class="leg-item"><span class="leg-icon" style="color:#58a6ff;">◎</span> 目標極</div>
+          <div class="leg-item"><span class="leg-icon" style="color:#ffa657;">●</span> 閉ループ極</div>
+        </div>
+        <canvas id="splane"></canvas>
+      </div>
+
+      <!-- Time response -->
+      <div class="plot-card timeplot">
+        <div class="plot-header">
+          <span class="plot-title">初期状態応答 x(t)</span>
+          <span class="plot-sub" id="time-sub"></span>
+        </div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-line" style="background:#58a6ff;"></div> x₁(t)（位置）</div>
+          <div class="leg-item"><div class="leg-line" style="background:#ffa657;"></div> x₂(t)（速度）</div>
+          <div class="leg-item"><div class="leg-line" style="background:#3fb950; opacity:0.5;"></div> 開ループ応答</div>
+        </div>
+        <canvas id="timeplot"></canvas>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="info-bar">
+  <span>Ackermann の公式で K を算出 &nbsp;|&nbsp; RK4 数値積分</span>
+  <span id="ctrl-info"></span>
+</div>
+
+<script>
+// =========================================================
+// 行列演算
+// =========================================================
+const zeros = (r, c) => Array.from({length:r}, () => Array(c).fill(0));
+const eye   = n => Array.from({length:n}, (_,i) => Array.from({length:n}, (_,j) => i===j?1:0));
+
+function matAdd(A, B) { return A.map((r,i) => r.map((v,j) => v+B[i][j])); }
+function matSub(A, B) { return A.map((r,i) => r.map((v,j) => v-B[i][j])); }
+function matScale(A, s) { return A.map(r => r.map(v => v*s)); }
+function matMul(A, B) {
+  const rA=A.length, cB=B[0].length, cA=B.length;
+  const C = zeros(rA, cB);
+  for(let i=0;i<rA;i++) for(let j=0;j<cB;j++) for(let k=0;k<cA;k++) C[i][j]+=A[i][k]*B[k][j];
+  return C;
+}
+function matVecMul(A, x) { return A.map(r => r.reduce((s,v,j)=>s+v*x[j],0)); }
+
+function matInv2(M) {
+  const d = M[0][0]*M[1][1] - M[0][1]*M[1][0];
+  if(Math.abs(d) < 1e-12) return null;
+  return [[M[1][1]/d, -M[0][1]/d], [-M[1][0]/d, M[0][0]/d]];
+}
+
+// 2×2 固有値（複素数で返す）
+function eig2(M) {
+  const tr = M[0][0]+M[1][1];
+  const det = M[0][0]*M[1][1]-M[0][1]*M[1][0];
+  const disc = tr*tr - 4*det;
+  if(disc >= 0) {
+    return [{re:(tr+Math.sqrt(disc))/2, im:0}, {re:(tr-Math.sqrt(disc))/2, im:0}];
+  }
+  return [{re:tr/2, im:Math.sqrt(-disc)/2}, {re:tr/2, im:-Math.sqrt(-disc)/2}];
+}
+
+// =========================================================
+// Ackermann の公式（2次 SISO）
+// 状態フィードバックゲイン K = [k1, k2] を計算
+// =========================================================
+function ackermann(A, B2, sigma, omega) {
+  // 目標極: p1 = sigma+j*omega, p2 = sigma-j*omega
+  // 特性多項式: (s-p1)(s-p2) = s^2 - 2σs + (σ²+ω²)
+  const trP  = 2 * sigma;          // p1+p2
+  const detP = sigma*sigma + omega*omega; // p1*p2
+
+  // B2 は [[b1],[b2]] の形式
+  // 可制御行列 Wc = [B, AB]
+  const AB = matMul(A, B2);  // 2×1
+  const Wc = [[B2[0][0], AB[0][0]],
+               [B2[1][0], AB[1][0]]];  // 2×2
+
+  const WcInv = matInv2(Wc);
+  if(!WcInv) return { K: null, controllable: false };
+
+  // φ(A) = A² - 2σA + (σ²+ω²)I
+  const A2   = matMul(A, A);
+  const phiA = matAdd(matAdd(A2, matScale(A, -trP)), matScale(eye(2), detP));
+
+  // K = [0, 1] · Wc⁻¹ · φ(A)  （行ベクトル）
+  const M = matMul(WcInv, phiA);  // 2×2
+  // [0,1] との積 → 行インデックス 1 を取る
+  return { K: [M[1][0], M[1][1]], controllable: true };
+}
+
+// =========================================================
+// RK4 数値積分  ẋ = Acl · x
+// =========================================================
+function simulate(Acl, x0, tEnd, dt) {
+  const steps = Math.ceil(tEnd / dt);
+  const n = steps + 1;
+  const t  = new Float64Array(n);
+  const x1 = new Float64Array(n);
+  const x2 = new Float64Array(n);
+  let xi = [x0[0], x0[1]];
+  const CLIP = 1e6;
+
+  for(let i=0; i<n; i++) {
+    t[i]  = i * dt;
+    x1[i] = xi[0];
+    x2[i] = xi[1];
+    if(i === n-1) break;
+
+    const k1 = matVecMul(Acl, xi);
+    const k2 = matVecMul(Acl, [xi[0]+0.5*dt*k1[0], xi[1]+0.5*dt*k1[1]]);
+    const k3 = matVecMul(Acl, [xi[0]+0.5*dt*k2[0], xi[1]+0.5*dt*k2[1]]);
+    const k4 = matVecMul(Acl, [xi[0]+dt*k3[0],     xi[1]+dt*k3[1]]);
+    xi[0] += (dt/6)*(k1[0]+2*k2[0]+2*k3[0]+k4[0]);
+    xi[1] += (dt/6)*(k1[1]+2*k2[1]+2*k3[1]+k4[1]);
+    // 発散防止
+    if(!isFinite(xi[0]) || Math.abs(xi[0])>CLIP) { xi[0]=CLIP*(xi[0]>0?1:-1); }
+    if(!isFinite(xi[1]) || Math.abs(xi[1])>CLIP) { xi[1]=CLIP*(xi[1]>0?1:-1); }
+  }
+  return {t, x1, x2};
+}
+
+// =========================================================
+// メイン計算
+// =========================================================
+let state = null;
+
+function compute() {
+  const A = [
+    [+document.getElementById('a11').value, +document.getElementById('a12').value],
+    [+document.getElementById('a21').value, +document.getElementById('a22').value]
+  ];
+  const B2 = [[+document.getElementById('b1').value], [+document.getElementById('b2').value]];
+  const x0  = [+document.getElementById('x01').value, +document.getElementById('x02').value];
+  const sigma = +document.getElementById('sigma').value;
+  const omega = Math.abs(+document.getElementById('omega').value);
+  const tEnd  = Math.max(+document.getElementById('tEnd').value, 0.1);
+  const dt    = Math.min(Math.max(+document.getElementById('dt').value, 0.0001), 0.5);
+
+  const errEl = document.getElementById('error-msg');
+  errEl.textContent = '';
+
+  // 開ループ固有値
+  const olPoles = eig2(A);
+
+  // 目標極パラメータ表示
+  const wn = Math.sqrt(sigma*sigma + omega*omega);
+  const zeta = wn > 1e-10 ? -sigma / wn : 0;
+  document.getElementById('pole-info').textContent =
+    `ωₙ = ${wn.toFixed(3)},  ζ = ${zeta.toFixed(3)}${zeta>1?' （過減衰）':zeta===1?' （臨界）':zeta<1&&zeta>=0?' （不足減衰）':''}`;
+
+  // Ackermann
+  const { K, controllable } = ackermann(A, B2, sigma, omega);
+
+  // 可制御性情報
+  const AB = matMul(A, B2);
+  const Wc = [[B2[0][0], AB[0][0]], [B2[1][0], AB[1][0]]];
+  const wcDet = Wc[0][0]*Wc[1][1]-Wc[0][1]*Wc[1][0];
+  document.getElementById('ctrl-info').textContent =
+    `可制御行列 det(Wc) = ${wcDet.toFixed(6)}  →  ${controllable ? '可制御 ✓' : '不可制御 ✗（極配置不能）'}`;
+
+  if(!K) {
+    errEl.textContent = '⚠ システムが可制御でないため、極配置できません。B ベクトルを変更してください。';
+    document.getElementById('result-box').innerHTML = '<div style="color:#f85149;">計算エラー</div>';
+    return;
+  }
+
+  // 閉ループ行列  Acl = A − B·K
+  const BK  = [[B2[0][0]*K[0], B2[0][0]*K[1]], [B2[1][0]*K[0], B2[1][0]*K[1]]];
+  const Acl = matSub(A, BK);
+
+  // 閉ループ固有値
+  const clPoles = eig2(Acl);
+
+  // シミュレーション（閉ループ）
+  const simCL = simulate(Acl, x0, tEnd, dt);
+  // シミュレーション（開ループ）
+  const simOL = simulate(A, x0, tEnd, dt);
+
+  state = { A, B2, K, Acl, olPoles, clPoles,
+            sigma, omega, wn, zeta,
+            simCL, simOL, tEnd, dt };
+
+  // 結果パネル更新
+  const fmt = v => isFinite(v) ? v.toFixed(4) : '∞';
+  const fmtC = c => {
+    const r = fmt(c.re);
+    if(Math.abs(c.im) < 1e-6) return r;
+    const sign = c.im >= 0 ? '+' : '';
+    return `${r}${sign}${fmt(c.im)}j`;
+  };
+  const isStable = c => c.re < -1e-9;
+
+  document.getElementById('result-box').innerHTML = `
+    <div class="res-row"><span class="res-key">K</span><span class="res-val">[${fmt(K[0])}, ${fmt(K[1])}]</span></div>
+    <hr class="res-sep">
+    <div style="font-size:0.68rem;color:#6e7681;margin-bottom:4px;">開ループ極</div>
+    <div class="res-row"><span class="res-key">λ₁</span><span class="res-val ${isStable(olPoles[0])?'stable':'unstable'}">${fmtC(olPoles[0])}</span></div>
+    <div class="res-row"><span class="res-key">λ₂</span><span class="res-val ${isStable(olPoles[1])?'stable':'unstable'}">${fmtC(olPoles[1])}</span></div>
+    <hr class="res-sep">
+    <div style="font-size:0.68rem;color:#6e7681;margin-bottom:4px;">閉ループ極</div>
+    <div class="res-row"><span class="res-key">λ₁</span><span class="res-val ${isStable(clPoles[0])?'stable':'unstable'}">${fmtC(clPoles[0])}</span></div>
+    <div class="res-row"><span class="res-key">λ₂</span><span class="res-val ${isStable(clPoles[1])?'stable':'unstable'}">${fmtC(clPoles[1])}</span></div>
+    <hr class="res-sep">
+    <div class="res-row"><span class="res-key">ωₙ</span><span class="res-val">${wn.toFixed(3)} rad/s</span></div>
+    <div class="res-row"><span class="res-key">ζ</span><span class="res-val">${zeta.toFixed(3)}</span></div>
+    <hr class="res-sep">
+    <div class="res-row"><span class="res-key">安定性</span><span>${isStable(clPoles[0])&&isStable(clPoles[1]) ? '<span class="badge stable">安定</span>' : '<span class="badge unstable">不安定</span>'}</span></div>
+  `;
+
+  document.getElementById('time-sub').textContent =
+    `閉ループ時定数 ≈ ${(-1/Math.max(...clPoles.map(p=>p.re))).toFixed(2)}s`;
+
+  drawSplane();
+  drawTimePlot();
+}
+
+// =========================================================
+// s 平面プロット
+// =========================================================
+function drawSplane() {
+  const canvas = document.getElementById('splane');
+  const par = canvas.parentElement;
+  const legendH = par.querySelector('.legend').offsetHeight;
+  const headerH = par.querySelector('.plot-header').offsetHeight;
+  const W = par.clientWidth;
+  const H = par.clientHeight - legendH - headerH - 4;
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  if(!state) return;
+  const { olPoles, clPoles, sigma, omega } = state;
+
+  const p1 = {re: sigma, im:  omega};
+  const p2 = {re: sigma, im: -omega};
+
+  // スケール決定
+  const allRe = [...olPoles.map(p=>p.re), ...clPoles.map(p=>p.re), sigma];
+  const allIm = [...olPoles.map(p=>p.im), ...clPoles.map(p=>p.im), omega, -omega];
+  const mR = Math.max(Math.max(...allRe.map(Math.abs)), 0.5);
+  const mI = Math.max(Math.max(...allIm.map(Math.abs)), 0.5);
+  const range = Math.max(mR, mI) * 1.6;
+
+  const cx = W/2, cy = H/2;
+  const scl = Math.min(W, H) / 2 / range * 0.88;
+  const toS = (re, im) => ({x: cx + re*scl, y: cy - im*scl});
+
+  // --- 背景 ---
+  ctx.clearRect(0, 0, W, H);
+
+  // 左半平面（安定域）のシェード
+  ctx.fillStyle = 'rgba(63,185,80,0.04)';
+  ctx.fillRect(0, 0, cx, H);
+
+  // 定ζ線（0.1刻み）
+  for(let z=0.1; z<1.0; z+=0.1) {
+    const angle = Math.acos(z);  // imaginary axis から測った角度
+    ctx.strokeStyle = 'rgba(88,166,255,0.08)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3,4]);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    // 第2象限（上）
+    ctx.lineTo(cx - range*scl*Math.cos(angle), cy - range*scl*Math.sin(angle));
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    // 第3象限（下）
+    ctx.lineTo(cx - range*scl*Math.cos(angle), cy + range*scl*Math.sin(angle));
+    ctx.stroke();
+    // ζ ラベル
+    const lx = cx - (range*scl*0.85)*Math.cos(angle);
+    const ly = cy - (range*scl*0.85)*Math.sin(angle) - 4;
+    if(ly > 4 && ly < H-4) {
+      ctx.fillStyle = 'rgba(88,166,255,0.4)';
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`ζ=${z.toFixed(1)}`, lx, ly);
+    }
+  }
+  ctx.setLineDash([]);
+
+  // グリッド
+  const step = Math.pow(10, Math.floor(Math.log10(range)));
+  ctx.strokeStyle = '#21262d';
+  ctx.lineWidth = 1;
+  ctx.font = '9px monospace';
+  ctx.fillStyle = '#444c56';
+  ctx.textAlign = 'center';
+  for(let g=-Math.ceil(range/step)*step; g<=Math.ceil(range/step)*step; g+=step) {
+    if(Math.abs(g) < step*0.01) continue;
+    const gf = parseFloat(g.toFixed(6));
+    // 水平線
+    ctx.beginPath();
+    ctx.moveTo(0, cy - gf*scl); ctx.lineTo(W, cy - gf*scl); ctx.stroke();
+    // 垂直線
+    ctx.beginPath();
+    ctx.moveTo(cx + gf*scl, 0); ctx.lineTo(cx + gf*scl, H); ctx.stroke();
+    // Re ラベル
+    if(cx + gf*scl > 20 && cx + gf*scl < W-5)
+      ctx.fillText(gf % 1 === 0 ? gf : gf.toFixed(1), cx + gf*scl, H - 4);
+    // Im ラベル
+    if(cy - gf*scl > 10 && cy - gf*scl < H-4) {
+      ctx.textAlign = 'right';
+      ctx.fillText(gf % 1 === 0 ? gf : gf.toFixed(1), cx - 3, cy - gf*scl + 4);
+      ctx.textAlign = 'center';
+    }
+  }
+
+  // 軸
+  ctx.strokeStyle = '#30363d';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+
+  // 軸ラベル
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('Re(s)', W-4, cy-4);
+  ctx.textAlign = 'center';
+  ctx.fillText('Im(s)', cx+20, 10);
+
+  // ── マーカーを描く ──
+
+  // 開ループ極（×）
+  olPoles.forEach(p => drawCross(ctx, toS(p.re, p.im), '#f85149', 9));
+
+  // 目標極（◎）
+  [p1, p2].forEach(p => drawRing(ctx, toS(p.re, p.im), '#58a6ff', 9));
+
+  // 閉ループ極（●）
+  clPoles.forEach(p => drawDot(ctx, toS(p.re, p.im), '#ffa657', 6));
+
+  // 安定軸の注記
+  ctx.fillStyle = 'rgba(63,185,80,0.3)';
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('← 安定域', 6, cy - 4);
+}
+
+function drawCross(ctx, s, color, r) {
+  ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(s.x-r, s.y-r); ctx.lineTo(s.x+r, s.y+r);
+  ctx.moveTo(s.x+r, s.y-r); ctx.lineTo(s.x-r, s.y+r);
+  ctx.stroke();
+}
+function drawRing(ctx, s, color, r) {
+  ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, 2*Math.PI); ctx.stroke();
+}
+function drawDot(ctx, s, color, r) {
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, 2*Math.PI); ctx.fill();
+}
+
+// =========================================================
+// 時間応答プロット
+// =========================================================
+function drawTimePlot() {
+  const canvas = document.getElementById('timeplot');
+  const par = canvas.parentElement;
+  const legendH = par.querySelector('.legend').offsetHeight;
+  const headerH = par.querySelector('.plot-header').offsetHeight;
+  const W = par.clientWidth;
+  const H = par.clientHeight - legendH - headerH - 4;
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  if(!state) return;
+  const { simCL, simOL, tEnd } = state;
+
+  const pad = {l:46, r:14, t:12, b:32};
+  const pw = W - pad.l - pad.r;
+  const ph = H - pad.t - pad.b;
+
+  // Y スケール
+  const vals = [...Array.from(simCL.x1), ...Array.from(simCL.x2)];
+  const raw  = Math.max(Math.abs(Math.max(...vals)), Math.abs(Math.min(...vals)), 0.1);
+  const yMax = raw * 1.25;
+  const yMin = -yMax;
+
+  const toX = t  => pad.l + (t/tEnd)*pw;
+  const toY = v  => pad.t + (1 - (v-yMin)/(yMax-yMin))*ph;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // グリッド
+  ctx.strokeStyle = '#21262d';
+  ctx.lineWidth = 1;
+  for(let i=0; i<=4; i++) {
+    const y = pad.t + i*ph/4;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W-pad.r, y); ctx.stroke();
+  }
+  for(let i=0; i<=5; i++) {
+    const x = pad.l + i*pw/5;
+    ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, H-pad.b); ctx.stroke();
+  }
+
+  // ゼロ線
+  const zy = toY(0);
+  ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(pad.l, zy); ctx.lineTo(W-pad.r, zy); ctx.stroke();
+
+  // 枠
+  ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(pad.l, pad.t, pw, ph);
+
+  // 軸ラベル
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'center';
+  for(let i=0; i<=5; i++) {
+    const t = i*tEnd/5;
+    ctx.fillText(t.toFixed(1), pad.l + i*pw/5, H-pad.b+14);
+  }
+  ctx.textAlign = 'right';
+  for(let i=0; i<=4; i++) {
+    const v = yMax - i*(yMax-yMin)/4;
+    ctx.fillText(v.toFixed(2), pad.l-4, pad.t + i*ph/4 + 4);
+  }
+  ctx.textAlign = 'center';
+  ctx.fillText('t [s]', W-pad.r, H-pad.b+14);
+
+  const n = simCL.x1.length;
+
+  // 開ループ応答（薄く）
+  ctx.globalAlpha = 0.35;
+  drawLine(ctx, simCL.t, simOL.x1, toX, toY, '#3fb950', 1.5);
+  ctx.globalAlpha = 1;
+
+  // 閉ループ応答
+  drawLine(ctx, simCL.t, simCL.x1, toX, toY, '#58a6ff', 2);
+  drawLine(ctx, simCL.t, simCL.x2, toX, toY, '#ffa657', 2);
+}
+
+function drawLine(ctx, t, x, toX, toY, color, lw) {
+  ctx.strokeStyle = color; ctx.lineWidth = lw;
+  ctx.beginPath();
+  for(let i=0; i<t.length; i++) {
+    const px = toX(t[i]), py = toY(x[i]);
+    i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+}
+
+// =========================================================
+// プリセット
+// =========================================================
+const PRESETS = {
+  spring:     { a11:0, a12:1, a21:-1,  a22:0,  b1:0, b2:1, x01:1, x02:0, sigma:-2, omega:2,  tEnd:5  },
+  unstable:   { a11:0, a12:1, a21:1,   a22:0,  b1:0, b2:1, x01:1, x02:0, sigma:-3, omega:1,  tEnd:4  },
+  integrator: { a11:0, a12:1, a21:0,   a22:0,  b1:0, b2:1, x01:1, x02:0, sigma:-2, omega:0,  tEnd:6  },
+  pendulum:   { a11:0, a12:1, a21:9.8, a22:0,  b1:0, b2:1, x01:0.1, x02:0, sigma:-3, omega:3, tEnd:5 },
+};
+
+function applyPreset() {
+  const key = document.getElementById('preset').value;
+  if(key === 'custom') return;
+  const p = PRESETS[key];
+  document.getElementById('a11').value = p.a11;
+  document.getElementById('a12').value = p.a12;
+  document.getElementById('a21').value = p.a21;
+  document.getElementById('a22').value = p.a22;
+  document.getElementById('b1').value  = p.b1;
+  document.getElementById('b2').value  = p.b2;
+  document.getElementById('x01').value = p.x01;
+  document.getElementById('x02').value = p.x02;
+  document.getElementById('sigma').value = p.sigma;
+  document.getElementById('omega').value = p.omega;
+  document.getElementById('tEnd').value  = p.tEnd;
+  compute();
+}
+
+function markCustom() {
+  document.getElementById('preset').value = 'custom';
+}
+
+// =========================================================
+// リサイズ対応
+// =========================================================
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { if(state) { drawSplane(); drawTimePlot(); } }, 80);
+});
+
+// 初期計算
+compute();
+</script>
+</body>
+</html>

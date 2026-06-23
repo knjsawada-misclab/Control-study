@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 440" font-family="Segoe UI, Hiragino Kaku Gothic ProN, Meiryo, sans-serif">
+  <rect width="560" height="440" fill="#ffffff"/>
+  <text x="280" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#1f2d3a">空気浮上系の力の関係（自由体図）</text>
+
+  <!-- tube -->
+  <rect x="180" y="60" width="100" height="320" fill="#f4f8fb" stroke="#b9c8d6" stroke-width="2" rx="4"/>
+  <!-- height scale -->
+  <g stroke="#dbe6ef" stroke-width="1" fill="#7c93a7" font-size="10">
+    <line x1="180" y1="100" x2="190" y2="100"/><text x="150" y="104">250</text>
+    <line x1="180" y1="160" x2="190" y2="160"/><text x="150" y="164">200</text>
+    <line x1="180" y1="220" x2="190" y2="220"/><text x="150" y="224">150</text>
+    <line x1="180" y1="280" x2="190" y2="280"/><text x="150" y="284">100</text>
+    <line x1="180" y1="340" x2="190" y2="340"/><text x="158" y="344">50</text>
+  </g>
+  <text x="135" y="50" font-size="11" fill="#5b7184">高さ y</text>
+
+  <!-- SP line -->
+  <line x1="176" y1="220" x2="284" y2="220" stroke="#2e7dd1" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="288" y="224" font-size="11" fill="#2e7dd1" font-weight="700">SP</text>
+
+  <!-- ball -->
+  <circle cx="230" cy="250" r="22" fill="#ff9a4d" stroke="#c96b22" stroke-width="1.5"/>
+  <circle cx="222" cy="242" r="7" fill="#ffd9a0" opacity="0.8"/>
+  <text x="230" y="255" text-anchor="middle" font-size="11" fill="#7a3b10" font-weight="700">m</text>
+
+  <!-- F_air arrow (up, orange) -->
+  <line x1="230" y1="228" x2="230" y2="150" stroke="#e08a00" stroke-width="4" marker-end="url(#arrOrange)"/>
+  <text x="240" y="160" font-size="14" fill="#e08a00" font-weight="700">F_air</text>
+  <text x="240" y="178" font-size="10" fill="#a06400">＝ K_f·u²·e^(−y/H_d)</text>
+
+  <!-- mg arrow (down, gray) -->
+  <line x1="210" y1="272" x2="210" y2="345" stroke="#5b7184" stroke-width="4" marker-end="url(#arrGray)"/>
+  <text x="150" y="320" font-size="14" fill="#5b7184" font-weight="700">m·g</text>
+
+  <!-- drag arrow (down small, when moving up) -->
+  <line x1="252" y1="272" x2="252" y2="312" stroke="#9aa9b8" stroke-width="3" marker-end="url(#arrGray2)"/>
+  <text x="262" y="300" font-size="12" fill="#7c93a7">c·ẏ</text>
+
+  <!-- fan -->
+  <rect x="172" y="380" width="116" height="34" fill="#dfe8f0" stroke="#b9c8d6" rx="3"/>
+  <g transform="translate(230,397)">
+    <g fill="#e08a00">
+      <rect x="-2" y="0" width="4" height="13"/>
+      <rect x="0" y="-2" width="13" height="4"/>
+      <rect x="-2" y="-13" width="4" height="13"/>
+      <rect x="-13" y="-2" width="13" height="4"/>
+    </g>
+  </g>
+  <text x="230" y="432" text-anchor="middle" font-size="11" fill="#5b7184">FAN（PWM 指令 u）</text>
+
+  <!-- airflow wavy lines -->
+  <g stroke="#e08a00" stroke-width="2" opacity="0.4" fill="none">
+    <path d="M205 380 q-4 -14 0 -28 q4 -14 0 -28"/>
+    <path d="M230 378 q-4 -14 0 -28 q4 -14 0 -28"/>
+    <path d="M255 380 q-4 -14 0 -28 q4 -14 0 -28"/>
+  </g>
+
+  <!-- equation box -->
+  <rect x="330" y="120" width="210" height="150" fill="#f8fafc" stroke="#cdd9e4" rx="8"/>
+  <text x="345" y="148" font-size="13" font-weight="700" fill="#1f6fc4">運動方程式</text>
+  <text x="345" y="178" font-size="15" fill="#1f2d3a">m·ÿ = F_air − m·g − c·ẏ</text>
+  <text x="345" y="210" font-size="12" fill="#5b7184">F_air：上向きの空気力</text>
+  <text x="345" y="230" font-size="12" fill="#5b7184">m·g ：一定の重力</text>
+  <text x="345" y="250" font-size="12" fill="#5b7184">c·ẏ ：速度に比例する抗力</text>
+
+  <!-- equilibrium note -->
+  <rect x="330" y="290" width="210" height="92" fill="#f1f5f9" stroke="#d4dde6" rx="8"/>
+  <text x="345" y="316" font-size="12" font-weight="700" fill="#1f2d3a">平衡（F_air = m·g）</text>
+  <text x="345" y="340" font-size="12" fill="#5b7184">y_eq = H_d·ln(K_f·u²/mg)</text>
+  <text x="345" y="362" font-size="11" fill="#5b7184">風量↑で平衡高さ↑（単調増加）</text>
+
+  <defs>
+    <marker id="arrOrange" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e08a00"/></marker>
+    <marker id="arrGray" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#5b7184"/></marker>
+    <marker id="arrGray2" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#9aa9b8"/></marker>
+  </defs>
+</svg>

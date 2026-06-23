@@ -4,7 +4,7 @@ Claudeに類するAIコーディングの使い方の勉強がてらに，制御
 html上で触って理解するコンテンツを目指します．
 
 空気浮上系のPID制御：
-[air_levitation_pid.html](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid.html)
+[air_levitation_pid.html](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/air_levitation_pid.html)
 
 極の位置と相平面上の応答：
 [state_equation_simulator.html](https://knjsawada-misclab.github.io/Control-study/state_equation_simulator.html)

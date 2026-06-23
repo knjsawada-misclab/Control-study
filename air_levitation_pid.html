@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>空気浮上システム PID制御シミュレータ</title>
+<style>
+  :root{
+    --bg:#eef2f6; --panel:#ffffff; --panel2:#f1f5f9; --line:#d4dde6;
+    --accent:#2e7dd1; --accent2:#1f6fc4; --pv:#e23b3b; --sp:#2e7dd1; --pwm:#e08a00;
+    --txt:#1f2d3a; --muted:#5b7184; --green:#16a34a; --red:#dc2626;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{font-family:"Segoe UI","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
+       background:var(--bg);color:var(--txt);-webkit-text-size-adjust:100%;}
+  header{padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel);}
+  header h1{margin:0;font-size:18px;font-weight:700;letter-spacing:.3px;}
+  header p{margin:5px 0 0;color:var(--muted);font-size:13px;line-height:1.5;}
+  .wrap{display:flex;gap:14px;padding:14px;flex-wrap:wrap;align-items:flex-start;}
+  .col{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;
+       box-shadow:0 1px 3px rgba(30,50,70,.05);}
+  .stage{flex:1 1 200px;max-width:260px;}
+  .mid{flex:3 1 360px;min-width:280px;}
+  .ctrl{flex:1 1 300px;max-width:430px;}
+  h2{font-size:12px;margin:0 0 10px;color:var(--accent2);text-transform:uppercase;letter-spacing:1px;}
+  canvas{display:block;}
+  #tube{background:#f4f8fb;border-radius:10px;margin:0 auto;width:100%;max-width:200px;height:auto;}
+  #chart{background:#f8fafc;border-radius:8px;width:100%;height:auto;}
+  .readouts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+  .ro{background:var(--panel2);border-radius:8px;padding:8px 10px;}
+  .ro .lab{font-size:11px;color:var(--muted);}
+  .ro .val{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .ro.pv .val{color:var(--pv);} .ro.sp .val{color:var(--sp);} .ro.pwm .val{color:var(--pwm);}
+  .ro.err .val{color:var(--txt);}
+  .field{margin-bottom:12px;}
+  .field label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;}
+  .field label b{color:var(--accent2);font-variant-numeric:tabular-nums;}
+  input[type=range]{width:100%;accent-color:var(--accent);height:26px;}
+  .row{display:flex;gap:10px;}
+  .row .field{flex:1;}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+  button{font-family:inherit;font-size:14px;font-weight:600;border-radius:8px;
+    padding:11px 13px;cursor:pointer;background:var(--panel2);color:var(--txt);
+    border:1px solid var(--line);flex:1 1 auto;min-height:44px;}
+  button:hover{border-color:var(--accent);}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  button.warn{background:#fdeaee;border-color:#f3c2cc;color:#b3263a;}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .seg button{flex:1;border:none;border-radius:0;background:#fff;color:var(--muted);}
+  .seg button.on{background:var(--accent);color:#fff;}
+  .gains{background:var(--panel2);border-radius:8px;padding:10px;font-size:12px;color:var(--muted);
+    margin-top:6px;line-height:1.7;font-variant-numeric:tabular-nums;}
+  .gains b{color:var(--pwm);}
+  .pid-state{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:10px;font-weight:600;}
+  .dot{width:12px;height:12px;border-radius:50%;background:#c2cdd8;}
+  .dot.on{background:var(--green);box-shadow:0 0 10px var(--green);}
+  .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6;}
+  .legend{display:flex;gap:14px;font-size:12px;margin-bottom:8px;flex-wrap:wrap;}
+  .legend span{display:flex;align-items:center;gap:5px;}
+  .legend i{width:14px;height:3px;border-radius:2px;display:inline-block;}
+  @media (max-width:680px){
+    header h1{font-size:16px;}
+    .wrap{padding:10px;gap:10px;}
+    .stage,.mid,.ctrl{flex:1 1 100%;max-width:100%;}
+    .ro .val{font-size:22px;}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>空気浮上システム ピンポン球 PID制御シミュレータ</h1>
+  <p>筒の中のピンポン球を、ファンの風量(PWM出力)で目標高さに浮かせるフィードバック制御。教育キット(PV/SP/PWM・KP/TR/TD)準拠。</p>
+</header>
+
+<div class="wrap">
+  <!-- 左: アニメーション -->
+  <div class="col stage">
+    <h2>装置</h2>
+    <canvas id="tube" width="200" height="430"></canvas>
+    <div class="readouts">
+      <div class="ro pv"><div class="lab">PV 現在値</div><div class="val"><span id="rPV">0</span></div></div>
+      <div class="ro sp"><div class="lab">SP 設定値</div><div class="val"><span id="rSP">150</span></div></div>
+      <div class="ro pwm"><div class="lab">PWM_OUT</div><div class="val"><span id="rPWM">0</span></div></div>
+      <div class="ro err"><div class="lab">偏差 e=SP−PV</div><div class="val"><span id="rERR">0</span></div></div>
+    </div>
+  </div>
+
+  <!-- 中: グラフ -->
+  <div class="col mid">
+    <h2>リアルタイムグラフ（グラフィカル画面）</h2>
+    <div class="legend">
+      <span><i style="background:#2e7dd1"></i>SP 設定値</span>
+      <span><i style="background:#e23b3b"></i>PV 現在値</span>
+      <span><i style="background:#e08a00"></i>PWM出力(回転指示)</span>
+    </div>
+    <canvas id="chart" width="640" height="360"></canvas>
+  </div>
+
+  <!-- 右: 操作パネル -->
+  <div class="col ctrl">
+    <h2>制御パネル</h2>
+    <div class="pid-state">
+      <span class="dot" id="ledDot"></span>
+      <span id="pidStateTxt">PID制御: 無効</span>
+    </div>
+    <div class="seg" id="modeSeg" style="margin-bottom:12px;">
+      <button data-mode="OFF" class="on">OFF</button>
+      <button data-mode="P">P</button>
+      <button data-mode="PI">PI</button>
+      <button data-mode="PID">PID</button>
+    </div>
+
+    <div class="field">
+      <label>SP 目標高さ <b><span id="vSP">150</span></b></label>
+      <input id="sp" type="range" min="20" max="240" value="150" step="1">
+    </div>
+
+    <div class="field">
+      <label>KP 比例ゲイン <b><span id="vKP">2.00</span></b></label>
+      <input id="kp" type="range" min="0" max="8" value="2" step="0.05">
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>TR 積分時間 <b><span id="vTR">2.0</span></b></label>
+        <input id="tr" type="range" min="0.3" max="20" value="2" step="0.1">
+      </div>
+      <div class="field">
+        <label>TD 微分時間 <b><span id="vTD">0.30</span></b></label>
+        <input id="td" type="range" min="0" max="1.5" value="0.30" step="0.01">
+      </div>
+    </div>
+
+    <div class="gains">
+      標準形換算（u = Kp·e + Ki·∫e dt + Kd·de/dt）<br>
+      Kp = KP = <b><span id="gKp">2.00</span></b>
+      Ki = KP/TR = <b><span id="gKi">1.00</span></b>
+      Kd = KP·TD = <b><span id="gKd">0.60</span></b>
+    </div>
+
+    <div class="btns">
+      <button id="run" class="primary">⏸ 一時停止</button>
+      <button id="reset">↺ リセット</button>
+      <button id="knock" class="warn">球を叩く（外乱）</button>
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label>外乱の強さ <b><span id="vDist">120</span></b></label>
+      <input id="dist" type="range" min="20" max="250" value="120" step="10">
+    </div>
+
+    <div class="note">
+      OFF/P/PI/PID で制御則を切り替え。OFFはファン停止（球は落下）。Pのみは定常偏差が残り、I(積分)で偏差ゼロへ、D(微分)で振動を抑制します。「球を叩く」で外乱を加え、制御の復帰を確認できます。
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  // ===== 物理モデル（数値整定済みの定数） =====
+  const M=1.0, G=9.81, YMAX=300.0, HD=120.0, KF=60.0, CD=0.9;
+  const DT=0.02;            // 物理ステップ [s]
+  const PWM_MAX=255;
+  function airForce(uNorm,y){ return KF*uNorm*uNorm*Math.exp(-y/HD); }
+
+  // ===== 状態 =====
+  let y=0, v=0, integ=0, prevPV=0;
+  let pwm=0;                // PWM出力 0..255
+  let mode="OFF";
+  let running=true;
+  let SP=150, KP=2.0, TR=2.0, TD=0.30, DIST=120;
+  let pendingDist=0;
+  const WIN=600;            // 表示点数（=12秒）
+  const pvH=[], spH=[], pwmH=[];
+
+  // ===== 色（白背景テーマ） =====
+  const COL={tubeBg:"#f4f8fb",tubeBorder:"#b9c8d6",scale:"#dbe6ef",scaleTxt:"#7c93a7",
+    fanBox:"#dfe8f0",fanOn:"#e08a00",fanOff:"#aebccb",
+    ballA:"#ffd9a0",ballB:"#ff8c42",ballEdge:"#c96b22",
+    chBg:"#f8fafc",chFrame:"#cdd9e4",grid:"#e6edf3",axis:"#7c93a7",
+    pv:"#e23b3b",sp:"#2e7dd1",pwm:"#e08a00",wind:"#e08a00"};
+
+  // ===== DOM =====
+  const $=id=>document.getElementById(id);
+  const rPV=$("rPV"), rSP=$("rSP"), rPWM=$("rPWM"), rERR=$("rERR");
+  const tubeC=$("tube"), tx=tubeC.getContext("2d");
+  const chC=$("chart"), cx=chC.getContext("2d");
+
+  function computeGains(){
+    const Kp=KP, Ki=(TR>0?KP/TR:0), Kd=KP*TD;
+    return {Kp,Ki,Kd};
+  }
+  function refreshGainBox(){
+    const {Kp,Ki,Kd}=computeGains();
+    $("gKp").textContent=Kp.toFixed(2);
+    $("gKi").textContent=Ki.toFixed(2);
+    $("gKd").textContent=Kd.toFixed(2);
+  }
+
+  // ===== 制御 =====
+  function controller(){
+    if(mode==="OFF"){ integ=0; return 0; }
+    const {Kp,Ki,Kd}=computeGains();
+    const e=SP-y;
+    const useI=(mode==="PI"||mode==="PID");
+    const useD=(mode==="PID");
+    const deriv = useD ? -(y-prevPV)/DT : 0;     // 微分は計測値に対して（微分キック回避）
+    let u = Kp*e + (useI?Ki*integ:0) + Kd*deriv;
+    let uSat=Math.min(Math.max(u,0),PWM_MAX);
+    if(useI){                                     // アンチワインドアップ
+      const notSat=(uSat===u);
+      if(notSat || (u>PWM_MAX && e<0) || (u<0 && e>0)) integ+=e*DT;
+    }
+    prevPV=y;
+    return uSat;
+  }
+
+  function physics(){
+    pwm=controller();
+    const uNorm=pwm/PWM_MAX;
+    const F=airForce(uNorm,y);
+    let a=(F-M*G-CD*v)/M;
+    if(pendingDist!==0){ v+=pendingDist; pendingDist=0; }
+    v+=a*DT; y+=v*DT;
+    if(y<0){y=0; if(v<0)v=0;}
+    if(y>YMAX){y=YMAX; if(v>0)v=0;}
+  }
+
+  function pushHist(){
+    pvH.push(y); spH.push(SP); pwmH.push(pwm);
+    if(pvH.length>WIN){pvH.shift();spH.shift();pwmH.shift();}
+  }
+
+  // ===== 描画: 筒 =====
+  function drawTube(){
+    const W=tubeC.width,H=tubeC.height;
+    tx.clearRect(0,0,W,H);
+    const tubeX=70,tubeW=60,top=20,bot=H-50;
+    const tubeH=bot-top;
+    tx.fillStyle=COL.tubeBg;tx.fillRect(tubeX,top,tubeW,tubeH);
+    tx.strokeStyle=COL.tubeBorder;tx.lineWidth=2;tx.strokeRect(tubeX,top,tubeW,tubeH);
+    // 目盛り
+    tx.font="9px sans-serif";tx.lineWidth=1;
+    for(let h=0;h<=YMAX;h+=50){
+      const py=bot-(h/YMAX)*tubeH;
+      tx.strokeStyle=COL.scale;tx.beginPath();tx.moveTo(tubeX,py);tx.lineTo(tubeX+8,py);tx.stroke();
+      tx.fillStyle=COL.scaleTxt;tx.fillText(h,tubeX-22,py+3);
+    }
+    // 風
+    const uN=pwm/PWM_MAX;
+    if(uN>0.02){
+      tx.strokeStyle="rgba(224,138,0,"+(0.15+0.5*uN)+")";tx.lineWidth=2;
+      const t=performance.now()/180;
+      for(let i=0;i<5;i++){
+        const lx=tubeX+10+i*((tubeW-20)/4);
+        const off=((t+i*0.7)%1);
+        const yA=bot-off*tubeH*0.6;
+        tx.beginPath();tx.moveTo(lx,bot);tx.lineTo(lx,yA);tx.stroke();
+      }
+    }
+    // ファン
+    tx.fillStyle=COL.fanBox;tx.fillRect(tubeX-8,bot,tubeW+16,30);
+    tx.fillStyle=uN>0.02?COL.fanOn:COL.fanOff;
+    tx.save();tx.translate(tubeX+tubeW/2,bot+15);
+    const ang=performance.now()/(uN>0.02?(60/Math.max(uN,0.05)):100000);
+    tx.rotate(ang);
+    for(let b=0;b<4;b++){tx.rotate(Math.PI/2);tx.fillRect(-2,0,4,12);}
+    tx.restore();
+    tx.fillStyle=COL.scaleTxt;tx.font="10px sans-serif";tx.textAlign="center";
+    tx.fillText("FAN",tubeX+tubeW/2,bot+44);tx.textAlign="left";
+    // ボール
+    const by=bot-(y/YMAX)*tubeH;
+    const bx=tubeX+tubeW/2;
+    const grd=tx.createRadialGradient(bx-5,by-5,2,bx,by,16);
+    grd.addColorStop(0,COL.ballA);grd.addColorStop(1,COL.ballB);
+    tx.fillStyle=grd;tx.beginPath();tx.arc(bx,by,15,0,7);tx.fill();
+    tx.strokeStyle=COL.ballEdge;tx.lineWidth=1;tx.stroke();
+    // SP ライン
+    const spy=bot-(SP/YMAX)*tubeH;
+    tx.strokeStyle=COL.sp;tx.setLineDash([6,4]);tx.lineWidth=1.5;
+    tx.beginPath();tx.moveTo(tubeX-4,spy);tx.lineTo(tubeX+tubeW+4,spy);tx.stroke();
+    tx.setLineDash([]);
+    tx.fillStyle=COL.sp;tx.font="10px sans-serif";tx.fillText("SP",tubeX+tubeW+6,spy+3);
+  }
+
+  // ===== 描画: グラフ =====
+  function drawChart(){
+    const W=chC.width,H=chC.height;
+    cx.clearRect(0,0,W,H);
+    const padL=42,padR=46,padT=14,padB=22;
+    const pw=W-padL-padR, ph=H-padT-padB;
+    cx.fillStyle=COL.chBg;cx.fillRect(padL,padT,pw,ph);
+    cx.strokeStyle=COL.chFrame;cx.lineWidth=1;cx.strokeRect(padL,padT,pw,ph);
+    // 左軸: 高さ
+    cx.font="10px sans-serif";cx.textAlign="right";
+    for(let h=0;h<=YMAX;h+=50){
+      const py=padT+ph-(h/YMAX)*ph;
+      cx.strokeStyle=COL.grid;cx.beginPath();cx.moveTo(padL,py);cx.lineTo(padL+pw,py);cx.stroke();
+      cx.fillStyle=COL.axis;cx.fillText(h,padL-5,py+3);
+    }
+    // 右軸: PWM
+    cx.textAlign="left";cx.fillStyle=COL.pwm;
+    for(let p=0;p<=PWM_MAX;p+=51){
+      const py=padT+ph-(p/PWM_MAX)*ph;
+      cx.fillText(Math.round(p),padL+pw+5,py+3);
+    }
+    cx.save();cx.translate(12,padT+ph/2);cx.rotate(-Math.PI/2);
+    cx.textAlign="center";cx.fillStyle=COL.axis;cx.fillText("高さ PV/SP",0,0);cx.restore();
+    const n=pvH.length;
+    if(n<2){return;}
+    const xAt=i=>padL+(i/(WIN-1))*pw;
+    function line(arr,color,max,w){
+      cx.strokeStyle=color;cx.lineWidth=w;cx.beginPath();
+      for(let i=0;i<arr.length;i++){
+        const x=xAt(i+(WIN-arr.length));
+        const py=padT+ph-(Math.min(arr[i],max)/max)*ph;
+        i?cx.lineTo(x,py):cx.moveTo(x,py);
+      }
+      cx.stroke();
+    }
+    line(pwmH,COL.pwm,PWM_MAX,1.5);
+    line(spH,COL.sp,YMAX,2);
+    line(pvH,COL.pv,YMAX,2);
+  }
+
+  // ===== ループ =====
+  let acc=0,last=performance.now();
+  function frame(now){
+    const dtReal=Math.min((now-last)/1000,0.1); last=now;
+    if(running){
+      acc+=dtReal;
+      let steps=0;
+      while(acc>=DT && steps<10){ physics(); pushHist(); acc-=DT; steps++; }
+    }
+    rPV.textContent=y.toFixed(1);
+    rSP.textContent=SP.toFixed(0);
+    rPWM.textContent=pwm.toFixed(0);
+    rERR.textContent=(SP-y).toFixed(1);
+    drawTube();drawChart();
+    requestAnimationFrame(frame);
+  }
+
+  // ===== UI =====
+  function setMode(m){
+    mode=m;
+    document.querySelectorAll("#modeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.mode===m));
+    const on=(m!=="OFF");
+    $("ledDot").classList.toggle("on",on);
+    $("pidStateTxt").textContent="PID制御: "+(on?(m+" 有効（緑LED点灯）"):"無効");
+    if(m==="OFF") integ=0;
+  }
+  document.querySelectorAll("#modeSeg button").forEach(b=>{
+    b.onclick=()=>setMode(b.dataset.mode);
+  });
+  $("sp").oninput=e=>{SP=+e.target.value;$("vSP").textContent=SP;};
+  $("kp").oninput=e=>{KP=+e.target.value;$("vKP").textContent=KP.toFixed(2);refreshGainBox();};
+  $("tr").oninput=e=>{TR=+e.target.value;$("vTR").textContent=TR.toFixed(1);refreshGainBox();};
+  $("td").oninput=e=>{TD=+e.target.value;$("vTD").textContent=TD.toFixed(2);refreshGainBox();};
+  $("dist").oninput=e=>{DIST=+e.target.value;$("vDist").textContent=DIST;};
+  $("run").onclick=()=>{running=!running;$("run").textContent=running?"⏸ 一時停止":"▶ 再開";};
+  $("knock").onclick=()=>{ pendingDist += -DIST; };
+  $("reset").onclick=()=>{
+    y=0;v=0;integ=0;prevPV=0;pwm=0;pendingDist=0;
+    pvH.length=0;spH.length=0;pwmH.length=0;
+  };
+
+  setMode("OFF");
+  refreshGainBox();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

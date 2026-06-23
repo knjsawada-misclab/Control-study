@@ -76,7 +76,7 @@ flowchart LR
 筒内の球（質量 $m$）には3つの力が働きます．**ファンによる上向きの空気力**，**一定の重力**，そして**速度に比例する抗力**（筒壁との摩擦・空気抵抗をまとめたもの）です．ニュートンの運動方程式は次のとおりです．
 
 $$
-m\,\ddot{y} = F_{\text{air}}(u, y) \;-\; m g \;-\; c\,\dot{y}
+m\,\ddot{y} = F_{\text{air}}(u, y) -m g-c\,\dot{y}
 $$
 
 ここで $y$ は球の高さ，$\dot{y}$ は速度，$\ddot{y}$ は加速度です．
@@ -86,7 +86,7 @@ $$
 この浮上系の核心は空気力 $F_{\text{air}}$ の非線形性にあります．
 
 $$
-F_{\text{air}}(u, y) = K_f \, u_{\text{norm}}^{2} \, \exp\!\left(-\frac{y}{H_d}\right)
+F_{\text{air}}(u, y) = K_f  u_{\text{norm}}^{2} \exp\!\left(-\frac{y}{H_d}\right)
 $$
 
 $$
@@ -109,13 +109,13 @@ $$
 $$
 F_{\text{air}}(u, y_{\text{eq}}) = m g
 \quad\Longrightarrow\quad
-K_f \, u_{\text{norm}}^{2}\, \exp\!\left(-\frac{y_{\text{eq}}}{H_d}\right) = m g
+K_f u_{\text{norm}}^{2}\exp\left(-\frac{y_{\text{eq}}}{H_d}\right) = m g
 $$
 
 これを高さについて解くと，平衡高さが得られます．
 
 $$
-y_{\text{eq}} = H_d \,\ln\!\left(\frac{K_f \, u_{\text{norm}}^{2}}{m g}\right)
+y_{\text{eq}} = H_d \ln\!\left(\frac{K_f u_{\text{norm}}^{2}}{m g}\right)
 $$
 
 $y_{\text{eq}}$ は風量 $u_{\text{norm}}$ に対して**単調増加**です．つまり，ファンを強くすると平衡高さは高くなります．
@@ -152,7 +152,7 @@ $$
 これを運動方程式に代入すると，**質量‑ばね‑ダンパ**型の安定な2次系が得られます．
 
 $$
-m\,\delta\ddot{y} + c\,\delta\dot{y} + k\,\delta y = b\,\delta u_{\text{norm}}
+m\delta\ddot{y} + c\delta\dot{y} + k\delta y = b\delta u_{\text{norm}}
 $$
 
 ここで等価ばね定数 $k = mg/H_d$ が，空気力の高さ依存性に由来する**復元力**です．ラプラス変換して入力 $u$ から出力 $y$ への伝達関数を求めると，
@@ -182,7 +182,7 @@ $$
 ### 標準形（Kp / Ki / Kd）
 
 $$
-u(t) = K_p\,e(t) + K_i \int_0^t e(\tau)\,d\tau + K_d \frac{d e(t)}{dt}
+u(t) = K_p e(t) + K_i \int_0^t e(\tau) d\tau + K_d \frac{d e(t)}{dt}
 $$
 
 - **比例 P**：偏差に比例した即応的な押し戻し．大きいほど速いが，大きすぎると振動・不安定化．
@@ -194,13 +194,13 @@ $$
 教育キット（ScadaBR）は ISA 標準形のパラメータ表記を使います．
 
 $$
-u(t) = K_P\left(e + \frac{1}{T_R}\int_0^t e\,d\tau + T_D\,\frac{de}{dt}\right)
+u(t) = K_P\left(e + \frac{1}{T_R}\int_0^t e d\tau + T_D \frac{de}{dt}\right)
 $$
 
 両者は次の関係で換算できます．
 
 $$
-K_p = K_P, \qquad K_i = \frac{K_P}{T_R}, \qquad K_d = K_P \cdot T_D
+K_p = K_P \qquad K_i = \frac{K_P}{T_R} \qquad K_d = K_P \cdot T_D
 $$
 
 | キット表記 | 標準形 | 意味 |

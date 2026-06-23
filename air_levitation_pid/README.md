@@ -76,7 +76,7 @@ flowchart LR
 筒内の球（質量 $m$）には3つの力が働きます．**ファンによる上向きの空気力**，**一定の重力**，そして**速度に比例する抗力**（筒壁との摩擦・空気抵抗をまとめたもの）です．ニュートンの運動方程式は次のとおりです．
 
 $$
-m\,\ddot{y} = F_{\text{air}}(u, y) -m g-c\,\dot{y}
+m\,\ddot{y} = F_{\text{air}}(u, y) -m g-c\dot{y}
 $$
 
 ここで $y$ は球の高さ，$\dot{y}$ は速度，$\ddot{y}$ は加速度です．
@@ -86,7 +86,7 @@ $$
 この浮上系の核心は空気力 $F_{\text{air}}$ の非線形性にあります．
 
 $$
-F_{\text{air}}(u, y) = K_f  u_{\text{norm}}^{2} \exp\!\left(-\frac{y}{H_d}\right)
+F_{\text{air}}(u, y) = K_f  u_{\text{norm}}^{2} \exp\left(-\frac{y}{H_d}\right)
 $$
 
 $$
@@ -115,7 +115,7 @@ $$
 これを高さについて解くと，平衡高さが得られます．
 
 $$
-y_{\text{eq}} = H_d \ln\!\left(\frac{K_f u_{\text{norm}}^{2}}{m g}\right)
+y_{\text{eq}} = H_d \ln\left(\frac{K_f u_{\text{norm}}^{2}}{m g}\right)
 $$
 
 $y_{\text{eq}}$ は風量 $u_{\text{norm}}$ に対して**単調増加**です．つまり，ファンを強くすると平衡高さは高くなります．
@@ -200,7 +200,7 @@ $$
 両者は次の関係で換算できます．
 
 $$
-K_p = K_P \qquad K_i = \frac{K_P}{T_R} \qquad K_d = K_P \cdot T_D
+K_p = K_P, \qquad K_i = \frac{K_P}{T_R}, \qquad K_d = K_P \cdot T_D
 $$
 
 | キット表記 | 標準形 | 意味 |

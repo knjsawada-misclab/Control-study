@@ -56,6 +56,11 @@
   .dot{width:12px;height:12px;border-radius:50%;background:#c2cdd8;}
   .dot.on{background:var(--green);box-shadow:0 0 10px var(--green);}
   .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6;}
+  .seg-sub{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-top:6px;}
+  .seg-sub button{flex:1;border:none;border-radius:0;background:#fff;color:var(--muted);
+    font-size:11px;padding:7px 4px;min-height:32px;cursor:pointer;font-weight:600;}
+  .seg-sub button:hover{background:var(--panel2);}
+  .seg-sub button.on{background:var(--accent2);color:#fff;}
   .legend{display:flex;gap:14px;font-size:12px;margin-bottom:8px;flex-wrap:wrap;}
   .legend span{display:flex;align-items:center;gap:5px;}
   .legend i{width:14px;height:3px;border-radius:2px;display:inline-block;}
@@ -104,38 +109,57 @@
       <span class="dot" id="ledDot"></span>
       <span id="pidStateTxt">PID制御: 無効</span>
     </div>
-    <div class="seg" id="modeSeg" style="margin-bottom:12px;">
+    <div class="seg" id="modeSeg" style="margin-bottom:4px;">
       <button data-mode="OFF" class="on">OFF</button>
+      <button data-mode="MANUAL">手動</button>
       <button data-mode="P">P</button>
       <button data-mode="PI">PI</button>
       <button data-mode="PID">PID</button>
     </div>
-
-    <div class="field">
-      <label>SP 目標高さ <b><span id="vSP">150</span></b></label>
-      <input id="sp" type="range" min="20" max="240" value="150" step="1">
+    <p class="note" style="margin:2px 0 8px;">OFF=ファン停止　手動=開ループ（PWM直接指定）　P/PI/PID=フィードバック制御</p>
+    <div class="seg-sub" id="pidSub" style="display:none;margin-bottom:12px;">
+      <button data-struct="PI-D" class="on">PI-D 微分先行</button>
+      <button data-struct="I-PD">I-PD</button>
+      <button data-struct="PID-STD">標準PID</button>
     </div>
 
-    <div class="field">
-      <label>KP 比例ゲイン <b><span id="vKP">2.00</span></b></label>
-      <input id="kp" type="range" min="0" max="8" value="2" step="0.05">
-    </div>
-    <div class="row">
+    <div id="manualPanel" style="display:none;">
       <div class="field">
-        <label>TR 積分時間 <b><span id="vTR">2.0</span></b></label>
-        <input id="tr" type="range" min="0.3" max="20" value="2" step="0.1">
+        <label>手動 PWM 指令 <b><span id="vManPWM">150</span></b></label>
+        <input id="manPWM" type="range" min="0" max="255" value="150" step="1">
       </div>
-      <div class="field">
-        <label>TD 微分時間 <b><span id="vTD">0.30</span></b></label>
-        <input id="td" type="range" min="0" max="1.5" value="0.30" step="0.01">
-      </div>
+      <p class="note" style="margin-top:0;margin-bottom:10px;">フィードバックなしでファンを直接駆動。PWMを変えるとステップ応答が観察できます。</p>
     </div>
 
-    <div class="gains">
-      標準形換算（u = Kp·e + Ki·∫e dt + Kd·de/dt）<br>
-      Kp = KP = <b><span id="gKp">2.00</span></b>
-      Ki = KP/TR = <b><span id="gKi">1.00</span></b>
-      Kd = KP·TD = <b><span id="gKd">0.60</span></b>
+    <div id="fbPanel">
+      <div class="field">
+        <label>SP 目標高さ <b><span id="vSP">150</span></b></label>
+        <input id="sp" type="range" min="20" max="240" value="150" step="1">
+      </div>
+
+      <div class="field">
+        <label>KP 比例ゲイン <b><span id="vKP">2.00</span></b></label>
+        <input id="kp" type="range" min="0" max="8" value="2" step="0.05">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>TR 積分時間 <b><span id="vTR">2.0</span></b></label>
+          <input id="tr" type="range" min="0.3" max="20" value="2" step="0.1">
+        </div>
+        <div class="field">
+          <label>TD 微分時間 <b><span id="vTD">0.30</span></b></label>
+          <input id="td" type="range" min="0" max="1.5" value="0.30" step="0.01">
+        </div>
+      </div>
+      <p class="note" style="margin-top:0;">Pのみ→定常偏差が残る。+I(積分)→偏差ゼロへ。+D(微分)→振動を抑制。</p>
+
+      <div class="gains">
+        <span id="gainFormula">u = Kp·e + Ki·∫e dt − Kd·dPV/dt</span><br>
+        Kp = KP = <b><span id="gKp">2.00</span></b>
+        Ki = KP/TR = <b><span id="gKi">1.00</span></b>
+        Kd = KP·TD = <b><span id="gKd">0.60</span></b>
+      </div>
+      <p id="structNote" class="note" style="display:none;margin-top:4px;">PI-D: SP変更時の微分キック防止　I-PD: オーバーシュートを抑制　標準PID: 偏差eの微分を使用</p>
     </div>
 
     <div class="btns">
@@ -147,10 +171,11 @@
       <label>外乱の強さ <b><span id="vDist">120</span></b></label>
       <input id="dist" type="range" min="20" max="250" value="120" step="10">
     </div>
-
-    <div class="note">
-      OFF/P/PI/PID で制御則を切り替え。OFFはファン停止（球は落下）。Pのみは定常偏差が残り、I(積分)で偏差ゼロへ、D(微分)で振動を抑制します。「球を叩く」で外乱を加え、制御の復帰を確認できます。
+    <div class="field">
+      <label>むだ時間 L <b><span id="vDelay">0</span> ms</b></label>
+      <input id="delay" type="range" min="0" max="500" value="0" step="10">
     </div>
+    <p class="note">むだ時間を大きくすると、ゲインを上げた際に振動・不安定化しやすくなります。</p>
   </div>
 </div>
 
@@ -164,12 +189,17 @@
   function airForce(uNorm,y){ return KF*uNorm*uNorm*Math.exp(-y/HD); }
 
   // ===== 状態 =====
-  let y=0, v=0, integ=0, prevPV=0;
+  let y=0, v=0, integ=0, prevPV=0, prevE=0;
   let pwm=0;                // PWM出力 0..255
   let mode="OFF";
+  let pidStruct="PI-D";    // "PI-D" | "I-PD" | "PID-STD"
   let running=true;
-  let SP=150, KP=2.0, TR=2.0, TD=0.30, DIST=120;
+  let SP=150, KP=2.0, TR=2.0, TD=0.30, DIST=120, manualPWM=150;
   let pendingDist=0;
+  let DELAY_MS=0;           // むだ時間 [ms]
+  const DELAY_BUF_MAX=Math.ceil(500/1000/DT)+1;  // 500ms分のバッファ
+  const delayBuf=new Float64Array(DELAY_BUF_MAX);
+  let delayHead=0, delayLen=0;
   const WIN=600;            // 表示点数（=12秒）
   const pvH=[], spH=[], pwmH=[];
 
@@ -199,24 +229,49 @@
 
   // ===== 制御 =====
   function controller(){
-    if(mode==="OFF"){ integ=0; return 0; }
+    if(mode==="OFF"){ integ=0; prevE=SP-y; return 0; }
+    if(mode==="MANUAL"){ integ=0; prevE=SP-y; prevPV=y; return manualPWM; }
     const {Kp,Ki,Kd}=computeGains();
     const e=SP-y;
     const useI=(mode==="PI"||mode==="PID");
     const useD=(mode==="PID");
-    const deriv = useD ? -(y-prevPV)/DT : 0;     // 微分は計測値に対して（微分キック回避）
-    let u = Kp*e + (useI?Ki*integ:0) + Kd*deriv;
+
+    let pTerm, dTerm;
+    if(useD && pidStruct==="I-PD"){
+      pTerm = -Kp*y;                              // P on −PV
+      dTerm = Kd * (-(y-prevPV)/DT);              // D on −PV
+    } else if(useD && pidStruct==="PID-STD"){
+      pTerm = Kp*e;                                // P on e
+      dTerm = Kd * ((e-prevE)/DT);                 // D on e（微分キックあり）
+    } else {
+      pTerm = Kp*e;                                // P on e
+      dTerm = useD ? Kd * (-(y-prevPV)/DT) : 0;   // D on −PV（PI-D: 微分先行）
+    }
+
+    let u = pTerm + (useI?Ki*integ:0) + dTerm;
     let uSat=Math.min(Math.max(u,0),PWM_MAX);
-    if(useI){                                     // アンチワインドアップ
+    if(useI){                                      // アンチワインドアップ
       const notSat=(uSat===u);
       if(notSat || (u>PWM_MAX && e<0) || (u<0 && e>0)) integ+=e*DT;
     }
     prevPV=y;
+    prevE=e;
     return uSat;
   }
 
   function physics(){
-    pwm=controller();
+    const cmdPWM=controller();
+    // むだ時間バッファ
+    const delaySamples=Math.round(DELAY_MS/1000/DT);
+    if(delaySamples<=0){
+      pwm=cmdPWM;
+    } else {
+      delayBuf[delayHead]=cmdPWM;
+      delayHead=(delayHead+1)%DELAY_BUF_MAX;
+      if(delayLen<delaySamples) delayLen++;
+      const readIdx=(delayHead-delayLen+DELAY_BUF_MAX)%DELAY_BUF_MAX;
+      pwm=delayBuf[readIdx];
+    }
     const uNorm=pwm/PWM_MAX;
     const F=airForce(uNorm,y);
     let a=(F-M*G-CD*v)/M;
@@ -341,26 +396,55 @@
   }
 
   // ===== UI =====
+  const STRUCT_FORMULAS={
+    "PI-D":"PI-D: u = Kp·e + Ki·∫e dt − Kd·dPV/dt",
+    "I-PD":"I-PD: u = −Kp·PV + Ki·∫e dt − Kd·dPV/dt",
+    "PID-STD":"標準PID: u = Kp·e + Ki·∫e dt + Kd·de/dt"
+  };
+  function updateGainFormula(){
+    const f=(mode==="PID")?STRUCT_FORMULAS[pidStruct]:"u = Kp·e + Ki·∫e dt + Kd·de/dt";
+    $("gainFormula").textContent=f;
+  }
   function setMode(m){
     mode=m;
     document.querySelectorAll("#modeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.mode===m));
+    const isFB=m!=="OFF"&&m!=="MANUAL";
     const on=(m!=="OFF");
     $("ledDot").classList.toggle("on",on);
-    $("pidStateTxt").textContent="PID制御: "+(on?(m+" 有効（緑LED点灯）"):"無効");
-    if(m==="OFF") integ=0;
+    const label=m==="PID"?m+"("+pidStruct+")":m;
+    $("pidStateTxt").textContent=m==="MANUAL"?"手動（開ループ）":("PID制御: "+(on?(label+" 有効（緑LED点灯）"):"無効"));
+    $("pidSub").style.display=(m==="PID")?"flex":"none";
+    $("structNote").style.display=(m==="PID")?"block":"none";
+    $("manualPanel").style.display=(m==="MANUAL")?"block":"none";
+    $("fbPanel").style.display=(m==="MANUAL")?"none":"block";
+    if(m==="OFF"||m==="MANUAL") integ=0;
+    updateGainFormula();
+  }
+  function setStruct(s){
+    pidStruct=s;
+    document.querySelectorAll("#pidSub button").forEach(b=>b.classList.toggle("on",b.dataset.struct===s));
+    const label=mode+"("+pidStruct+")";
+    $("pidStateTxt").textContent="PID制御: "+label+" 有効（緑LED点灯）";
+    updateGainFormula();
   }
   document.querySelectorAll("#modeSeg button").forEach(b=>{
     b.onclick=()=>setMode(b.dataset.mode);
   });
+  document.querySelectorAll("#pidSub button").forEach(b=>{
+    b.onclick=()=>setStruct(b.dataset.struct);
+  });
   $("sp").oninput=e=>{SP=+e.target.value;$("vSP").textContent=SP;};
+  $("manPWM").oninput=e=>{manualPWM=+e.target.value;$("vManPWM").textContent=manualPWM;};
   $("kp").oninput=e=>{KP=+e.target.value;$("vKP").textContent=KP.toFixed(2);refreshGainBox();};
   $("tr").oninput=e=>{TR=+e.target.value;$("vTR").textContent=TR.toFixed(1);refreshGainBox();};
   $("td").oninput=e=>{TD=+e.target.value;$("vTD").textContent=TD.toFixed(2);refreshGainBox();};
   $("dist").oninput=e=>{DIST=+e.target.value;$("vDist").textContent=DIST;};
+  $("delay").oninput=e=>{DELAY_MS=+e.target.value;$("vDelay").textContent=DELAY_MS;};
   $("run").onclick=()=>{running=!running;$("run").textContent=running?"⏸ 一時停止":"▶ 再開";};
   $("knock").onclick=()=>{ pendingDist += -DIST; };
   $("reset").onclick=()=>{
-    y=0;v=0;integ=0;prevPV=0;pwm=0;pendingDist=0;
+    y=0;v=0;integ=0;prevPV=0;prevE=0;pwm=0;pendingDist=0;
+    delayBuf.fill(0);delayHead=0;delayLen=0;
     pvH.length=0;spH.length=0;pwmH.length=0;
   };
 

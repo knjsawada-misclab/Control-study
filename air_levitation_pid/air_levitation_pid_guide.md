@@ -319,7 +319,7 @@ Control-study/
 │   ├── air_levitation_pid.html       # ブラウザ動作の PID 制御シミュレータ（本体）
 │   ├── identification_sim.html       # パラメータ同定シミュレータ（静的・動的実験）
 │   ├── parameter_identification.md   # パラメータ同定手順
-│   ├── README.md                     # 本資料（制御ダイナミクスの解説）
+│   ├── air_levitation_pid_guide.md   # 本資料（制御ダイナミクスの解説）
 │   └── docs/
 │       ├── system_schematic.svg      # 浮上系の自由体図
 │       └── simulator_preview.svg     # シミュレータ画面のプレビュー

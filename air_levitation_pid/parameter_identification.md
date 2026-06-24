@@ -153,4 +153,4 @@ flowchart TD
 
 ---
 
-*関連ファイル：制御モデルの解説は [`README.md`](README.md)，同定実験ツールは `identification_sim.html`，制御シミュレータは `air_levitation_pid.html`．*
+*関連ファイル：制御モデルの解説は [`air_levitation_pid_guide.md`](air_levitation_pid_guide.md)，同定実験ツールは `identification_sim.html`，制御シミュレータは `air_levitation_pid.html`．*

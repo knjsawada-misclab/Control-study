@@ -17,12 +17,15 @@ html上で触って理解するコンテンツを目指します．
 ### 制御工学（応用理工学科機械工学科目3年）
 
 - [極の位置と相平面上の応答](https://knjsawada-misclab.github.io/Control-study/state_equation_simulator.html)
+（[解説資料](https://github.com/knjsawada-misclab/Control-study/blob/main/state_equation_simulator_guide.md)）
 
 - [極配置と初期状態応答](https://knjsawada-misclab.github.io/Control-study/pole_placement.html)
+（[解説資料](https://github.com/knjsawada-misclab/Control-study/blob/main/pole_placement_guide.md)）
 
 ### その他
 
 - [強化学習による迷路探索](https://knjsawada-misclab.github.io/Control-study/rl_maze.html)
+（[解説資料](https://github.com/knjsawada-misclab/Control-study/blob/main/rl_maze_guide.md)）
 
 ## License
 

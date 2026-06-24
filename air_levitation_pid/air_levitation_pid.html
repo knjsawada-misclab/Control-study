@@ -100,6 +100,17 @@
       <span><i style="background:#e08a00"></i>PWM出力(回転指示)</span>
     </div>
     <canvas id="chart" width="640" height="360"></canvas>
+    <div class="row" style="margin-top:8px;">
+      <div class="field" style="margin-bottom:0;">
+        <label>表示時間 <b><span id="vWin">24</span> 秒</b></label>
+        <input id="winRange" type="range" min="6" max="60" value="24" step="6">
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>シミュレーション速度 <b>×<span id="vSpeed">1</span></b></label>
+        <input id="speed" type="range" min="1" max="10" value="1" step="1">
+      </div>
+    </div>
+    <p class="note">一時停止中にグラフ上でマウスホバー（またはタッチ）すると、t / PV / SP / PWM の数値を確認できます。</p>
   </div>
 
   <!-- 右: 操作パネル -->
@@ -118,9 +129,9 @@
     </div>
     <p class="note" style="margin:2px 0 8px;">OFF=ファン停止　手動=開ループ（PWM直接指定）　P/PI/PID=フィードバック制御</p>
     <div class="seg-sub" id="pidSub" style="display:none;margin-bottom:12px;">
-      <button data-struct="PI-D" class="on">PI-D 微分先行</button>
+      <button data-struct="PID-STD" class="on">標準PID</button>
+      <button data-struct="PI-D">PI-D 微分先行</button>
       <button data-struct="I-PD">I-PD</button>
-      <button data-struct="PID-STD">標準PID</button>
     </div>
 
     <div id="manualPanel" style="display:none;">
@@ -147,8 +158,8 @@
           <input id="tr" type="range" min="0.3" max="20" value="2" step="0.1">
         </div>
         <div class="field">
-          <label>TD 微分時間 <b><span id="vTD">0.30</span></b></label>
-          <input id="td" type="range" min="0" max="1.5" value="0.30" step="0.01">
+          <label>TD 微分時間 <b><span id="vTD">0.60</span></b></label>
+          <input id="td" type="range" min="0" max="1.5" value="0.60" step="0.01">
         </div>
       </div>
       <p class="note" style="margin-top:0;">Pのみ→定常偏差が残る。+I(積分)→偏差ゼロへ。+D(微分)→振動を抑制。</p>
@@ -157,7 +168,7 @@
         <span id="gainFormula">u = Kp·e + Ki·∫e dt − Kd·dPV/dt</span><br>
         Kp = KP = <b><span id="gKp">2.00</span></b>
         Ki = KP/TR = <b><span id="gKi">1.00</span></b>
-        Kd = KP·TD = <b><span id="gKd">0.60</span></b>
+        Kd = KP·TD = <b><span id="gKd">1.20</span></b>
       </div>
       <p id="structNote" class="note" style="display:none;margin-top:4px;">PI-D: SP変更時の微分キック防止　I-PD: オーバーシュートを抑制　標準PID: 偏差eの微分を使用</p>
     </div>
@@ -169,10 +180,6 @@
     </div>
     <div class="btns" style="margin-top:6px;">
       <button id="csvBtn" class="ghost">CSV出力</button>
-    </div>
-    <div class="field" style="margin-top:10px;">
-      <label>シミュレーション速度 <b>×<span id="vSpeed">1</span></b></label>
-      <input id="speed" type="range" min="1" max="10" value="1" step="1">
     </div>
     <div class="field">
       <label>外乱の強さ <b><span id="vDist">120</span></b></label>
@@ -199,9 +206,9 @@
   let y=0, v=0, integ=0, prevPV=0, prevE=0;
   let pwm=0;                // PWM出力 0..255
   let mode="OFF";
-  let pidStruct="PI-D";    // "PI-D" | "I-PD" | "PID-STD"
+  let pidStruct="PID-STD"; // "PID-STD" | "PI-D" | "I-PD"
   let running=true;
-  let SP=150, KP=2.0, TR=2.0, TD=0.30, DIST=120, manualPWM=150, simSpeed=1;
+  let SP=150, KP=2.0, TR=2.0, TD=0.60, DIST=120, manualPWM=150, simSpeed=1;
   let simTime=0;
   const csvLog=[];          // {t, pv, sp, pwm, e} 全ステップ記録
   let pendingDist=0;
@@ -209,7 +216,8 @@
   const DELAY_BUF_MAX=Math.ceil(1500/1000/DT)+1;  // 1500ms分のバッファ
   const delayBuf=new Float64Array(DELAY_BUF_MAX);
   let delayHead=0, delayLen=0;
-  const WIN=600;            // 表示点数（=12秒）
+  let hoverX=-1;            // チャート上のホバー位置（canvas座標、-1=非表示）
+  let WIN=1200;             // 表示点数（初期=24秒）
   const pvH=[], spH=[], pwmH=[];
 
   // ===== 色（白背景テーマ） =====
@@ -400,6 +408,36 @@
     line(pwmH,COL.pwm,PWM_MAX,1.5);
     line(spH,COL.sp,YMAX,2);
     line(pvH,COL.pv,YMAX,2);
+    // ツールチップ（一時停止中のみ）
+    if(!running && hoverX>=padL && hoverX<=padL+pw && n>=2){
+      const frac=(hoverX-padL)/pw;
+      const idx=Math.round(frac*(WIN-1)-(WIN-n));
+      if(idx>=0 && idx<n){
+        const px=hoverX;
+        cx.strokeStyle="rgba(0,0,0,0.3)";cx.lineWidth=1;cx.setLineDash([4,3]);
+        cx.beginPath();cx.moveTo(px,padT);cx.lineTo(px,padT+ph);cx.stroke();
+        cx.setLineDash([]);
+        const pvVal=pvH[idx], spVal=spH[idx], pwmVal=pwmH[idx];
+        const pyPV=padT+ph-(Math.min(pvVal,YMAX)/YMAX)*ph;
+        const pySP=padT+ph-(Math.min(spVal,YMAX)/YMAX)*ph;
+        const pyPWM=padT+ph-(Math.min(pwmVal,PWM_MAX)/PWM_MAX)*ph;
+        [[pyPV,COL.pv],[pySP,COL.sp],[pyPWM,COL.pwm]].forEach(function(d){
+          cx.fillStyle=d[1];cx.beginPath();cx.arc(px,d[0],4,0,7);cx.fill();
+        });
+        const tVal=simTime-(n-1-idx)*DT;
+        const lines=["t = "+tVal.toFixed(1)+"s",
+          "PV = "+pvVal.toFixed(1),"SP = "+spVal.toFixed(0),"PWM = "+pwmVal.toFixed(0)];
+        cx.font="11px sans-serif";
+        const tw=Math.max(...lines.map(function(s){return cx.measureText(s).width;}))+12;
+        const th=lines.length*16+8;
+        let bx=px+10, by=padT+10;
+        if(bx+tw>padL+pw) bx=px-tw-10;
+        cx.fillStyle="rgba(255,255,255,0.92)";cx.strokeStyle="rgba(0,0,0,0.15)";cx.lineWidth=1;
+        cx.beginPath();cx.roundRect(bx,by,tw,th,4);cx.fill();cx.stroke();
+        cx.fillStyle="#1f2d3a";cx.textAlign="left";
+        lines.forEach(function(s,i){cx.fillText(s,bx+6,by+16+i*16);});
+      }
+    }
   }
 
   // ===== ループ =====
@@ -464,6 +502,7 @@
   $("tr").oninput=e=>{TR=+e.target.value;$("vTR").textContent=TR.toFixed(1);refreshGainBox();};
   $("td").oninput=e=>{TD=+e.target.value;$("vTD").textContent=TD.toFixed(2);refreshGainBox();};
   $("speed").oninput=e=>{simSpeed=+e.target.value;$("vSpeed").textContent=simSpeed;};
+  $("winRange").oninput=e=>{const sec=+e.target.value;WIN=Math.round(sec/DT);$("vWin").textContent=sec;};
   $("dist").oninput=e=>{DIST=+e.target.value;$("vDist").textContent=DIST;};
   $("delay").oninput=e=>{DELAY_MS=+e.target.value;$("vDelay").textContent=(DELAY_MS/1000).toFixed(1);};
   $("run").onclick=()=>{running=!running;$("run").textContent=running?"⏸ 一時停止":"▶ 再開";};
@@ -488,6 +527,17 @@
     a.click();
     URL.revokeObjectURL(a.href);
   };
+
+  function canvasX(e){
+    const rect=chC.getBoundingClientRect();
+    const clientX=e.touches?e.touches[0].clientX:e.clientX;
+    return (clientX-rect.left)*(chC.width/rect.width);
+  }
+  chC.addEventListener("mousemove",function(e){if(!running) hoverX=canvasX(e);});
+  chC.addEventListener("mouseleave",function(){hoverX=-1;});
+  chC.addEventListener("touchstart",function(e){if(!running){hoverX=canvasX(e);e.preventDefault();}},{passive:false});
+  chC.addEventListener("touchmove",function(e){if(!running){hoverX=canvasX(e);e.preventDefault();}},{passive:false});
+  chC.addEventListener("touchend",function(){hoverX=-1;});
 
   setMode("OFF");
   refreshGainBox();

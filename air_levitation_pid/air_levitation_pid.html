@@ -353,7 +353,7 @@
   function drawChart(){
     const W=chC.width,H=chC.height;
     cx.clearRect(0,0,W,H);
-    const padL=42,padR=46,padT=14,padB=30;
+    const padL=42,padR=46,padT=14,padB=40;
     const pw=W-padL-padR, ph=H-padT-padB;
     cx.fillStyle=COL.chBg;cx.fillRect(padL,padT,pw,ph);
     cx.strokeStyle=COL.chFrame;cx.lineWidth=1;cx.strokeRect(padL,padT,pw,ph);
@@ -384,6 +384,7 @@
       cx.strokeStyle=COL.grid;cx.beginPath();cx.moveTo(px,padT);cx.lineTo(px,padT+ph);cx.stroke();
       cx.fillText(ts.toFixed(0)+"s",px,padT+ph+14);
     }
+    cx.fillText("時間 [s]",padL+pw/2,padT+ph+30);
     const n=pvH.length;
     if(n<2){return;}
     const xAt=i=>padL+(i/(WIN-1))*pw;

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>空気浮上系 パラメータ同定シミュレータ</title>
+<style>
+  :root{
+    --bg:#eef2f6; --panel:#ffffff; --panel2:#f1f5f9; --line:#d4dde6;
+    --accent:#2e7dd1; --accent2:#1f6fc4; --pv:#e23b3b; --sp:#2e7dd1; --pwm:#e08a00;
+    --txt:#1f2d3a; --muted:#5b7184; --green:#16a34a; --red:#dc2626;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{font-family:"Segoe UI","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
+       background:var(--bg);color:var(--txt);-webkit-text-size-adjust:100%;}
+  header{padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel);}
+  header h1{margin:0;font-size:18px;font-weight:700;}
+  header p{margin:5px 0 0;color:var(--muted);font-size:13px;line-height:1.5;}
+  .wrap{display:flex;gap:14px;padding:14px;flex-wrap:wrap;align-items:flex-start;}
+  .col{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;
+       box-shadow:0 1px 3px rgba(30,50,70,.05);}
+  .exp{flex:1 1 420px;min-width:300px;}
+  .side{flex:1 1 260px;min-width:240px;max-width:360px;}
+  h2{font-size:13px;margin:0 0 4px;color:var(--accent2);}
+  h2 .step{display:inline-block;background:var(--accent);color:#fff;border-radius:6px;
+    padding:1px 7px;font-size:11px;margin-right:6px;}
+  .sub{font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5;}
+  canvas{display:block;width:100%;height:auto;background:#f8fafc;border-radius:8px;border:1px solid var(--line);}
+  .field{margin:10px 0;}
+  .field label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;}
+  .field label b{color:var(--accent2);font-variant-numeric:tabular-nums;}
+  input[type=range]{width:100%;accent-color:var(--accent);height:26px;}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;}
+  button{font-family:inherit;font-size:13px;font-weight:600;border-radius:8px;padding:10px 12px;
+    cursor:pointer;background:var(--panel2);color:var(--txt);border:1px solid var(--line);
+    flex:1 1 auto;min-height:42px;}
+  button:hover{border-color:var(--accent);}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  button.ghost{background:#fff;}
+  table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;}
+  th,td{border:1px solid var(--line);padding:4px 6px;text-align:right;}
+  th{background:var(--panel2);color:var(--muted);font-weight:600;}
+  .res{background:var(--panel2);border-radius:8px;padding:10px;margin-top:10px;font-size:13px;
+    line-height:1.8;font-variant-numeric:tabular-nums;}
+  .res b{color:var(--accent2);}
+  .res .big{font-size:16px;font-weight:700;color:var(--pwm);}
+  .row2{display:flex;gap:10px;}
+  .row2 .field{flex:1;}
+  .opt{font-size:12px;color:var(--muted);}
+  .chk{display:flex;align-items:center;gap:6px;font-size:13px;margin:8px 0;}
+  .warn{color:var(--red);font-size:12px;}
+  .ok{color:var(--green);}
+  .note{font-size:11px;color:var(--muted);line-height:1.6;margin-top:8px;}
+  .tablewrap{max-height:160px;overflow:auto;margin-top:8px;}
+  a{color:var(--accent);}
+  @media (max-width:720px){ .exp,.side{flex:1 1 100%;max-width:100%;} }
+</style>
+</head>
+<body>
+<header>
+  <h1>空気浮上系 パラメータ同定シミュレータ</h1>
+  <p>仮想の実機（真値は隠れています）に静的・動的実験を行い、回帰とフィットで物理パラメータ K_f・H_d・c を推定します。手順は <a href="parameter_identification.md">parameter_identification.md</a> 参照。</p>
+</header>
+
+<div class="wrap">
+  <!-- 静的実験 -->
+  <div class="col exp">
+    <h2><span class="step">手順1</span>静的実験 → K_f, H_d</h2>
+    <p class="sub">固定 PWM でファンを回し、平衡高さ y_eq を測定・記録します。y_eq を縦軸・ln(u_norm) を横軸に取ると直線になり、傾きと切片から K_f・H_d が求まります。</p>
+    <canvas id="scatter" width="520" height="300"></canvas>
+    <div class="field">
+      <label>測定する PWM <b><span id="vPWM">170</span></b></label>
+      <input id="pwm" type="range" min="105" max="255" value="170" step="1">
+    </div>
+    <div class="btns">
+      <button id="measure" class="primary">この PWM で平衡を測定・記録</button>
+      <button id="sweep" class="ghost">自動掃引（10点）</button>
+      <button id="clearStatic" class="ghost">クリア</button>
+    </div>
+    <div class="res" id="staticRes">データ点を 2 つ以上記録すると回帰します。</div>
+    <div class="tablewrap">
+      <table id="dataTable">
+        <thead><tr><th>PWM</th><th>u_norm</th><th>y_eq</th><th>ln(u_norm)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 動的実験 -->
+  <div class="col exp">
+    <h2><span class="step">手順2</span>動的実験 → c</h2>
+    <p class="sub">PWM をステップ変化させて応答 PV(t) を測定（赤点）。手順1で得た K_f・H_d を使ったモデル応答（青線）を重ね、c を調整して一致させます（残差 SSE 最小化）。</p>
+    <canvas id="timeplot" width="520" height="300"></canvas>
+    <div class="row2">
+      <div class="field">
+        <label>初期 PWM <b><span id="vBase">140</span></b></label>
+        <input id="basePWM" type="range" min="105" max="255" value="140" step="1">
+      </div>
+      <div class="field">
+        <label>ステップ後 PWM <b><span id="vStep">200</span></b></label>
+        <input id="stepPWM" type="range" min="105" max="255" value="200" step="1">
+      </div>
+    </div>
+    <div class="btns">
+      <button id="runStep" class="primary">ステップ応答を測定</button>
+      <button id="autoFitC" class="ghost">c を自動フィット</button>
+    </div>
+    <div class="field">
+      <label>抗力係数 c（手動調整） <b><span id="vC">0.90</span></b></label>
+      <input id="cEst" type="range" min="0.1" max="3" value="0.90" step="0.01">
+    </div>
+    <div class="res" id="dynRes">先に「ステップ応答を測定」を押してください。</div>
+  </div>
+
+  <!-- サイド: 結果・設定 -->
+  <div class="col side">
+    <h2>推定結果サマリ</h2>
+    <table id="summary">
+      <thead><tr><th style="text-align:left">パラメータ</th><th>推定値</th><th>真値</th><th>誤差</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left">K_f</td><td id="sKf">—</td><td id="tKf">—</td><td id="eKf">—</td></tr>
+        <tr><td style="text-align:left">H_d</td><td id="sHd">—</td><td id="tHd">—</td><td id="eHd">—</td></tr>
+        <tr><td style="text-align:left">c</td><td id="sC">—</td><td id="tC">—</td><td id="eC">—</td></tr>
+      </tbody>
+    </table>
+    <div class="chk"><input type="checkbox" id="reveal"><label for="reveal">答え合わせ（真値を表示）</label></div>
+
+    <h2 style="margin-top:14px;">実験条件</h2>
+    <div class="field">
+      <label>計測ノイズ σ <b><span id="vNoise">1.5</span></b></label>
+      <input id="noise" type="range" min="0" max="6" value="1.5" step="0.1">
+    </div>
+    <div class="chk"><input type="checkbox" id="deadband"><label for="deadband">発展：ファンのデッドバンドを有効化</label></div>
+    <p class="note">デッドバンドを有効にすると低 PWM 側で直線から外れ、単純回帰に誤差が出ます（手順1の発展課題）。既知量は m=1.0、g=9.81、PWM上限=255、有効高さ=300（正規化単位）。</p>
+
+    <h2 style="margin-top:14px;">使い方</h2>
+    <p class="note">1) 手順1で PWM を変えながら 8 点以上記録 → K_f・H_d が自動算出。<br>2) 手順2でステップ応答を測定し「c を自動フィット」→ c が決定。<br>3) サマリで推定値を確認、必要なら「答え合わせ」で真値と比較。</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  // ===== 既知量・真値（隠しパラメータ） =====
+  var M=1.0, G=9.81, YMAX=300.0, PWM_MAX=255, DT=0.02;
+  var KF_T=60.0, HD_T=120.0, C_T=0.9;      // 真値（推定対象）
+  var U0_T=0.0;                            // デッドバンド（発展で 0.12）
+  var SIGMA=1.5;                           // 計測ノイズ
+
+  // ===== 真の仮想プラント =====
+  function airForceTrue(un,y){
+    var d=un-U0_T; if(d<0) d=0;
+    return KF_T*d*d*Math.exp(-y/HD_T);
+  }
+  function gauss(){ // Box-Muller
+    var u=Math.random(),v=Math.random();
+    return Math.sqrt(-2*Math.log(u+1e-12))*Math.cos(2*Math.PI*v);
+  }
+  // 平衡高さを測定（落ち着くまで積分）
+  function settleHeight(pwm){
+    var un=pwm/PWM_MAX, y=0, v=0;
+    for(var i=0;i<6000;i++){
+      var a=(airForceTrue(un,y)-M*G-C_T*v)/M;
+      v+=a*DT; y+=v*DT;
+      if(y<0){y=0; if(v<0)v=0;}
+      if(y>YMAX){y=YMAX; if(v>0)v=0;}
+    }
+    return y;
+  }
+  // ステップ応答（真）: base平衡から step へ。サンプル毎にノイズ付きPV
+  function trueStepResponse(basePWM,stepPWM,T){
+    var y=settleHeight(basePWM), v=0, un=stepPWM/PWM_MAX;
+    var n=Math.round(T/DT), out=[], sampEvery=5; // 0.1s毎
+    for(var i=0;i<n;i++){
+      var a=(airForceTrue(un,y)-M*G-C_T*v)/M;
+      v+=a*DT; y+=v*DT;
+      if(y<0){y=0; if(v<0)v=0;} if(y>YMAX){y=YMAX; if(v>0)v=0;}
+      if(i%sampEvery===0) out.push({t:i*DT, y:y+SIGMA*gauss()});
+    }
+    return {y0:settleHeight(basePWM), data:out};
+  }
+  // モデル応答（推定パラメータ + 可変c）: 同じy0から積分
+  function modelStepResponse(y0,stepPWM,T,Kf,Hd,c){
+    var y=y0, v=0, un=stepPWM/PWM_MAX, n=Math.round(T/DT), out=[], sampEvery=5;
+    for(var i=0;i<n;i++){
+      var F=Kf*un*un*Math.exp(-y/Hd);
+      var a=(F-M*G-c*v)/M;
+      v+=a*DT; y+=v*DT;
+      if(y<0){y=0; if(v<0)v=0;} if(y>YMAX){y=YMAX; if(v>0)v=0;}
+      if(i%sampEvery===0) out.push({t:i*DT, y:y});
+    }
+    return out;
+  }
+
+  // ===== 状態 =====
+  var staticData=[];           // {pwm,un,yeq,x}
+  var fit={slope:0,inter:0,Hd:NaN,Kf:NaN,R2:NaN,ok:false};
+  var dyn={base:140,step:200,exp:[],y0:0,T:10,has:false};
+  var cEst=0.90;
+
+  var $=function(id){return document.getElementById(id);};
+
+  // ===== 線形回帰 =====
+  function regress(){
+    var n=staticData.length;
+    if(n<2){ fit.ok=false; return; }
+    var sx=0,sy=0,sxx=0,sxy=0,syy=0;
+    for(var i=0;i<n;i++){ var x=staticData[i].x, y=staticData[i].yeq;
+      sx+=x; sy+=y; sxx+=x*x; sxy+=x*y; syy+=y*y; }
+    var mx=sx/n, my=sy/n;
+    var Sxx=sxx-n*mx*mx, Sxy=sxy-n*mx*my, Syy=syy-n*my*my;
+    var slope=Sxy/Sxx, inter=my-slope*mx;
+    var R2=(Sxy*Sxy)/(Sxx*Syy);
+    fit.slope=slope; fit.inter=inter;
+    fit.Hd=slope/2;
+    fit.Kf=M*G*Math.exp(inter/fit.Hd);
+    fit.R2=R2; fit.ok=true;
+  }
+
+  // ===== 描画: 散布図 + 回帰直線 =====
+  function drawScatter(){
+    var c=$("scatter"), cx=c.getContext("2d"), W=c.width, H=c.height;
+    cx.clearRect(0,0,W,H);
+    var pad={l:46,r:14,t:14,b:30};
+    var pw=W-pad.l-pad.r, ph=H-pad.t-pad.b;
+    // x範囲
+    var xmin=-1.0, xmax=-0.05;
+    if(staticData.length){
+      xmin=Math.min.apply(null,staticData.map(function(d){return d.x;}))-0.08;
+      xmax=Math.max.apply(null,staticData.map(function(d){return d.x;}))+0.08;
+    }
+    var ymin=0, ymax=YMAX;
+    function X(x){return pad.l+(x-xmin)/(xmax-xmin)*pw;}
+    function Y(y){return pad.t+ph-(y-ymin)/(ymax-ymin)*ph;}
+    // grid
+    cx.strokeStyle="#e6edf3"; cx.fillStyle="#7c93a7"; cx.font="10px sans-serif";
+    cx.textAlign="right";
+    for(var gy=0;gy<=YMAX;gy+=50){ var py=Y(gy);
+      cx.beginPath();cx.moveTo(pad.l,py);cx.lineTo(pad.l+pw,py);cx.stroke();
+      cx.fillText(gy,pad.l-5,py+3); }
+    cx.textAlign="center";
+    var ticks=4;
+    for(var i=0;i<=ticks;i++){ var xv=xmin+(xmax-xmin)*i/ticks; var px=X(xv);
+      cx.fillText(xv.toFixed(2),px,H-12); }
+    cx.fillText("ln(u_norm)",pad.l+pw/2,H-1);
+    cx.save();cx.translate(12,pad.t+ph/2);cx.rotate(-Math.PI/2);
+    cx.fillText("平衡高さ y_eq",0,0);cx.restore();
+    // 回帰直線
+    if(fit.ok){
+      cx.strokeStyle="#2e7dd1"; cx.lineWidth=2; cx.beginPath();
+      cx.moveTo(X(xmin),Y(fit.inter+fit.slope*xmin));
+      cx.lineTo(X(xmax),Y(fit.inter+fit.slope*xmax));
+      cx.stroke();
+    }
+    // 点
+    cx.fillStyle="#e23b3b";
+    for(var k=0;k<staticData.length;k++){
+      cx.beginPath();cx.arc(X(staticData[k].x),Y(staticData[k].yeq),4,0,7);cx.fill();
+    }
+  }
+
+  // ===== 描画: 時間応答 =====
+  function drawTime(){
+    var c=$("timeplot"), cx=c.getContext("2d"), W=c.width, H=c.height;
+    cx.clearRect(0,0,W,H);
+    var pad={l:46,r:14,t:14,b:30}, pw=W-pad.l-pad.r, ph=H-pad.t-pad.b;
+    var T=dyn.T;
+    function X(t){return pad.l+t/T*pw;}
+    function Y(y){return pad.t+ph-(y/YMAX)*ph;}
+    cx.strokeStyle="#e6edf3"; cx.fillStyle="#7c93a7"; cx.font="10px sans-serif";
+    cx.textAlign="right";
+    for(var gy=0;gy<=YMAX;gy+=50){ var py=Y(gy);
+      cx.beginPath();cx.moveTo(pad.l,py);cx.lineTo(pad.l+pw,py);cx.stroke();
+      cx.fillText(gy,pad.l-5,py+3); }
+    cx.textAlign="center";
+    for(var s=0;s<=T;s+=2){ cx.fillText(s+"s",X(s),H-12); }
+    cx.fillText("時間",pad.l+pw/2,H-1);
+    cx.save();cx.translate(12,pad.t+ph/2);cx.rotate(-Math.PI/2);
+    cx.fillText("高さ PV",0,0);cx.restore();
+    if(!dyn.has) return;
+    // モデル線
+    var Kf=fit.ok?fit.Kf:60, Hd=fit.ok?fit.Hd:120;
+    var model=modelStepResponse(dyn.y0,dyn.step,T,Kf,Hd,cEst);
+    cx.strokeStyle="#2e7dd1"; cx.lineWidth=2; cx.beginPath();
+    for(var i=0;i<model.length;i++){ var p=model[i];
+      if(i)cx.lineTo(X(p.t),Y(p.y)); else cx.moveTo(X(p.t),Y(p.y)); }
+    cx.stroke();
+    // 実測点
+    cx.fillStyle="#e23b3b";
+    for(var k=0;k<dyn.exp.length;k++){ var e=dyn.exp[k];
+      cx.beginPath();cx.arc(X(e.t),Y(e.y),2.2,0,7);cx.fill(); }
+  }
+
+  // ===== SSE 計算 =====
+  function sseFor(c){
+    var Kf=fit.ok?fit.Kf:60, Hd=fit.ok?fit.Hd:120;
+    var model=modelStepResponse(dyn.y0,dyn.step,dyn.T,Kf,Hd,c);
+    var s=0;
+    for(var i=0;i<dyn.exp.length;i++){ s+=Math.pow(dyn.exp[i].y-model[i].y,2); }
+    return s;
+  }
+
+  // ===== UI 更新 =====
+  function fmt(x,d){ return (isFinite(x)?x.toFixed(d===undefined?2:d):"—"); }
+  function updateStaticRes(){
+    var el=$("staticRes");
+    if(!fit.ok){ el.innerHTML="データ点を 2 つ以上記録すると回帰します。"; updateSummary(); return; }
+    el.innerHTML="回帰直線：y_eq = <b>"+fmt(fit.slope,1)+"</b>·ln(u_norm) + <b>"+fmt(fit.inter,1)+
+      "</b>　(R² = "+fmt(fit.R2,4)+")<br>"+
+      "→ H_d = slope/2 = <span class='big'>"+fmt(fit.Hd,1)+"</span>　"+
+      "K_f = m·g·exp(切片/H_d) = <span class='big'>"+fmt(fit.Kf,1)+"</span>";
+    updateSummary();
+  }
+  function updateDynRes(){
+    var el=$("dynRes");
+    if(!dyn.has){ el.innerHTML="先に「ステップ応答を測定」を押してください。"; return; }
+    el.innerHTML="残差 SSE = <b>"+fmt(sseFor(cEst),1)+"</b>　推定 c = <span class='big'>"+fmt(cEst,2)+
+      "</span><br><span class='note'>c スライダーまたは自動フィットで青線を赤点に合わせます。</span>";
+    updateSummary();
+  }
+  function updateSummary(){
+    $("sKf").textContent=fit.ok?fmt(fit.Kf,1):"—";
+    $("sHd").textContent=fit.ok?fmt(fit.Hd,1):"—";
+    $("sC").textContent=dyn.has?fmt(cEst,2):"—";
+    var rev=$("reveal").checked;
+    $("tKf").textContent=rev?fmt(KF_T,1):"—";
+    $("tHd").textContent=rev?fmt(HD_T,1):"—";
+    $("tC").textContent=rev?fmt(C_T,2):"—";
+    function err(est,t,ok){ if(!rev||!ok||!isFinite(est))return "—";
+      return ((est-t)/t*100>=0?"+":"")+((est-t)/t*100).toFixed(1)+"%"; }
+    $("eKf").textContent=err(fit.Kf,KF_T,fit.ok);
+    $("eHd").textContent=err(fit.Hd,HD_T,fit.ok);
+    $("eC").textContent=err(cEst,C_T,dyn.has);
+  }
+  function rebuildTable(){
+    var tb=$("dataTable").getElementsByTagName("tbody")[0]; tb.innerHTML="";
+    for(var i=0;i<staticData.length;i++){ var d=staticData[i];
+      var tr=tb.insertRow();
+      tr.insertCell().textContent=d.pwm;
+      tr.insertCell().textContent=d.un.toFixed(3);
+      tr.insertCell().textContent=d.yeq.toFixed(1);
+      tr.insertCell().textContent=d.x.toFixed(3);
+    }
+  }
+
+  // ===== アクション =====
+  function recordPoint(pwm){
+    var un=pwm/PWM_MAX, yeq=settleHeight(pwm);
+    yeq+=SIGMA*gauss();
+    staticData.push({pwm:pwm, un:un, yeq:yeq, x:Math.log(un)});
+    regress(); rebuildTable(); drawScatter(); updateStaticRes();
+  }
+
+  $("pwm").oninput=function(e){ $("vPWM").textContent=e.target.value; };
+  $("measure").onclick=function(){ recordPoint(+$("pwm").value); };
+  $("sweep").onclick=function(){
+    staticData=[];
+    for(var p=110;p<=235;p+=Math.round(125/9)){ recordPoint(p); }
+  };
+  $("clearStatic").onclick=function(){
+    staticData=[]; fit.ok=false; rebuildTable(); drawScatter(); updateStaticRes();
+  };
+
+  $("basePWM").oninput=function(e){ $("vBase").textContent=e.target.value; };
+  $("stepPWM").oninput=function(e){ $("vStep").textContent=e.target.value; };
+  $("runStep").onclick=function(){
+    dyn.base=+$("basePWM").value; dyn.step=+$("stepPWM").value;
+    var r=trueStepResponse(dyn.base,dyn.step,dyn.T);
+    dyn.y0=r.y0; dyn.exp=r.data; dyn.has=true;
+    drawTime(); updateDynRes();
+  };
+  $("cEst").oninput=function(e){ cEst=+e.target.value; $("vC").textContent=cEst.toFixed(2);
+    drawTime(); updateDynRes(); };
+  $("autoFitC").onclick=function(){
+    if(!dyn.has) return;
+    var best=1e18, bc=0.9;
+    for(var c=0.1;c<=3.0001;c+=0.02){ var s=sseFor(c); if(s<best){best=s;bc=c;} }
+    cEst=Math.round(bc*100)/100; $("cEst").value=cEst; $("vC").textContent=cEst.toFixed(2);
+    drawTime(); updateDynRes();
+  };
+
+  $("noise").oninput=function(e){ SIGMA=+e.target.value; $("vNoise").textContent=SIGMA.toFixed(1); };
+  $("deadband").onchange=function(e){ U0_T=e.target.checked?0.12:0.0; };
+  $("reveal").onchange=updateSummary;
+
+  // 初期描画
+  drawScatter(); drawTime(); updateStaticRes(); updateDynRes();
+})();
+</script>
+</body>
+</html>

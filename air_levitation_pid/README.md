@@ -30,6 +30,8 @@ open air_levitation_pid.html        # macOS
 - **KP / TR / TD** スライダーでゲインを調整（標準形 `Kp / Ki / Kd` への換算値も同時表示）．
 - **球を叩く（外乱）** ボタンで外乱を与え，制御の復帰を確認．
 
+> **パラメータ同定**：実機からモデル定数 $K_f$ ・ $H_d$ ・ $c$ を推定する手順は [`parameter_identification.md`](parameter_identification.md)，それを仮想プラント上で実験できるツールは `identification_sim.html` です．
+
 ---
 
 ## 目次
@@ -281,7 +283,7 @@ P / PI / PID の切り替えは， $K_i$ （積分）・ $K_d$ （微分）項�
 ## 9. 備考
 
 - 本モデルは制御教育を目的とした**簡易1自由度モデル**であり，流体力学（CFD）レベルの厳密な再現ではありません．気流の渦やボールの回転，筒内の圧力分布などは集約パラメータ（ $K_f$ ， $H_d$ ， $c$ ）にまとめています．
-- 数値は教材向けに**正規化した無次元量**です．実機に合わせる場合は，ボール質量・筒長・センサスケールから $K_f$ ， $H_d$ ， $c$ を同定してください．
+- 数値は教材向けに**正規化した無次元量**です．実機に合わせる場合は，ボール質量・筒長・センサスケールから $K_f$ ， $H_d$ ， $c$ を同定してください（手順は [`parameter_identification.md`](parameter_identification.md)）．
 - 高さ約 230 以上を目標にすると，平衡に必要な PWM が上限を超えて**飽和**し，目標に届きません．これはアクチュエータ飽和の学習ポイントになります．
 
 ---
@@ -291,13 +293,15 @@ P / PI / PID の切り替えは， $K_i$ （積分）・ $K_d$ （微分）項�
 ```text
 Control-study/
 ├── air_levitation_pid/
-│   ├── air_levitation_pid.html   # ブラウザ動作の PID 制御シミュレータ（本体）
-│   ├── README.md                 # 本資料（制御ダイナミクスの解説）
+│   ├── air_levitation_pid.html       # ブラウザ動作の PID 制御シミュレータ（本体）
+│   ├── identification_sim.html       # パラメータ同定シミュレータ（静的・動的実験）
+│   ├── parameter_identification.md   # パラメータ同定手順
+│   ├── README.md                     # 本資料（制御ダイナミクスの解説）
 │   └── docs/
-│       ├── system_schematic.svg  # 浮上系の自由体図
-│       └── simulator_preview.svg # シミュレータ画面のプレビュー
+│       ├── system_schematic.svg      # 浮上系の自由体図
+│       └── simulator_preview.svg     # シミュレータ画面のプレビュー
 ├── ...
-└── README.md                     # リポジトリ全体の説明
+└── README.md                         # リポジトリ全体の説明
 ```
 
 ## ライセンス

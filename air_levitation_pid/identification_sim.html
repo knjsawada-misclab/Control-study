@@ -30,11 +30,11 @@
   .field{margin:10px 0;}
   .field label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;}
   .field label b{color:var(--accent2);font-variant-numeric:tabular-nums;}
-  input[type=range]{width:100%;accent-color:var(--accent);height:26px;}
+  input[type=range]{width:100%;accent-color:var(--accent);height:26px;touch-action:manipulation;}
   .btns{display:flex;gap:8px;flex-wrap:wrap;}
   button{font-family:inherit;font-size:13px;font-weight:600;border-radius:8px;padding:10px 12px;
     cursor:pointer;background:var(--panel2);color:var(--txt);border:1px solid var(--line);
-    flex:1 1 auto;min-height:42px;}
+    flex:1 1 auto;min-height:44px;touch-action:manipulation;}
   button:hover{border-color:var(--accent);}
   button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
   button.ghost{background:#fff;}
@@ -49,12 +49,34 @@
   .row2 .field{flex:1;}
   .opt{font-size:12px;color:var(--muted);}
   .chk{display:flex;align-items:center;gap:6px;font-size:13px;margin:8px 0;}
+  .chk input[type=checkbox]{width:20px;height:20px;}
   .warn{color:var(--red);font-size:12px;}
   .ok{color:var(--green);}
   .note{font-size:11px;color:var(--muted);line-height:1.6;margin-top:8px;}
-  .tablewrap{max-height:160px;overflow:auto;margin-top:8px;}
+  .tablewrap{max-height:160px;overflow:auto;margin-top:8px;-webkit-overflow-scrolling:touch;}
   a{color:var(--accent);}
-  @media (max-width:720px){ .exp,.side{flex:1 1 100%;max-width:100%;} }
+  .tube-row{display:flex;gap:10px;align-items:center;}
+  .tube-row canvas{flex:0 0 auto;}
+  .tube-info{flex:1;font-size:13px;line-height:1.9;font-variant-numeric:tabular-nums;}
+  @media (max-width:720px){
+    .exp,.side{flex:1 1 100%;max-width:100%;}
+    .wrap{padding:10px;gap:10px;}
+    header{padding:12px 14px;}
+    header h1{font-size:16px;}
+    header p{font-size:12px;}
+    .col{padding:12px;}
+    .row2{flex-direction:column;gap:4px;}
+  }
+  @media (max-width:480px){
+    .wrap{padding:8px;gap:8px;}
+    header{padding:10px 12px;}
+    header h1{font-size:15px;}
+    .col{padding:10px;border-radius:8px;}
+    button{font-size:12px;padding:10px 8px;}
+    .btns{gap:6px;}
+    .tube-row{flex-direction:column;align-items:stretch;}
+    .tube-row canvas{width:100% !important;max-width:200px;margin:0 auto;}
+  }
 </style>
 </head>
 <body>
@@ -117,9 +139,9 @@
   <div class="col side">
     <h2>浮上の様子</h2>
     <p class="sub">仮想プラントの実時間アニメーション。手順1の PWM スライダーでボールが平衡高さへ移動し、手順2の「ステップ応答を測定」で過渡が再生されます。</p>
-    <div style="display:flex;gap:10px;align-items:center;">
-      <canvas id="tube" width="150" height="260" style="width:130px;flex:0 0 auto;"></canvas>
-      <div style="flex:1;font-size:13px;line-height:1.9;font-variant-numeric:tabular-nums;">
+    <div class="tube-row">
+      <canvas id="tube" width="150" height="260" style="width:130px;"></canvas>
+      <div class="tube-info">
         指令 PWM：<b id="liveP" style="color:var(--pwm)">170</b><br>
         高さ y：<b id="liveY" style="color:var(--pv)">—</b><br>
         <span class="note">スライダーを動かすと、ファン風量に応じて浮上高さが変化します。</span>
@@ -231,7 +253,8 @@
 
   // ===== 描画: 散布図 + 回帰直線 =====
   function drawScatter(){
-    var c=$("scatter"), cx=c.getContext("2d"), W=c.width, H=c.height;
+    var c=$("scatter"), cx=c.getContext("2d");
+    var dpr=window.devicePixelRatio||1, W=c.width/dpr, H=c.height/dpr;
     cx.clearRect(0,0,W,H);
     var pad={l:46,r:14,t:14,b:30};
     var pw=W-pad.l-pad.r, ph=H-pad.t-pad.b;
@@ -273,7 +296,8 @@
 
   // ===== 描画: 時間応答 =====
   function drawTime(){
-    var c=$("timeplot"), cx=c.getContext("2d"), W=c.width, H=c.height;
+    var c=$("timeplot"), cx=c.getContext("2d");
+    var dpr=window.devicePixelRatio||1, W=c.width/dpr, H=c.height/dpr;
     cx.clearRect(0,0,W,H);
     var pad={l:46,r:14,t:14,b:30}, pw=W-pad.l-pad.r, ph=H-pad.t-pad.b;
     var T=dyn.T;
@@ -400,37 +424,43 @@
   // ===== 浮上アニメーション（連続物理ループ） =====
   var liveY=settleHeight(170), liveV=0, liveCmd=170;
   function drawTube(){
-    var c=$("tube"), cx=c.getContext("2d"), W=c.width, H=c.height;
+    var c=$("tube"), cx=c.getContext("2d");
+    var dpr=window.devicePixelRatio||1, W=c.width/dpr, H=c.height/dpr;
     cx.clearRect(0,0,W,H);
-    var tubeX=46, tubeW=42, top=12, bot=H-40, tubeH=bot-top;
+    var sc=W/130;
+    var tubeX=Math.round(46*sc), tubeW=Math.round(42*sc), top=Math.round(12*sc);
+    var bot=H-Math.round(40*sc), tubeH=bot-top;
+    var fs=Math.max(7,Math.round(8*sc));
     // 筒
     cx.fillStyle="#f4f8fb"; cx.fillRect(tubeX,top,tubeW,tubeH);
     cx.strokeStyle="#b9c8d6"; cx.lineWidth=2; cx.strokeRect(tubeX,top,tubeW,tubeH);
     // 目盛り
-    cx.font="8px sans-serif"; cx.textAlign="right";
+    cx.font=fs+"px sans-serif"; cx.textAlign="right";
     for(var h=0;h<=YMAX;h+=50){ var py=bot-(h/YMAX)*tubeH;
-      cx.strokeStyle="#dbe6ef"; cx.beginPath(); cx.moveTo(tubeX,py); cx.lineTo(tubeX+6,py); cx.stroke();
-      cx.fillStyle="#7c93a7"; cx.fillText(h,tubeX-4,py+3); }
+      cx.strokeStyle="#dbe6ef"; cx.beginPath(); cx.moveTo(tubeX,py); cx.lineTo(tubeX+6*sc,py); cx.stroke();
+      cx.fillStyle="#7c93a7"; cx.fillText(h,tubeX-4*sc,py+3); }
     // 風
     var uN=liveCmd/PWM_MAX;
     if(uN>0.02){ cx.strokeStyle="rgba(224,138,0,"+(0.15+0.5*uN)+")"; cx.lineWidth=2;
       var t=performance.now()/180;
-      for(var i=0;i<4;i++){ var lx=tubeX+8+i*((tubeW-16)/3); var off=((t+i*0.7)%1);
+      for(var i=0;i<4;i++){ var lx=tubeX+8*sc+i*((tubeW-16*sc)/3); var off=((t+i*0.7)%1);
         cx.beginPath(); cx.moveTo(lx,bot); cx.lineTo(lx,bot-off*tubeH*0.55); cx.stroke(); } }
     // ファン
-    cx.fillStyle="#dfe8f0"; cx.fillRect(tubeX-6,bot,tubeW+12,24);
-    cx.save(); cx.translate(tubeX+tubeW/2,bot+12);
+    cx.fillStyle="#dfe8f0"; cx.fillRect(tubeX-6*sc,bot,tubeW+12*sc,24*sc);
+    var fanCx=tubeX+tubeW/2, fanCy=bot+12*sc, fanR=10*sc;
+    cx.save(); cx.translate(fanCx,fanCy);
     cx.rotate(performance.now()/(uN>0.02?(60/Math.max(uN,0.05)):1e5));
     cx.fillStyle=uN>0.02?"#e08a00":"#aebccb";
-    for(var b=0;b<4;b++){ cx.rotate(Math.PI/2); cx.fillRect(-1.5,0,3,10); }
+    for(var b=0;b<4;b++){ cx.rotate(Math.PI/2); cx.fillRect(-1.5*sc,0,3*sc,fanR); }
     cx.restore();
-    cx.fillStyle="#7c93a7"; cx.font="9px sans-serif"; cx.textAlign="center";
-    cx.fillText("FAN",tubeX+tubeW/2,bot+36); cx.textAlign="left";
+    cx.fillStyle="#7c93a7"; cx.font=Math.max(7,Math.round(9*sc))+"px sans-serif"; cx.textAlign="center";
+    cx.fillText("FAN",fanCx,bot+36*sc); cx.textAlign="left";
     // ボール
+    var ballR=Math.round(11*sc);
     var by=bot-(liveY/YMAX)*tubeH, bx=tubeX+tubeW/2;
-    var g=cx.createRadialGradient(bx-4,by-4,1,bx,by,12);
+    var g=cx.createRadialGradient(bx-4*sc,by-4*sc,1,bx,by,ballR);
     g.addColorStop(0,"#ffd9a0"); g.addColorStop(1,"#ff8c42");
-    cx.fillStyle=g; cx.beginPath(); cx.arc(bx,by,11,0,7); cx.fill();
+    cx.fillStyle=g; cx.beginPath(); cx.arc(bx,by,ballR,0,7); cx.fill();
     cx.strokeStyle="#c96b22"; cx.lineWidth=1; cx.stroke();
   }
   var liveLast=performance.now(), liveAcc=0;
@@ -445,12 +475,48 @@
     }
     $("liveP").textContent=Math.round(liveCmd);
     $("liveY").textContent=liveY.toFixed(1);
+    resizeTube();
     drawTube();
     requestAnimationFrame(liveLoop);
   }
 
+  // ===== Canvas リサイズ（レスポンシブ + 高DPI対応） =====
+  var CHART_ASPECT=300/520;
+  function resizeCanvas(canvas,aspect){
+    var dpr=window.devicePixelRatio||1;
+    var w=canvas.parentElement.clientWidth;
+    var h=Math.round(w*aspect);
+    if(canvas.width!==w*dpr||canvas.height!==h*dpr){
+      canvas.width=w*dpr; canvas.height=h*dpr;
+      canvas.style.width=w+"px"; canvas.style.height=h+"px";
+      canvas.getContext("2d").setTransform(dpr,0,0,dpr,0,0);
+    }
+  }
+  function resizeTube(){
+    var c=$("tube"), dpr=window.devicePixelRatio||1;
+    var w=parseInt(getComputedStyle(c).width)||130;
+    var h=Math.round(w*260/130);
+    if(c.width!==w*dpr||c.height!==h*dpr){
+      c.width=w*dpr; c.height=h*dpr;
+      c.style.height=h+"px";
+      c.getContext("2d").setTransform(dpr,0,0,dpr,0,0);
+    }
+  }
+  function resizeAll(){
+    resizeCanvas($("scatter"),CHART_ASPECT);
+    resizeCanvas($("timeplot"),CHART_ASPECT);
+    resizeTube();
+    drawScatter(); drawTime();
+  }
+  var resizeTimer;
+  window.addEventListener("resize",function(){
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(resizeAll,100);
+  });
+
   // 初期描画
-  drawScatter(); drawTime(); updateStaticRes(); updateDynRes();
+  resizeAll();
+  updateStaticRes(); updateDynRes();
   requestAnimationFrame(liveLoop);
 })();
 </script>

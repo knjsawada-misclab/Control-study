@@ -179,8 +179,8 @@
       <input id="dist" type="range" min="20" max="250" value="120" step="10">
     </div>
     <div class="field">
-      <label>むだ時間 L <b><span id="vDelay">0</span> ms</b></label>
-      <input id="delay" type="range" min="0" max="500" value="0" step="10">
+      <label>むだ時間 L <b><span id="vDelay">0.0</span> s</b></label>
+      <input id="delay" type="range" min="0" max="1500" value="0" step="100">
     </div>
     <p class="note">むだ時間を大きくすると、ゲインを上げた際に振動・不安定化しやすくなります。</p>
   </div>
@@ -206,7 +206,7 @@
   const csvLog=[];          // {t, pv, sp, pwm, e} 全ステップ記録
   let pendingDist=0;
   let DELAY_MS=0;           // むだ時間 [ms]
-  const DELAY_BUF_MAX=Math.ceil(500/1000/DT)+1;  // 500ms分のバッファ
+  const DELAY_BUF_MAX=Math.ceil(1500/1000/DT)+1;  // 1500ms分のバッファ
   const delayBuf=new Float64Array(DELAY_BUF_MAX);
   let delayHead=0, delayLen=0;
   const WIN=600;            // 表示点数（=12秒）
@@ -465,7 +465,7 @@
   $("td").oninput=e=>{TD=+e.target.value;$("vTD").textContent=TD.toFixed(2);refreshGainBox();};
   $("speed").oninput=e=>{simSpeed=+e.target.value;$("vSpeed").textContent=simSpeed;};
   $("dist").oninput=e=>{DIST=+e.target.value;$("vDist").textContent=DIST;};
-  $("delay").oninput=e=>{DELAY_MS=+e.target.value;$("vDelay").textContent=DELAY_MS;};
+  $("delay").oninput=e=>{DELAY_MS=+e.target.value;$("vDelay").textContent=(DELAY_MS/1000).toFixed(1);};
   $("run").onclick=()=>{running=!running;$("run").textContent=running?"⏸ 一時停止":"▶ 再開";};
   $("knock").onclick=()=>{ pendingDist += -DIST; };
   $("reset").onclick=()=>{

@@ -115,7 +115,18 @@
 
   <!-- サイド: 結果・設定 -->
   <div class="col side">
-    <h2>推定結果サマリ</h2>
+    <h2>浮上の様子</h2>
+    <p class="sub">仮想プラントの実時間アニメーション。手順1の PWM スライダーでボールが平衡高さへ移動し、手順2の「ステップ応答を測定」で過渡が再生されます。</p>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <canvas id="tube" width="150" height="260" style="width:130px;flex:0 0 auto;"></canvas>
+      <div style="flex:1;font-size:13px;line-height:1.9;font-variant-numeric:tabular-nums;">
+        指令 PWM：<b id="liveP" style="color:var(--pwm)">170</b><br>
+        高さ y：<b id="liveY" style="color:var(--pv)">—</b><br>
+        <span class="note">スライダーを動かすと、ファン風量に応じて浮上高さが変化します。</span>
+      </div>
+    </div>
+
+    <h2 style="margin-top:14px;">推定結果サマリ</h2>
     <table id="summary">
       <thead><tr><th style="text-align:left">パラメータ</th><th>推定値</th><th>真値</th><th>誤差</th></tr></thead>
       <tbody>
@@ -352,7 +363,7 @@
     regress(); rebuildTable(); drawScatter(); updateStaticRes();
   }
 
-  $("pwm").oninput=function(e){ $("vPWM").textContent=e.target.value; };
+  $("pwm").oninput=function(e){ $("vPWM").textContent=e.target.value; liveCmd=+e.target.value; };
   $("measure").onclick=function(){ recordPoint(+$("pwm").value); };
   $("sweep").onclick=function(){
     staticData=[];
@@ -369,6 +380,8 @@
     var r=trueStepResponse(dyn.base,dyn.step,dyn.T);
     dyn.y0=r.y0; dyn.exp=r.data; dyn.has=true;
     drawTime(); updateDynRes();
+    // アニメーション：基準平衡から開始してステップ指令を与える
+    liveY=dyn.y0; liveV=0; liveCmd=dyn.step;
   };
   $("cEst").oninput=function(e){ cEst=+e.target.value; $("vC").textContent=cEst.toFixed(2);
     drawTime(); updateDynRes(); };
@@ -384,8 +397,61 @@
   $("deadband").onchange=function(e){ U0_T=e.target.checked?0.12:0.0; };
   $("reveal").onchange=updateSummary;
 
+  // ===== 浮上アニメーション（連続物理ループ） =====
+  var liveY=settleHeight(170), liveV=0, liveCmd=170;
+  function drawTube(){
+    var c=$("tube"), cx=c.getContext("2d"), W=c.width, H=c.height;
+    cx.clearRect(0,0,W,H);
+    var tubeX=46, tubeW=42, top=12, bot=H-40, tubeH=bot-top;
+    // 筒
+    cx.fillStyle="#f4f8fb"; cx.fillRect(tubeX,top,tubeW,tubeH);
+    cx.strokeStyle="#b9c8d6"; cx.lineWidth=2; cx.strokeRect(tubeX,top,tubeW,tubeH);
+    // 目盛り
+    cx.font="8px sans-serif"; cx.textAlign="right";
+    for(var h=0;h<=YMAX;h+=50){ var py=bot-(h/YMAX)*tubeH;
+      cx.strokeStyle="#dbe6ef"; cx.beginPath(); cx.moveTo(tubeX,py); cx.lineTo(tubeX+6,py); cx.stroke();
+      cx.fillStyle="#7c93a7"; cx.fillText(h,tubeX-4,py+3); }
+    // 風
+    var uN=liveCmd/PWM_MAX;
+    if(uN>0.02){ cx.strokeStyle="rgba(224,138,0,"+(0.15+0.5*uN)+")"; cx.lineWidth=2;
+      var t=performance.now()/180;
+      for(var i=0;i<4;i++){ var lx=tubeX+8+i*((tubeW-16)/3); var off=((t+i*0.7)%1);
+        cx.beginPath(); cx.moveTo(lx,bot); cx.lineTo(lx,bot-off*tubeH*0.55); cx.stroke(); } }
+    // ファン
+    cx.fillStyle="#dfe8f0"; cx.fillRect(tubeX-6,bot,tubeW+12,24);
+    cx.save(); cx.translate(tubeX+tubeW/2,bot+12);
+    cx.rotate(performance.now()/(uN>0.02?(60/Math.max(uN,0.05)):1e5));
+    cx.fillStyle=uN>0.02?"#e08a00":"#aebccb";
+    for(var b=0;b<4;b++){ cx.rotate(Math.PI/2); cx.fillRect(-1.5,0,3,10); }
+    cx.restore();
+    cx.fillStyle="#7c93a7"; cx.font="9px sans-serif"; cx.textAlign="center";
+    cx.fillText("FAN",tubeX+tubeW/2,bot+36); cx.textAlign="left";
+    // ボール
+    var by=bot-(liveY/YMAX)*tubeH, bx=tubeX+tubeW/2;
+    var g=cx.createRadialGradient(bx-4,by-4,1,bx,by,12);
+    g.addColorStop(0,"#ffd9a0"); g.addColorStop(1,"#ff8c42");
+    cx.fillStyle=g; cx.beginPath(); cx.arc(bx,by,11,0,7); cx.fill();
+    cx.strokeStyle="#c96b22"; cx.lineWidth=1; cx.stroke();
+  }
+  var liveLast=performance.now(), liveAcc=0;
+  function liveLoop(now){
+    var dtReal=Math.min((now-liveLast)/1000,0.1); liveLast=now; liveAcc+=dtReal;
+    var steps=0, un=liveCmd/PWM_MAX;
+    while(liveAcc>=DT && steps<12){
+      var a=(airForceTrue(un,liveY)-M*G-C_T*liveV)/M;
+      liveV+=a*DT; liveY+=liveV*DT;
+      if(liveY<0){liveY=0; if(liveV<0)liveV=0;} if(liveY>YMAX){liveY=YMAX; if(liveV>0)liveV=0;}
+      liveAcc-=DT; steps++;
+    }
+    $("liveP").textContent=Math.round(liveCmd);
+    $("liveY").textContent=liveY.toFixed(1);
+    drawTube();
+    requestAnimationFrame(liveLoop);
+  }
+
   // 初期描画
   drawScatter(); drawTime(); updateStaticRes(); updateDynRes();
+  requestAnimationFrame(liveLoop);
 })();
 </script>
 </body>

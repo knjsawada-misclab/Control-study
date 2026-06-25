@@ -179,7 +179,7 @@ $\det(W_c) = 0$ の場合，Ackermann の公式で $W_c^{-1}$ が計算できず
 m\ddot{z} = -kz + u
 ```
 
-状態変数 $x = \begin{bmatrix} z \\ \dot{z} \end{bmatrix}$ として状態空間表現にすると：
+状態変数 $x = [z, \dot{z}]^T$ として状態空間表現にすると：
 
 ```math
 A = \begin{bmatrix} 0 & 1 \\ -k/m & 0 \end{bmatrix}, \qquad B = \begin{bmatrix} 0 \\ 1/m \end{bmatrix}
@@ -201,7 +201,7 @@ A = \begin{bmatrix} 0 & 1 \\ -k/m & 0 \end{bmatrix}, \qquad B = \begin{bmatrix} 
 A = \begin{bmatrix} 0 & 1 \\ 0 & 0 \end{bmatrix}, \qquad B = \begin{bmatrix} 0 \\ 1 \end{bmatrix}
 ```
 
-開ループ極が原点に2つあり（$\lambda_1 = \lambda_2 = 0$），入力がなければ状態が一定速度で発散します．PD 制御 $u = -k_p z - k_d \dot{z}$ は状態フィードバック $K = \begin{bmatrix} -k_p & -k_d \end{bmatrix}$ と等価であり，閉ループ極の位置で $k_p$，$k_d$ が決定されます．
+開ループ極が原点に2つあり（$\lambda_1 = \lambda_2 = 0$），入力がなければ状態が一定速度で発散します．PD 制御 $u = -k_p z - k_d \dot{z}$ は状態フィードバック $K = [-k_p, -k_d]$ と等価であり，閉ループ極の位置で $k_p$，$k_d$ が決定されます．
 
 ### 倒立振子（線形化）
 
@@ -228,7 +228,7 @@ A = \begin{bmatrix} 0 & 1 \\ 0 & 0 \end{bmatrix}, \qquad B = \begin{bmatrix} 0 \
 
 | 表示項目 | 説明 |
 |---|---|
-| フィードバックゲイン $K$ | Ackermann の公式で算出された $K = \begin{bmatrix} k_1 & k_2 \end{bmatrix}$ |
+| フィードバックゲイン $K$ | Ackermann の公式で算出された $K = [k_1, k_2]$ |
 | 開ループ極 $(\lambda_1, \lambda_2)$ | $A$ の固有値 |
 | 閉ループ極 $(\lambda_1, \lambda_2)$ | $A + BK$ の固有値 |
 | $\omega_n$ | 閉ループ系の固有角周波数 |

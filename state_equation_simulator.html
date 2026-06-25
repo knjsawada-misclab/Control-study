@@ -6,9 +6,9 @@
 <title>2次元状態方程式シミュレーター</title>
 <style>
 :root {
-  --bg:#0d1117;--surface:#161b22;--border:#30363d;
-  --text:#e6edf3;--muted:#7d8590;--accent:#58a6ff;
-  --green:#3fb950;--red:#f85149;--orange:#ffa657;--purple:#bc8cff;
+  --bg:#eef2f6;--surface:#ffffff;--border:#d4dde6;
+  --text:#1f2d3a;--muted:#5b7184;--accent:#2e7dd1;
+  --green:#16a34a;--red:#dc2626;--orange:#e08a00;--purple:#8b5cf6;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
@@ -17,7 +17,7 @@ header{padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--
 header h1{font-size:14px;font-weight:600;white-space:nowrap;}
 header .eq{font-size:12px;color:var(--muted);font-style:italic;white-space:nowrap;}
 .layout{display:flex;flex:1;overflow:hidden;min-height:0;}
-.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99;}
 .sidebar{width:258px;min-width:190px;max-width:380px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;overflow-x:hidden;padding:12px 11px;display:flex;flex-direction:column;gap:13px;}
 .sec-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:7px;}
 .matrix-eq{display:flex;align-items:center;gap:5px;margin-bottom:9px;}
@@ -43,11 +43,11 @@ input[type=number]:focus{outline:1px solid var(--accent);}
 .eig-sym{font-family:monospace;color:var(--muted);}
 .eig-val{font-family:monospace;font-weight:600;font-size:13px;}
 .badge{border-radius:6px;padding:6px 9px;font-size:11px;font-weight:600;text-align:center;line-height:1.5;border:1px solid transparent;}
-.b-stable{background:rgba(63,185,80,.12);color:var(--green);border-color:rgba(63,185,80,.3);}
-.b-unstable{background:rgba(248,81,73,.12);color:var(--red);border-color:rgba(248,81,73,.3);}
-.b-saddle{background:rgba(255,166,87,.12);color:var(--orange);border-color:rgba(255,166,87,.3);}
-.b-center{background:rgba(188,140,255,.12);color:var(--purple);border-color:rgba(188,140,255,.3);}
-.b-degen{background:rgba(125,133,144,.1);color:var(--muted);border-color:var(--border);}
+.b-stable{background:rgba(22,163,74,.1);color:var(--green);border-color:rgba(22,163,74,.3);}
+.b-unstable{background:rgba(220,38,38,.1);color:var(--red);border-color:rgba(220,38,38,.3);}
+.b-saddle{background:rgba(224,138,0,.1);color:var(--orange);border-color:rgba(224,138,0,.3);}
+.b-center{background:rgba(139,92,246,.1);color:var(--purple);border-color:rgba(139,92,246,.3);}
+.b-degen{background:rgba(91,113,132,.08);color:var(--muted);border-color:var(--border);}
 .ic-wrap{display:flex;flex-direction:column;gap:6px;}
 .ic-row{display:flex;align-items:center;gap:8px;}
 .ic-lbl{font-size:11px;font-family:monospace;color:var(--muted);width:28px;flex-shrink:0;}
@@ -200,8 +200,8 @@ canvas{display:block;flex:1;min-height:0;touch-action:none;}
           </div>
           <canvas id="tc" style="cursor:grab;"></canvas>
           <div class="legend-strip">
-            <div class="leg-item"><div class="leg-line" style="background:#58a6ff"></div> x₁(t)</div>
-            <div class="leg-item"><div class="leg-line" style="background:#3fb950"></div> x₂(t)</div>
+            <div class="leg-item"><div class="leg-line" style="background:#2e7dd1"></div> x₁(t)</div>
+            <div class="leg-item"><div class="leg-line" style="background:#16a34a"></div> x₂(t)</div>
           </div>
         </div>
       </div>
@@ -233,7 +233,7 @@ const PRESETS={
   ss:[[-.3,2.5],[-2.5,-.3]],us:[[.3,2.5],[-2.5,.3]],ce:[[0,2],[-2,0]],
   sn2:[[-1.5,1],[0,-1.5]]
 };
-const TRAJ_COLORS=['#58a6ff','#3fb950','#ffa657','#bc8cff','#f85149','#39d353','#ff7b72','#79c0ff','#56d364','#ffb86c','#cae8ff','#b392f0'];
+const TRAJ_COLORS=['#2e7dd1','#16a34a','#e08a00','#8b5cf6','#dc2626','#0d9488','#e11d48','#1d4ed8','#15803d','#b45309','#0369a1','#7c3aed'];
 
 // ═══ MATH ════════════════════════════════════════
 function eigs(a,b,c,d){
@@ -303,17 +303,18 @@ function fromC(cx,cy,W,H){return[(cx-W/2)/SCALE+phPanX, -(cy-H/2)/SCALE+phPanY];
 
 // ═══ DRAW PHASE PORTRAIT ══════════════════════════
 function drawPhase(){
-  const ctx=pctx,W=pc.width,H=pc.height;
+  const dpr=window.devicePixelRatio||1;
+  const ctx=pctx,W=pc.width/dpr,H=pc.height/dpr;
   if(W<2||H<2)return;
   ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='#090d15';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#f8fafb';ctx.fillRect(0,0,W,H);
 
   // Visible math range
   const vx0=phPanX-W/(2*SCALE), vx1=phPanX+W/(2*SCALE);
   const vy0=phPanY-H/(2*SCALE), vy1=phPanY+H/(2*SCALE);
 
   // Grid (integer lines)
-  ctx.strokeStyle='#1a2030';ctx.lineWidth=1;
+  ctx.strokeStyle='#dfe5ec';ctx.lineWidth=1;
   for(let i=Math.floor(vx0)-1;i<=Math.ceil(vx1)+1;i++){
     const[gx]=toC(i,0,W,H);
     ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,H);ctx.stroke();
@@ -325,12 +326,12 @@ function drawPhase(){
 
   // Axes (draw only if visible)
   const[axX,axY]=toC(0,0,W,H);
-  ctx.strokeStyle='#2a3548';ctx.lineWidth=1.5;
+  ctx.strokeStyle='#9aacbe';ctx.lineWidth=1.5;
   if(axY>=-2&&axY<=H+2){ctx.beginPath();ctx.moveTo(0,axY);ctx.lineTo(W,axY);ctx.stroke();}
   if(axX>=-2&&axX<=W+2){ctx.beginPath();ctx.moveTo(axX,0);ctx.lineTo(axX,H);ctx.stroke();}
 
   // Axis name labels (clamped to canvas edge)
-  ctx.fillStyle='#4a6080';ctx.font='13px monospace';
+  ctx.fillStyle='#5b7184';ctx.font='13px monospace';
   ctx.textAlign='left';
   ctx.fillText('x₂',Math.max(4,Math.min(W-22,axX+6)),16);
   ctx.textAlign='center';
@@ -339,7 +340,7 @@ function drawPhase(){
   // Grid tick numbers — x axis numbers along bottom, y axis numbers along left
   const labelAxY=Math.max(17,Math.min(H-4,axY+15)); // clamp to canvas
   const labelAxX=Math.max(34,Math.min(W-6,axX-5));
-  ctx.fillStyle='#3d4f6b';ctx.font='12px monospace';
+  ctx.fillStyle='#6b829a';ctx.font='12px monospace';
   ctx.textAlign='center';
   for(let i=Math.ceil(vx0);i<=Math.floor(vx1);i++){
     if(i===0)continue;
@@ -358,7 +359,7 @@ function drawPhase(){
   // Eigenvectors (real case)
   const λ=eigs(A[0][0],A[0][1],A[1][0],A[1][1]);
   if(Math.abs(λ[0].im)<1e-8){
-    const ec=['#f0a500','#e05c34'];
+    const ec=['#c87800','#c03020'];
     for(let k=0;k<2;k++){
       const v=eigvec(A[0][0],A[0][1],A[1][0],A[1][1],λ[k].re);
       ctx.save();ctx.strokeStyle=ec[k];ctx.setLineDash([6,5]);
@@ -381,10 +382,10 @@ function drawPhase(){
       const ax=cx+nx*len,ay=cy-ny*len;
       const t=Math.min(1,mag/4),alpha=.28+t*.15;
       ctx.save();ctx.globalAlpha=alpha;
-      ctx.strokeStyle=`hsl(${215-t*70},70%,${55+t*15}%)`;ctx.lineWidth=.8;
+      ctx.strokeStyle=`hsl(${215-t*70},55%,${45-t*10}%)`;ctx.lineWidth=.8;
       ctx.beginPath();ctx.moveTo(cx-nx*len*.25,cy+ny*len*.25);ctx.lineTo(ax,ay);ctx.stroke();
       const ang=Math.atan2(ay-cy,ax-cx);
-      ctx.fillStyle=`hsl(${215-t*70},70%,${55+t*15}%)`;
+      ctx.fillStyle=`hsl(${215-t*70},55%,${45-t*10}%)`;
       ctx.beginPath();ctx.moveTo(ax,ay);
       ctx.lineTo(ax-5*Math.cos(ang-.45),ay-5*Math.sin(ang-.45));
       ctx.lineTo(ax-5*Math.cos(ang+.45),ay-5*Math.sin(ang+.45));
@@ -428,8 +429,8 @@ function drawPhase(){
   if(ic){
     const fwd=integrate(ic,A,DT,400),bwd=integrate(ic,A,-DT,150);
     const full=[...bwd.slice(1).reverse(),...fwd];
-    ctx.save();ctx.strokeStyle='#fff';ctx.lineWidth=2.2;ctx.globalAlpha=.92;
-    ctx.shadowColor='#fff';ctx.shadowBlur=6;
+    ctx.save();ctx.strokeStyle='#1a1a2e';ctx.lineWidth=2.2;ctx.globalAlpha=.92;
+    ctx.shadowColor='#1a1a2e';ctx.shadowBlur=4;
     ctx.beginPath();let pen=false;
     for(const[x,y]of full){
       const[cx,cy]=toC(x,y,W,H);
@@ -438,15 +439,15 @@ function drawPhase(){
     }
     ctx.stroke();ctx.restore();
     const[icx,icy]=toC(ic[0],ic[1],W,H);
-    ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle='#090d15';ctx.lineWidth=2;
+    ctx.save();ctx.fillStyle='#1a1a2e';ctx.strokeStyle='#ffffff';ctx.lineWidth=2;
     ctx.beginPath();ctx.arc(icx,icy,5.5,0,Math.PI*2);ctx.fill();ctx.stroke();
-    ctx.fillStyle='#e6edf3';ctx.font='10px monospace';ctx.textAlign='left';
+    ctx.fillStyle='#1f2d3a';ctx.font='10px monospace';ctx.textAlign='left';
     ctx.fillText(`x₀=(${ic[0].toFixed(2)},${ic[1].toFixed(2)})`,icx+8,icy-6);
     ctx.restore();
   }
 
   // Equilibrium at origin
-  ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle='#090d15';ctx.lineWidth=2.5;
+  ctx.save();ctx.fillStyle='#1a1a2e';ctx.strokeStyle='#ffffff';ctx.lineWidth=2.5;
   ctx.beginPath();ctx.arc(axX,axY,5,0,Math.PI*2);ctx.fill();ctx.stroke();
   ctx.restore();
 }
@@ -465,9 +466,10 @@ function niceTicks(lo,hi,maxN){
 
 // ═══ DRAW TIME DOMAIN ════════════════════════════
 function drawTime(){
-  const ctx=tctx,W=tc.width,H=tc.height;
+  const dpr=window.devicePixelRatio||1;
+  const ctx=tctx,W=tc.width/dpr,H=tc.height/dpr;
   if(W<2||H<2)return;
-  ctx.clearRect(0,0,W,H);ctx.fillStyle='#090d15';ctx.fillRect(0,0,W,H);
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#f8fafb';ctx.fillRect(0,0,W,H);
   if(!ic)return;
 
   // Integrate
@@ -479,8 +481,8 @@ function drawTime(){
   tmPanT=Math.max(0,Math.min(maxPanT,tmPanT));
   const tStart=tmPanT, tEnd=tStart+TM_WINDOW;
 
-  // Auto y range from VISIBLE section only
-  let ay0=Infinity,ay1=-Infinity;
+  // Auto y range from VISIBLE section, always include 0
+  let ay0=0,ay1=0;
   for(let vi=0;vi<traj.length;vi++){
     const vt=vi*TM_DT;
     if(vt<tStart-TM_DT)continue;
@@ -489,10 +491,9 @@ function drawTime(){
     if(isFinite(a)){ay0=Math.min(ay0,a);ay1=Math.max(ay1,a);}
     if(isFinite(b)){ay0=Math.min(ay0,b);ay1=Math.max(ay1,b);}
   }
-  if(!isFinite(ay0)){ay0=-2;ay1=2;}
   const apd=Math.max(.2,(ay1-ay0)*.12);
   ay0-=apd;ay1+=apd;
-  if(ay1-ay0<.01){ay0-=1;ay1+=1;}
+  if(ay1-ay0<.4){ay0-=1;ay1+=1;}
   const yRange=ay1-ay0;
   const effectiveYRange=yRange/tmYZoom;
   tmLastYRange=effectiveYRange;
@@ -507,20 +508,20 @@ function drawTime(){
 
   // Horizontal grid (nice y ticks)
   const yTicks=niceTicks(yMin,yMax,4);
-  ctx.strokeStyle='#1a2030';ctx.lineWidth=1;ctx.setLineDash([3,4]);
+  ctx.strokeStyle='#dfe5ec';ctx.lineWidth=1;ctx.setLineDash([3,4]);
   yTicks.forEach(y=>{
     if(ty(y)<mg.t-2||ty(y)>H-mg.b+2)return;
     ctx.beginPath();ctx.moveTo(mg.l,ty(y));ctx.lineTo(W-mg.r,ty(y));ctx.stroke();
   });
   ctx.setLineDash([]);
-  if(yMin<0&&yMax>0){ctx.strokeStyle='#2a3548';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(mg.l,ty(0));ctx.lineTo(W-mg.r,ty(0));ctx.stroke();}
+  if(yMin<0&&yMax>0){ctx.strokeStyle='#9aacbe';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(mg.l,ty(0));ctx.lineTo(W-mg.r,ty(0));ctx.stroke();}
   // Axes
-  ctx.strokeStyle='#2a3548';ctx.lineWidth=1;
+  ctx.strokeStyle='#9aacbe';ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(mg.l,mg.t);ctx.lineTo(mg.l,H-mg.b);ctx.stroke();
   ctx.beginPath();ctx.moveTo(mg.l,H-mg.b);ctx.lineTo(W-mg.r,H-mg.b);ctx.stroke();
 
   // Y labels
-  ctx.fillStyle='#3d4f6b';ctx.font='11px monospace';ctx.textAlign='right';
+  ctx.fillStyle='#6b829a';ctx.font='11px monospace';ctx.textAlign='right';
   yTicks.forEach(y=>{
     if(ty(y)<mg.t||ty(y)>H-mg.b+4)return;
     ctx.fillText(y.toFixed(1),mg.l-4,ty(y)+4);
@@ -532,10 +533,10 @@ function drawTime(){
     if(x<mg.l+8||x>W-mg.r+2)return;
     ctx.fillText(t.toFixed(1),x,H-mg.b+17);
   });
-  ctx.fillStyle='#4a6080';ctx.font='12px monospace';ctx.fillText('t',W-mg.r+4,H-mg.b+17);
+  ctx.fillStyle='#5b7184';ctx.font='12px monospace';ctx.fillText('t',W-mg.r+4,H-mg.b+17);
 
   // Plot x1(t)
-  ctx.strokeStyle='#58a6ff';ctx.lineWidth=2;ctx.beginPath();
+  ctx.strokeStyle='#2e7dd1';ctx.lineWidth=2;ctx.beginPath();
   let p1=false;
   for(let i=0;i<traj.length;i++){
     const t=i*TM_DT;
@@ -549,7 +550,7 @@ function drawTime(){
   ctx.stroke();
 
   // Plot x2(t)
-  ctx.strokeStyle='#3fb950';ctx.lineWidth=2;ctx.beginPath();
+  ctx.strokeStyle='#16a34a';ctx.lineWidth=2;ctx.beginPath();
   let p2=false;
   for(let i=0;i<traj.length;i++){
     const t=i*TM_DT;
@@ -564,7 +565,7 @@ function drawTime(){
 
   // t=0 marker
   if(0>=tStart&&0<=tEnd){
-    ctx.strokeStyle='#ffffff';ctx.lineWidth=1.2;
+    ctx.strokeStyle='#1a1a2e';ctx.lineWidth=1.2;
     ctx.beginPath();ctx.moveTo(tx(0),mg.t);ctx.lineTo(tx(0),H-mg.b);ctx.stroke();
   }
 }
@@ -581,7 +582,7 @@ function update(){
   document.getElementById('idet').textContent=det.toFixed(4);
   document.getElementById('idisc').textContent=disc.toFixed(4);
   const λ=eigs(a,b,c,d);
-  const ec=re=>Math.abs(re)<1e-7?'#bc8cff':re<0?'#3fb950':'#f85149';
+  const ec=re=>Math.abs(re)<1e-7?'#8b5cf6':re<0?'#16a34a':'#dc2626';
   document.getElementById('eig1').textContent=fmtC(λ[0].re,λ[0].im);
   document.getElementById('eig1').style.color=ec(λ[0].re);
   document.getElementById('eig2').textContent=fmtC(λ[1].re,λ[1].im);
@@ -735,21 +736,20 @@ document.getElementById('tm-autofit').addEventListener('click',()=>{
   const steps=traj.length-1;
   const totalT=steps*TM_DT;
   let endT=totalT;
-  if(steps>=TM_N-1){
-    // Non-diverging: find when trajectory settles (drops to < 2% of peak)
-    let maxMag=0;
-    for(const[a,b]of traj){if(isFinite(a)&&isFinite(b))maxMag=Math.max(maxMag,Math.hypot(a,b));}
+  // Find meaningful end: where trajectory settles (< 2% of peak) or diverges
+  let maxMag=0;
+  for(const[a,b]of traj){if(isFinite(a)&&isFinite(b))maxMag=Math.max(maxMag,Math.hypot(a,b));}
+  if(maxMag>0){
     const thresh=Math.max(0.01,maxMag*.02);
     for(let i=steps;i>=1;i--){
       const[a,b]=traj[i];
-      if(isFinite(a)&&isFinite(b)&&Math.hypot(a,b)>thresh){
-        // Add 10% margin, cap at totalT
-        endT=Math.min(totalT,(i+Math.ceil(steps*.08))*TM_DT);
+      if(!isFinite(a)||!isFinite(b)||Math.hypot(a,b)>thresh){
+        endT=Math.min(totalT,(i+Math.ceil(steps*.1))*TM_DT);
         break;
       }
     }
   }
-  TM_WINDOW=Math.max(.5,endT);
+  TM_WINDOW=Math.max(1,endT);
   tmPanT=0;tmPanY=0;tmYZoom=1;
   drawTime();
 });

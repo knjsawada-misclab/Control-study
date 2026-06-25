@@ -20,7 +20,7 @@ open state_equation_simulator.html        # macOS
 操作のポイント：
 
 - **行列 A** のスライダー（$a_{11}, a_{12}, a_{21}, a_{22}$，範囲 $-3$ 〜 $3$）を動かすとシステムが即座に更新されます．数値入力欄で細かい値の指定も可能です．
-- **システム特性**（トレース $\mathrm{tr}(A)$，行列式 $\det(A)$，判別式 $\Delta = \mathrm{tr}^2 - 4\det$）と**固有値** $\lambda_1, \lambda_2$ がサイドバーに表示されます．
+- **システム特性**（トレース $\operatorname{tr}(A)$，行列式 $\det(A)$，判別式 $\Delta = \operatorname{tr}(A)^2 - 4\det(A)$）と**固有値** $\lambda_1, \lambda_2$ がサイドバーに表示されます．
 - **平衡点の分類**がバッジで表示されます（安定節点・不安定節点・鞍点・安定焦点・不安定焦点・中心・退化）．
 - **初期値** $x_0 = (x_{10},\, x_{20})$ を数値入力し「適用」ボタンまたは Enter で軌道を再計算します．
 - **位相面**（左パネル）：ベクトル場・固有ベクトル方向・軌道を表示．ドラッグで移動，ホイールでズーム，ダブルクリックでリセット．
@@ -57,22 +57,22 @@ x(t) = e^{At}\, x_0
 $A$ の固有値 $\lambda_1, \lambda_2$ は特性方程式を解いて求めます．
 
 ```math
-\det(\lambda I - A) = \lambda^2 - \mathrm{tr}(A)\,\lambda + \det(A) = 0
+\det(\lambda I - A) = \lambda^2 - \operatorname{tr}(A)\,\lambda + \det(A) = 0
 ```
 
 ```math
-\lambda_{1,2} = \frac{\mathrm{tr}(A) \pm \sqrt{\Delta}}{2}, \qquad \Delta = \mathrm{tr}(A)^2 - 4\det(A)
+\lambda_{1,2} = \frac{\operatorname{tr}(A) \pm \sqrt{\Delta}}{2}, \qquad \Delta = \operatorname{tr}(A)^2 - 4\det(A)
 ```
 
 解の振る舞いは固有値の実部と虚部で決まります．
 
 | 固有値の性質 | 解の振る舞い |
 |---|---|
-| $\mathrm{Re}[\lambda] < 0$ | 時間とともに**収束**（減衰） |
-| $\mathrm{Re}[\lambda] > 0$ | 時間とともに**発散**（増大） |
-| $\mathrm{Re}[\lambda] = 0$ | 振幅一定（**持続振動**または静止） |
-| $\mathrm{Im}[\lambda] \neq 0$ | **振動**成分をもつ（周期 $T = 2\pi / |\mathrm{Im}[\lambda]|$） |
-| $\mathrm{Im}[\lambda] = 0$ | 振動なし（**単調**な収束/発散） |
+| $\operatorname{Re}(\lambda) < 0$ | 時間とともに**収束**（減衰） |
+| $\operatorname{Re}(\lambda) > 0$ | 時間とともに**発散**（増大） |
+| $\operatorname{Re}(\lambda) = 0$ | 振幅一定（**持続振動**または静止） |
+| $\operatorname{Im}(\lambda) \neq 0$ | **振動**成分をもつ（周期 $T = 2\pi / \lvert\operatorname{Im}(\lambda)\rvert$） |
+| $\operatorname{Im}(\lambda) = 0$ | 振動なし（**単調**な収束/発散） |
 
 固有値が複素数 $\lambda = \sigma \pm j\omega$ のとき，解は $e^{\sigma t}$ の包絡線をもちながら角周波数 $\omega$ で振動します．$\sigma < 0$ なら減衰振動，$\sigma > 0$ なら発散振動，$\sigma = 0$ なら等振幅の周期運動（中心）です．
 
@@ -82,15 +82,15 @@ $A$ の固有値 $\lambda_1, \lambda_2$ は特性方程式を解いて求めま�
 
 2次元線形システムの平衡点（原点）は，固有値の組合せにより以下の7パターンに分類されます．
 
-| # | 名称 | 固有値の条件 | 判別式 $\Delta$・$\mathrm{tr}$・$\det$ | 位相面の様子 |
+| # | 名称 | 固有値の条件 | 判別式・tr・det の条件 | 位相面の様子 |
 |---|---|---|---|---|
-| 1 | **安定節点** (Stable Node) | $\lambda_2 < \lambda_1 < 0$（実数，両方負） | $\Delta \ge 0$，$\mathrm{tr} < 0$，$\det > 0$ | 全軌道が原点に収束．遅い固有ベクトル方向に接線的に接近 |
-| 2 | **安定焦点** (Stable Spiral) | $\sigma \pm j\omega$，$\sigma < 0$（複素，負実部） | $\Delta < 0$，$\mathrm{tr} < 0$ | 原点に渦巻き状に収束（減衰振動） |
-| 3 | **不安定節点** (Unstable Node) | $0 < \lambda_1 < \lambda_2$（実数，両方正） | $\Delta \ge 0$，$\mathrm{tr} > 0$，$\det > 0$ | 全軌道が原点から発散．速い固有ベクトル方向に沿って離脱 |
-| 4 | **不安定焦点** (Unstable Spiral) | $\sigma \pm j\omega$，$\sigma > 0$（複素，正実部） | $\Delta < 0$，$\mathrm{tr} > 0$ | 原点から渦巻き状に発散（発散振動） |
-| 5 | **鞍点** (Saddle) | $\lambda_1 < 0 < \lambda_2$（実数，異符号） | $\det < 0$ | 安定固有ベクトル方向に収束，不安定固有ベクトル方向に発散 |
-| 6 | **中心** (Center) | $\pm j\omega$（純虚数） | $\Delta < 0$，$\mathrm{tr} = 0$ | 原点の周りを周回する閉軌道（持続振動） |
-| 7 | **退化** (Degenerate) | 重根 $\lambda_1 = \lambda_2$ または $\det = 0$ | $\Delta = 0$ | 安定星型節点，退化節点，直線上の流れなど |
+| 1 | **安定節点** (Stable Node) | $\lambda_2 < \lambda_1 < 0$（実数，両方負） | $\Delta \ge 0$，tr $< 0$，det $> 0$ | 全軌道が原点に収束．遅い固有ベクトル方向に接線的に接近 |
+| 2 | **安定焦点** (Stable Spiral) | $\sigma \pm j\omega$，$\sigma < 0$（複素，負実部） | $\Delta < 0$，tr $< 0$ | 原点に渦巻き状に収束（減衰振動） |
+| 3 | **不安定節点** (Unstable Node) | $0 < \lambda_1 < \lambda_2$（実数，両方正） | $\Delta \ge 0$，tr $> 0$，det $> 0$ | 全軌道が原点から発散．速い固有ベクトル方向に沿って離脱 |
+| 4 | **不安定焦点** (Unstable Spiral) | $\sigma \pm j\omega$，$\sigma > 0$（複素，正実部） | $\Delta < 0$，tr $> 0$ | 原点から渦巻き状に発散（発散振動） |
+| 5 | **鞍点** (Saddle) | $\lambda_1 < 0 < \lambda_2$（実数，異符号） | det $< 0$ | 安定固有ベクトル方向に収束，不安定固有ベクトル方向に発散 |
+| 6 | **中心** (Center) | $\pm j\omega$（純虚数） | $\Delta < 0$，tr $= 0$ | 原点の周りを周回する閉軌道（持続振動） |
+| 7 | **退化** (Degenerate) | 重根 $\lambda_1 = \lambda_2$ または det $= 0$ | $\Delta = 0$ | 安定星型節点，退化節点，直線上の流れなど |
 
 > **シミュレータの対応**：プリセットボタンで上記の各パターンを瞬時に設定できます．バッジの色分け（緑=安定，赤=不安定，橙=鞍点，紫=中心，灰=退化）で分類が一目で分かります．
 
@@ -132,11 +132,11 @@ $A$ が複素共役固有値 $\lambda = \sigma \pm j\omega$ をもち，固有�
 
 以下のポイントをシミュレータで実験的に確認してみてください．
 
-1. **tr-det 図との対応**：$\mathrm{tr}(A)$ と $\det(A)$ の符号・大きさを変えて，分類が切り替わる境界を探ってみましょう．
+1. **tr-det 図との対応**：$\operatorname{tr}(A)$ と $\det(A)$ の符号・大きさを変えて，分類が切り替わる境界を探ってみましょう．
 2. **固有ベクトル方向の確認**：位相面に表示される固有ベクトル方向の直線が不変部分空間に対応します．鞍点では安定/不安定方向が明確に見えます．
 3. **速いモードと遅いモードの分離**：安定節点で $\lambda_1$ と $\lambda_2$ の差を大きくすると，速い成分が先に減衰し，軌道が遅い固有ベクトル方向に「折れ曲がる」様子が観察できます．
-4. **振動の周期**：安定焦点や中心で，時間応答の波形から周期 $T = 2\pi / |\mathrm{Im}[\lambda]|$ を読み取り，固有値の虚部と一致することを確認できます．
-5. **収束・発散速度**：実部 $\mathrm{Re}[\lambda]$ を変えると，時間応答の減衰/増大の速さが変わります．$|\mathrm{Re}[\lambda]|$ が大きいほど速い応答になります．
+4. **振動の周期**：安定焦点や中心で，時間応答の波形から周期 $T = 2\pi / \lvert\operatorname{Im}(\lambda)\rvert$ を読み取り，固有値の虚部と一致することを確認できます．
+5. **収束・発散速度**：実部 $\operatorname{Re}(\lambda)$ を変えると，時間応答の減衰/増大の速さが変わります．$\lvert\operatorname{Re}(\lambda)\rvert$ が大きいほど速い応答になります．
 6. **鞍点の安定多様体**：鞍点で初期値を安定固有ベクトル方向に正確に置くと原点に収束しますが，わずかにずれると不安定方向に発散します．
 
 ---

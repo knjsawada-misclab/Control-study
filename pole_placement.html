@@ -9,8 +9,8 @@
 
 body {
   font-family: 'Helvetica Neue', Arial, sans-serif;
-  background: #0d1117;
-  color: #c9d1d9;
+  background: #eef2f6;
+  color: #1f2d3a;
   height: 100vh;
   height: 100dvh;
   display: flex;
@@ -19,24 +19,24 @@ body {
 }
 
 header {
-  background: #161b22;
-  border-bottom: 1px solid #30363d;
+  background: #ffffff;
+  border-bottom: 1px solid #d4dde6;
   padding: 10px 20px;
   display: flex;
   align-items: baseline;
   gap: 16px;
   flex-shrink: 0;
 }
-header h1 { font-size: 1rem; font-weight: 600; color: #58a6ff; }
-header .eq { font-size: 0.78rem; color: #8b949e; font-family: 'Courier New', monospace; }
+header h1 { font-size: 1rem; font-weight: 600; color: #2e7dd1; }
+header .eq { font-size: 0.78rem; color: #5b7184; font-family: 'Courier New', monospace; }
 
 .body { display: flex; flex: 1; overflow: hidden; }
 
 /* ─── Sidebar ─────────────────────────────────────────────── */
 .sidebar {
   width: 300px;
-  background: #161b22;
-  border-right: 1px solid #30363d;
+  background: #ffffff;
+  border-right: 1px solid #d4dde6;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -50,36 +50,36 @@ header .eq { font-size: 0.78rem; color: #8b949e; font-family: 'Courier New', mon
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #58a6ff;
+  color: #2e7dd1;
   margin-bottom: 8px;
   padding-bottom: 4px;
-  border-bottom: 1px solid #21262d;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 /* Preset selector */
 select {
   width: 100%;
-  background: #0d1117;
-  border: 1px solid #30363d;
-  color: #c9d1d9;
+  background: #f1f5f9;
+  border: 1px solid #d4dde6;
+  color: #1f2d3a;
   padding: 5px 8px;
   border-radius: 6px;
   font-size: 0.82rem;
   cursor: pointer;
 }
-select:focus { outline: none; border-color: #58a6ff; }
+select:focus { outline: none; border-color: #2e7dd1; }
 
 /* Matrix inputs */
-.matrix-label { font-size: 0.75rem; color: #8b949e; margin-bottom: 5px; }
+.matrix-label { font-size: 0.75rem; color: #5b7184; margin-bottom: 5px; }
 .mat-grid { display: grid; gap: 5px; margin-bottom: 8px; }
 .mat-2x2 { grid-template-columns: 1fr 1fr; }
 .mat-2x1 { grid-template-columns: 1fr; }
 .mat-1x2 { grid-template-columns: 1fr 1fr; }
 
 input[type="number"] {
-  background: #0d1117;
-  border: 1px solid #30363d;
-  color: #c9d1d9;
+  background: #f1f5f9;
+  border: 1px solid #d4dde6;
+  color: #1f2d3a;
   padding: 5px 6px;
   border-radius: 5px;
   width: 100%;
@@ -88,18 +88,18 @@ input[type="number"] {
   font-family: 'Courier New', monospace;
   transition: border-color 0.15s;
 }
-input[type="number"]:focus { outline: none; border-color: #58a6ff; background: #0d1117; }
+input[type="number"]:focus { outline: none; border-color: #2e7dd1; background: #f1f5f9; }
 
-.input-label { font-size: 0.7rem; color: #6e7681; margin-bottom: 2px; }
+.input-label { font-size: 0.7rem; color: #5b7184; margin-bottom: 2px; }
 
 /* Pole inputs */
 .pole-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 6px; }
-.pole-field label { display: block; font-size: 0.7rem; color: #8b949e; margin-bottom: 3px; }
+.pole-field label { display: block; font-size: 0.7rem; color: #5b7184; margin-bottom: 3px; }
 
 /* Buttons */
 .btn-compute {
   width: 100%;
-  background: #238636;
+  background: #16a34a;
   color: #fff;
   border: none;
   padding: 9px;
@@ -110,26 +110,26 @@ input[type="number"]:focus { outline: none; border-color: #58a6ff; background: #
   transition: background 0.15s;
   margin-bottom: 12px;
 }
-.btn-compute:hover { background: #2ea043; }
-.btn-compute:active { background: #196127; }
+.btn-compute:hover { background: #15803d; }
+.btn-compute:active { background: #166534; }
 
 /* Results */
 .result-box {
-  background: #0d1117;
-  border: 1px solid #21262d;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
   padding: 10px;
   font-family: 'Courier New', monospace;
   font-size: 0.77rem;
 }
 .res-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
-.res-key { color: #8b949e; }
-.res-val { color: #79c0ff; }
-.res-val.stable { color: #3fb950; }
-.res-val.unstable { color: #f85149; }
-.res-sep { border: none; border-top: 1px solid #21262d; margin: 6px 0; }
+.res-key { color: #5b7184; }
+.res-val { color: #2e7dd1; }
+.res-val.stable { color: #16a34a; }
+.res-val.unstable { color: #dc2626; }
+.res-sep { border: none; border-top: 1px solid #e2e8f0; margin: 6px 0; }
 
-.error-msg { color: #f85149; font-size: 0.78rem; margin-top: 6px; min-height: 16px; }
+.error-msg { color: #dc2626; font-size: 0.78rem; margin-top: 6px; min-height: 16px; }
 
 /* Stability badge */
 .badge {
@@ -139,8 +139,8 @@ input[type="number"]:focus { outline: none; border-color: #58a6ff; background: #
   font-size: 0.7rem;
   font-weight: 600;
 }
-.badge.stable { background: rgba(63,185,80,0.15); color: #3fb950; border: 1px solid #3fb950; }
-.badge.unstable { background: rgba(248,81,73,0.15); color: #f85149; border: 1px solid #f85149; }
+.badge.stable { background: rgba(22,163,74,0.12); color: #16a34a; border: 1px solid #16a34a; }
+.badge.unstable { background: rgba(220,38,38,0.12); color: #dc2626; border: 1px solid #dc2626; }
 
 /* ─── Main plots area ─────────────────────────────────────── */
 .main {
@@ -159,8 +159,8 @@ input[type="number"]:focus { outline: none; border-color: #58a6ff; background: #
 }
 .plot-card {
   flex: 1;
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: #ffffff;
+  border: 1px solid #d4dde6;
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -176,8 +176,8 @@ input[type="number"]:focus { outline: none; border-color: #58a6ff; background: #
   align-items: center;
   flex-shrink: 0;
 }
-.plot-title { font-size: 0.8rem; font-weight: 600; color: #c9d1d9; }
-.plot-sub { font-size: 0.7rem; color: #6e7681; }
+.plot-title { font-size: 0.8rem; font-weight: 600; color: #1f2d3a; }
+.plot-sub { font-size: 0.7rem; color: #5b7184; }
 
 .legend {
   display: flex;
@@ -186,7 +186,7 @@ input[type="number"]:focus { outline: none; border-color: #58a6ff; background: #
   padding: 0 12px 6px;
   flex-shrink: 0;
 }
-.leg-item { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: #8b949e; }
+.leg-item { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: #5b7184; }
 .leg-icon { width: 14px; text-align: center; font-size: 0.8rem; }
 .leg-line { width: 14px; height: 2px; }
 
@@ -226,7 +226,7 @@ canvas {
   .sidebar {
     width: 100%;
     border-right: none;
-    border-bottom: 1px solid #30363d;
+    border-bottom: 1px solid #d4dde6;
     overflow-y: visible;
     max-height: none;
   }
@@ -274,16 +274,16 @@ canvas {
 
 /* ─── Info bar ────────────────────────────────────────────── */
 .info-bar {
-  background: #161b22;
-  border-top: 1px solid #30363d;
+  background: #ffffff;
+  border-top: 1px solid #d4dde6;
   padding: 5px 16px;
   font-size: 0.7rem;
-  color: #6e7681;
+  color: #5b7184;
   flex-shrink: 0;
   display: flex;
   gap: 20px;
 }
-.info-bar span { color: #8b949e; }
+.info-bar span { color: #5b7184; }
 </style>
 </head>
 <body>
@@ -345,7 +345,7 @@ canvas {
       <!-- Desired poles -->
       <div class="section">
         <div class="sec-title">目標極（複素共役対）</div>
-        <div style="font-size:0.72rem;color:#6e7681;margin-bottom:6px;">
+        <div style="font-size:0.72rem;color:#5b7184;margin-bottom:6px;">
           p<sub>1,2</sub> = σ ± jω &nbsp; （実部 σ &lt; 0 で安定）
         </div>
         <div class="pole-row">
@@ -358,7 +358,7 @@ canvas {
             <input type="number" id="omega" value="2" step="0.1" min="0">
           </div>
         </div>
-        <div style="font-size:0.7rem;color:#6e7681;" id="pole-info">
+        <div style="font-size:0.7rem;color:#5b7184;" id="pole-info">
           ωₙ = —,  ζ = —
         </div>
       </div>
@@ -384,7 +384,7 @@ canvas {
       <div class="section">
         <div class="sec-title">計算結果</div>
         <div id="result-box" class="result-box">
-          <div style="color:#6e7681;">「計算・更新」を押してください</div>
+          <div style="color:#5b7184;">「計算・更新」を押してください</div>
         </div>
         <div id="error-msg" class="error-msg"></div>
       </div>
@@ -403,8 +403,8 @@ canvas {
           <span class="plot-sub">左半平面 = 安定</span>
         </div>
         <div class="legend">
-          <div class="leg-item"><span class="leg-icon" style="color:#f85149;">✕</span> 開ループ極</div>
-          <div class="leg-item"><span class="leg-icon" style="color:#58a6ff;">◎</span> 目標極</div>
+          <div class="leg-item"><span class="leg-icon" style="color:#dc2626;">✕</span> 開ループ極</div>
+          <div class="leg-item"><span class="leg-icon" style="color:#2e7dd1;">◎</span> 目標極</div>
           <div class="leg-item"><span class="leg-icon" style="color:#ffa657;">●</span> 閉ループ極</div>
         </div>
         <canvas id="splane"></canvas>
@@ -417,9 +417,9 @@ canvas {
           <span class="plot-sub" id="time-sub"></span>
         </div>
         <div class="legend">
-          <div class="leg-item"><div class="leg-line" style="background:#58a6ff;"></div> x₁(t)（位置）</div>
+          <div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> x₁(t)（位置）</div>
           <div class="leg-item"><div class="leg-line" style="background:#ffa657;"></div> x₂(t)（速度）</div>
-          <div class="leg-item"><div class="leg-line" style="background:#3fb950; opacity:0.5;"></div> 開ループ応答</div>
+          <div class="leg-item"><div class="leg-line" style="background:#16a34a; opacity:0.5;"></div> 開ループ応答</div>
         </div>
         <canvas id="timeplot"></canvas>
       </div>
@@ -569,7 +569,7 @@ function compute() {
 
   if(!K) {
     errEl.textContent = '⚠ システムが可制御でないため、極配置できません。B ベクトルを変更してください。';
-    document.getElementById('result-box').innerHTML = '<div style="color:#f85149;">計算エラー</div>';
+    document.getElementById('result-box').innerHTML = '<div style="color:#dc2626;">計算エラー</div>';
     return;
   }
 
@@ -602,11 +602,11 @@ function compute() {
   document.getElementById('result-box').innerHTML = `
     <div class="res-row"><span class="res-key">K</span><span class="res-val">[${fmt(K[0])}, ${fmt(K[1])}]</span></div>
     <hr class="res-sep">
-    <div style="font-size:0.68rem;color:#6e7681;margin-bottom:4px;">開ループ極</div>
+    <div style="font-size:0.68rem;color:#5b7184;margin-bottom:4px;">開ループ極</div>
     <div class="res-row"><span class="res-key">λ₁</span><span class="res-val ${isStable(olPoles[0])?'stable':'unstable'}">${fmtC(olPoles[0])}</span></div>
     <div class="res-row"><span class="res-key">λ₂</span><span class="res-val ${isStable(olPoles[1])?'stable':'unstable'}">${fmtC(olPoles[1])}</span></div>
     <hr class="res-sep">
-    <div style="font-size:0.68rem;color:#6e7681;margin-bottom:4px;">閉ループ極</div>
+    <div style="font-size:0.68rem;color:#5b7184;margin-bottom:4px;">閉ループ極</div>
     <div class="res-row"><span class="res-key">λ₁</span><span class="res-val ${isStable(clPoles[0])?'stable':'unstable'}">${fmtC(clPoles[0])}</span></div>
     <div class="res-row"><span class="res-key">λ₂</span><span class="res-val ${isStable(clPoles[1])?'stable':'unstable'}">${fmtC(clPoles[1])}</span></div>
     <hr class="res-sep">
@@ -658,13 +658,13 @@ function drawSplane() {
   ctx.clearRect(0, 0, W, H);
 
   // 左半平面（安定域）のシェード
-  ctx.fillStyle = 'rgba(63,185,80,0.04)';
+  ctx.fillStyle = 'rgba(22,163,74,0.06)';
   ctx.fillRect(0, 0, cx, H);
 
   // 定ζ線（0.1刻み）
   for(let z=0.1; z<1.0; z+=0.1) {
     const angle = Math.acos(z);  // imaginary axis から測った角度
-    ctx.strokeStyle = 'rgba(88,166,255,0.08)';
+    ctx.strokeStyle = 'rgba(46,125,209,0.15)';
     ctx.lineWidth = 1;
     ctx.setLineDash([3,4]);
     ctx.beginPath();
@@ -681,7 +681,7 @@ function drawSplane() {
     const lx = cx - (range*scl*0.85)*Math.cos(angle);
     const ly = cy - (range*scl*0.85)*Math.sin(angle) - 4;
     if(ly > 4 && ly < H-4) {
-      ctx.fillStyle = 'rgba(88,166,255,0.4)';
+      ctx.fillStyle = 'rgba(46,125,209,0.5)';
       ctx.font = '9px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(`ζ=${z.toFixed(1)}`, lx, ly);
@@ -691,10 +691,10 @@ function drawSplane() {
 
   // グリッド
   const step = Math.pow(10, Math.floor(Math.log10(range)));
-  ctx.strokeStyle = '#21262d';
+  ctx.strokeStyle = '#e2e8f0';
   ctx.lineWidth = 1;
   ctx.font = '9px monospace';
-  ctx.fillStyle = '#444c56';
+  ctx.fillStyle = '#8899a8';
   ctx.textAlign = 'center';
   for(let g=-Math.ceil(range/step)*step; g<=Math.ceil(range/step)*step; g+=step) {
     if(Math.abs(g) < step*0.01) continue;
@@ -717,13 +717,13 @@ function drawSplane() {
   }
 
   // 軸
-  ctx.strokeStyle = '#30363d';
+  ctx.strokeStyle = '#94a3b8';
   ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
 
   // 軸ラベル
-  ctx.fillStyle = '#8b949e';
+  ctx.fillStyle = '#5b7184';
   ctx.font = '10px sans-serif';
   ctx.textAlign = 'right';
   ctx.fillText('Re(s)', W-4, cy-4);
@@ -733,16 +733,16 @@ function drawSplane() {
   // ── マーカーを描く ──
 
   // 開ループ極（×）
-  olPoles.forEach(p => drawCross(ctx, toS(p.re, p.im), '#f85149', 9));
+  olPoles.forEach(p => drawCross(ctx, toS(p.re, p.im), '#dc2626', 9));
 
   // 目標極（◎）
-  [p1, p2].forEach(p => drawRing(ctx, toS(p.re, p.im), '#58a6ff', 9));
+  [p1, p2].forEach(p => drawRing(ctx, toS(p.re, p.im), '#2e7dd1', 9));
 
   // 閉ループ極（●）
   clPoles.forEach(p => drawDot(ctx, toS(p.re, p.im), '#ffa657', 6));
 
   // 安定軸の注記
-  ctx.fillStyle = 'rgba(63,185,80,0.3)';
+  ctx.fillStyle = 'rgba(22,163,74,0.5)';
   ctx.font = '9px sans-serif';
   ctx.textAlign = 'left';
   ctx.fillText('← 安定域', 6, cy - 4);
@@ -797,7 +797,7 @@ function drawTimePlot() {
   ctx.clearRect(0, 0, W, H);
 
   // グリッド
-  ctx.strokeStyle = '#21262d';
+  ctx.strokeStyle = '#e2e8f0';
   ctx.lineWidth = 1;
   for(let i=0; i<=4; i++) {
     const y = pad.t + i*ph/4;
@@ -810,15 +810,15 @@ function drawTimePlot() {
 
   // ゼロ線
   const zy = toY(0);
-  ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(pad.l, zy); ctx.lineTo(W-pad.r, zy); ctx.stroke();
 
   // 枠
-  ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5;
   ctx.strokeRect(pad.l, pad.t, pw, ph);
 
   // 軸ラベル
-  ctx.fillStyle = '#8b949e';
+  ctx.fillStyle = '#5b7184';
   ctx.font = '10px monospace';
   ctx.textAlign = 'center';
   for(let i=0; i<=5; i++) {
@@ -837,11 +837,11 @@ function drawTimePlot() {
 
   // 開ループ応答（薄く）
   ctx.globalAlpha = 0.35;
-  drawLine(ctx, simCL.t, simOL.x1, toX, toY, '#3fb950', 1.5);
+  drawLine(ctx, simCL.t, simOL.x1, toX, toY, '#16a34a', 1.5);
   ctx.globalAlpha = 1;
 
   // 閉ループ応答
-  drawLine(ctx, simCL.t, simCL.x1, toX, toY, '#58a6ff', 2);
+  drawLine(ctx, simCL.t, simCL.x1, toX, toY, '#2e7dd1', 2);
   drawLine(ctx, simCL.t, simCL.x2, toX, toY, '#ffa657', 2);
 }
 

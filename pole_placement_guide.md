@@ -132,7 +132,7 @@ K = -\begin{bmatrix} 0 & \cdots & 0 & 1 \end{bmatrix} W_c^{-1}\,\varphi_P(A)
 | $0 < \zeta < 1$ | 共役複素数（虚部あり） | **不足減衰**：振動しながら収束 |
 | $\zeta = 1$ | 重実根 | **臨界減衰**：振動なしで最速収束 |
 | $\zeta > 1$ | 異なる2実根 | **過減衰**：振動なしだが収束が遅い |
-| $\zeta = 1/\sqrt{2} \approx 0.707$ | $\lvert\text{Re}\rvert = \lvert\text{Im}\rvert$ | **Butterworth 標準形**：平坦な周波数特性 |
+| $\zeta = 1/\sqrt{2} \approx 0.707$ | $\lvert\operatorname{Re}\rvert = \lvert\operatorname{Im}\rvert$ | **Butterworth 標準形**：平坦な周波数特性 |
 
 ### 極の位置と応答の関係
 

@@ -135,8 +135,8 @@ input[type="number"]:focus { outline: none; border-color: #2e7dd1; }
   line-height: 1.5;
 }
 .res-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
-.res-key { color: #5b7184; }
-.res-val { color: #2e7dd1; }
+.res-key { color: #5b7184; flex-shrink: 0; }
+.res-val { color: #2e7dd1; min-width: 0; text-align: right; }
 .res-val.stable { color: #16a34a; }
 .res-val.unstable { color: #dc2626; }
 .res-sep { border: none; border-top: 1px solid #e2e8f0; margin: 6px 0; }
@@ -288,7 +288,7 @@ canvas {
   }
   .plot-card.anim-panel {
     width: 100% !important;
-    height: min(80vw, 350px);
+    height: min(85vw, 380px);
     flex: none;
   }
   .plot-card.response-panel {
@@ -302,9 +302,9 @@ canvas {
     flex: none;
   }
   canvas {
-    flex: none !important;
+    flex: 1 1 0 !important;
     width: 100% !important;
-    height: 100% !important;
+    min-height: 0 !important;
   }
   .legend {
     gap: 4px 8px;
@@ -358,6 +358,28 @@ canvas {
   }
   .pole-row {
     gap: 4px;
+  }
+  .anim-controls {
+    gap: 4px;
+    padding: 4px 8px;
+    flex-wrap: wrap;
+  }
+  .btn-play {
+    padding: 6px 16px;
+    font-size: 0.85rem;
+    min-height: 36px;
+  }
+  .speed-slider {
+    width: 50px;
+  }
+  .speed-label {
+    font-size: 0.6rem;
+  }
+  .anim-info {
+    font-size: 0.6rem;
+  }
+  .plot-card.anim-panel {
+    height: min(65vw, 280px);
   }
 }
 

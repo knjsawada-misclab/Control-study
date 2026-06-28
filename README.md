@@ -17,6 +17,7 @@
 制御工学の後半「現代制御編」の講義資料に基づき，シミュレータを構築しています．そのため，幾つかのシミュレータは講義を受けて，かつ，解説を読まないと意味がわからない仕様になっています．
 | シミュレータ | 解説資料 | 概要 |
 |:--|:--:|:--|
+| [非線形システムの線形近似](https://knjsawada-misclab.github.io/Control-study/CNTENG/linearization_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/linearization_simulator_guide.md) | 振り子の非線形・線形近似の比較とアニメーション |
 | [極の位置と相平面上の応答](https://knjsawada-misclab.github.io/Control-study/CNTENG/state_equation_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/state_equation_simulator_guide.md) | 2次系の固有値・位相面・時間応答の可視化 |
 | [極配置と初期状態応答](https://knjsawada-misclab.github.io/Control-study/CNTENG/pole_placement.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/pole_placement_guide.md) | 状態フィードバックによる極配置法の体験 |
 | [可制御性と極配置](https://knjsawada-misclab.github.io/Control-study/CNTENG/controllability_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/controllability_simulator_guide.md) | 可制御・不可制御・可安定の判定と極配置の可否の体験 |

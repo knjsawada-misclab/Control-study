@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>非線形システムの線形近似シミュレータ</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+  background: #eef2f6;
+  color: #1f2d3a;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+header {
+  background: #ffffff;
+  border-bottom: 1px solid #d4dde6;
+  padding: 10px 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-shrink: 0;
+}
+header h1 { font-size: 1rem; font-weight: 600; color: #2e7dd1; }
+header .eq { font-size: 0.78rem; color: #5b7184; font-family: 'Courier New', monospace; }
+
+.body { display: flex; flex: 1; overflow: hidden; }
+
+.sidebar {
+  width: 320px;
+  background: #ffffff;
+  border-right: 1px solid #d4dde6;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.sidebar-inner { padding: 12px; flex: 1; }
+
+.section { margin-bottom: 14px; }
+.sec-title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #2e7dd1;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+select {
+  width: 100%;
+  background: #f1f5f9;
+  border: 1px solid #d4dde6;
+  color: #1f2d3a;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+select:focus { outline: none; border-color: #2e7dd1; }
+
+.matrix-label { font-size: 0.75rem; color: #5b7184; margin-bottom: 5px; }
+.mat-grid { display: grid; gap: 5px; margin-bottom: 8px; }
+.mat-2x2 { grid-template-columns: 1fr 1fr; }
+.mat-2x1 { grid-template-columns: 1fr; }
+
+input[type="number"] {
+  background: #f1f5f9;
+  border: 1px solid #d4dde6;
+  color: #1f2d3a;
+  padding: 5px 6px;
+  border-radius: 5px;
+  width: 100%;
+  font-size: 0.82rem;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  transition: border-color 0.15s;
+}
+input[type="number"]:focus { outline: none; border-color: #2e7dd1; }
+
+.input-label { font-size: 0.7rem; color: #5b7184; margin-bottom: 2px; }
+
+.pole-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 6px; }
+.pole-row.three-col { grid-template-columns: 1fr 1fr 1fr; }
+.pole-field label { display: block; font-size: 0.7rem; color: #5b7184; margin-bottom: 3px; }
+
+.radio-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.radio-row label {
+  font-size: 0.8rem;
+  color: #1f2d3a;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.radio-row input[type="radio"] {
+  width: auto;
+  margin: 0;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.checkbox-row label {
+  font-size: 0.8rem;
+  color: #1f2d3a;
+  cursor: pointer;
+}
+.checkbox-row input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+.fb-params {
+  transition: opacity 0.2s;
+}
+.fb-params.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.btn-compute {
+  width: 100%;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  padding: 9px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 12px;
+}
+.btn-compute:hover { background: #15803d; }
+.btn-compute:active { background: #166534; }
+
+.result-box {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.res-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+.res-key { color: #5b7184; }
+.res-val { color: #2e7dd1; }
+.res-val.stable { color: #16a34a; }
+.res-val.unstable { color: #dc2626; }
+.res-sep { border: none; border-top: 1px solid #e2e8f0; margin: 6px 0; }
+.error-msg { color: #dc2626; font-size: 0.78rem; margin-top: 6px; min-height: 16px; }
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.badge.ctrl { background: rgba(22,163,74,0.12); color: #16a34a; border: 1px solid #16a34a; }
+.badge.stab { background: rgba(245,158,11,0.12); color: #d97706; border: 1px solid #d97706; }
+.badge.unstab { background: rgba(220,38,38,0.12); color: #dc2626; border: 1px solid #dc2626; }
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 10px;
+  overflow: hidden;
+}
+.plots-row {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  overflow: hidden;
+}
+.plot-card {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #d4dde6;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.plot-card.anim-panel { flex: 0 0 auto; width: 40%; }
+.plot-card.phase-panel { flex: 1; }
+.plot-card.time-panel { flex: none; height: 200px; }
+
+.plot-header {
+  padding: 8px 12px 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.plot-title { font-size: 0.8rem; font-weight: 600; color: #1f2d3a; }
+.plot-sub { font-size: 0.7rem; color: #5b7184; }
+
+.legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 12px 6px;
+  flex-shrink: 0;
+}
+.leg-item { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: #5b7184; }
+.leg-icon { width: 14px; text-align: center; font-size: 0.8rem; }
+.leg-line { width: 14px; height: 2px; }
+
+canvas {
+  flex: 1;
+  width: 100%;
+  display: block;
+}
+
+.anim-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-top: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+.btn-play {
+  background: #2e7dd1;
+  color: #fff;
+  border: none;
+  padding: 4px 14px;
+  border-radius: 5px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-play:hover { background: #1d6ab8; }
+.speed-label { font-size: 0.7rem; color: #5b7184; }
+.speed-slider {
+  width: 70px;
+  cursor: pointer;
+}
+.anim-info {
+  font-size: 0.7rem;
+  color: #5b7184;
+  font-family: 'Courier New', monospace;
+  margin-left: auto;
+}
+
+/* ─── Narrow desktop / landscape tablet ───────────────────── */
+@media (max-width: 1024px) {
+  .sidebar { width: 260px; }
+  .plot-card.anim-panel { width: 38%; }
+}
+
+/* ─── Tablet / Mobile ─────────────────────────────────────── */
+@media (max-width: 820px) {
+  body {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-y: auto;
+  }
+  header {
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    gap: 4px;
+  }
+  header h1 { font-size: 0.9rem; }
+  header .eq { font-size: 0.65rem; line-height: 1.5; display: block; }
+  .body {
+    flex-direction: column;
+    overflow: visible;
+    flex: none;
+  }
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #d4dde6;
+    overflow-y: visible;
+    max-height: none;
+  }
+  .sidebar-inner { padding: 10px; }
+  .section { margin-bottom: 10px; }
+  .mat-grid { gap: 3px; }
+  .main {
+    overflow: visible;
+    flex: none;
+    padding: 8px;
+  }
+  .plots-row {
+    flex-direction: column;
+    overflow: visible;
+    flex-shrink: 0;
+    gap: 8px;
+  }
+  .plot-card.anim-panel {
+    width: 100% !important;
+    height: min(80vw, 350px);
+    flex: none;
+  }
+  .plot-card.phase-panel {
+    width: 100% !important;
+    height: min(70vw, 300px);
+    flex: none;
+  }
+  .plot-card.time-panel {
+    width: 100% !important;
+    height: min(60vw, 250px);
+    flex: none;
+  }
+  canvas {
+    flex: none !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+  .legend {
+    gap: 4px 8px;
+    padding: 4px 8px;
+    flex-wrap: wrap;
+  }
+  .leg-item { font-size: 0.6rem; }
+  .plot-header {
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 6px 8px 2px;
+  }
+  .plot-title { font-size: 0.75rem; }
+  .plot-sub { font-size: 0.62rem; }
+  .info-bar {
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 0.6rem;
+    padding: 6px 10px;
+  }
+  /* iOS auto-zoom prevention */
+  input[type="number"],
+  select {
+    font-size: 16px;
+  }
+  input[type="number"] {
+    padding: 7px 6px;
+  }
+  .btn-compute {
+    padding: 12px;
+    font-size: 0.9rem;
+    min-height: 44px;
+  }
+  .result-box {
+    font-size: 0.7rem;
+    overflow: hidden;
+  }
+  .res-row {
+    gap: 2px 4px;
+  }
+  .res-key {
+    flex-shrink: 0;
+  }
+  .res-val {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.66rem;
+    overflow-wrap: anywhere;
+  }
+  .badge {
+    font-size: 0.68rem;
+  }
+  .pole-row {
+    gap: 4px;
+  }
+}
+
+.info-bar {
+  background: #ffffff;
+  border-top: 1px solid #d4dde6;
+  padding: 5px 16px;
+  font-size: 0.7rem;
+  color: #5b7184;
+  flex-shrink: 0;
+  display: flex;
+  gap: 20px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>非線形システムの線形近似シミュレータ</h1>
+  <span class="eq">ẋ = f(x,u), &nbsp; 線形近似: δẋ = Aδx + Bδu</span>
+</header>
+
+<div class="body">
+  <div class="sidebar">
+    <div class="sidebar-inner">
+
+      <div class="section">
+        <div class="sec-title">プリセット</div>
+        <select id="preset" onchange="applyPreset()">
+          <option value="custom">── カスタム ──</option>
+          <option value="bottom_small" selected>下死点（θ*=0）安定平衡点</option>
+          <option value="bottom_large">下死点（θ*=0）大偏差</option>
+          <option value="top_unstable">上死点（θ*=π）不安定平衡点</option>
+          <option value="top_fb">上死点（θ*=π）＋状態FB安定化</option>
+        </select>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">物理パラメータ</div>
+        <div class="pole-row three-col">
+          <div class="pole-field">
+            <label>質量 m [kg]</label>
+            <input type="number" id="param_m" value="1" step="0.1" min="0.1" onchange="markCustom()">
+          </div>
+          <div class="pole-field">
+            <label>長さ l [m]</label>
+            <input type="number" id="param_l" value="1" step="0.1" min="0.1" onchange="markCustom()">
+          </div>
+          <div class="pole-field">
+            <label>減衰 k</label>
+            <input type="number" id="param_k" value="0.5" step="0.1" min="0" onchange="markCustom()">
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">平衡点</div>
+        <div class="radio-row">
+          <label><input type="radio" name="equil" value="0" checked onchange="markCustom()"> 下死点（θ*=0）</label>
+          <label><input type="radio" name="equil" value="pi" onchange="markCustom()"> 上死点（θ*=π）</label>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">平衡点からの初期偏差</div>
+        <div class="pole-row">
+          <div class="pole-field">
+            <label>Δθ [rad]</label>
+            <input type="number" id="dtheta0" value="0.3" step="0.1" onchange="markCustom()">
+          </div>
+          <div class="pole-field">
+            <label>Δθ̇ [rad/s]</label>
+            <input type="number" id="ddtheta0" value="0" step="0.1" onchange="markCustom()">
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">状態フィードバック</div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="fb_enable" onchange="toggleFB(); markCustom()">
+          <label for="fb_enable">状態フィードバック有効</label>
+        </div>
+        <div id="fb_params" class="fb-params disabled">
+          <div class="pole-row">
+            <div class="pole-field">
+              <label>目標極 P₁</label>
+              <input type="number" id="p1" value="-3" step="0.1">
+            </div>
+            <div class="pole-field">
+              <label>目標極 P₂</label>
+              <input type="number" id="p2" value="-3" step="0.1">
+            </div>
+          </div>
+          <div class="matrix-label" id="k_display" style="font-family:'Courier New',monospace;">K = [-, -]</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">シミュレーション</div>
+        <div class="pole-row">
+          <div class="pole-field">
+            <label>終了時刻 T [s]</label>
+            <input type="number" id="tEnd" value="10" step="1" min="0.5">
+          </div>
+          <div class="pole-field">
+            <label>刻み幅 dt</label>
+            <input type="number" id="dt" value="0.01" step="0.001" min="0.001" max="0.1">
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-compute" onclick="runSimulation()">&#x25B6; 計算・シミュレーション</button>
+
+      <div class="section">
+        <div class="sec-title">解析結果</div>
+        <div id="result-box" class="result-box">
+          <div style="color:#5b7184;">「計算・シミュレーション」を押してください</div>
+        </div>
+        <div id="error-msg" class="error-msg"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="plots-row">
+      <div class="plot-card anim-panel">
+        <div class="plot-header">
+          <span class="plot-title">振り子アニメーション</span>
+          <span class="plot-sub" id="anim-sub"></span>
+        </div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> 非線形</div>
+          <div class="leg-item"><div class="leg-line" style="background:#ffa657;"></div> 線形近似</div>
+          <div class="leg-item"><div class="leg-line" style="background:#94a3b8; opacity:0.4;"></div> 平衡点</div>
+        </div>
+        <canvas id="pendulum"></canvas>
+        <div class="anim-controls">
+          <button class="btn-play" id="btn-play" onclick="togglePlay()">&#x25B6;</button>
+          <span class="speed-label">速度:</span>
+          <input type="range" class="speed-slider" id="speed" min="0" max="2" step="1" value="1">
+          <span class="speed-label" id="speed-label">1x</span>
+          <span class="anim-info" id="anim-info">t=0.00</span>
+        </div>
+      </div>
+
+      <div class="plot-card phase-panel">
+        <div class="plot-header">
+          <span class="plot-title">位相平面</span>
+          <span class="plot-sub">横: θ−θ*, 縦: θ̇</span>
+        </div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> 非線形</div>
+          <div class="leg-item"><div class="leg-line" style="background:#ffa657; border-style:dashed;height:0;border-top:2px dashed #ffa657;"></div> 線形近似</div>
+          <div class="leg-item"><span class="leg-icon" style="color:#16a34a;">&#x25CB;</span> 平衡点</div>
+          <div class="leg-item"><span class="leg-icon" style="color:#dc2626;">&#x25CF;</span> 初期点</div>
+        </div>
+        <canvas id="phase"></canvas>
+      </div>
+    </div>
+
+    <div class="plot-card time-panel">
+      <div class="plot-header">
+        <span class="plot-title">時間応答 θ(t)</span>
+        <span class="plot-sub" id="time-sub"></span>
+      </div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> 非線形 θ(t)</div>
+        <div class="leg-item"><div class="leg-line" style="background:#ffa657; border-style:dashed;height:0;border-top:2px dashed #ffa657;"></div> 線形近似 θ(t)</div>
+        <div class="leg-item"><div class="leg-line" style="background:#94a3b8; opacity:0.4;"></div> 平衡点 θ*</div>
+      </div>
+      <canvas id="timeplot"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="info-bar">
+  <span>単振り子の非線形・線形近似比較 &nbsp;|&nbsp; RK4 数値積分</span>
+  <span id="ctrl-info"></span>
+</div>
+
+<script>
+// =========================================================
+// 定数・グローバル状態
+// =========================================================
+const G = 9.81;
+let simData = null;    // シミュレーション結果
+let animFrame = 0;     // 現在のアニメーションフレーム
+let animPlaying = false;
+let animRAF = null;
+let lastAnimTime = 0;
+
+// =========================================================
+// ユーティリティ
+// =========================================================
+function fN(v) {
+  if (!isFinite(v)) return 'Inf';
+  if (Number.isInteger(v) || Math.abs(v - Math.round(v)) < 1e-10) return String(Math.round(v));
+  return v.toFixed(4);
+}
+
+function fN2(v) {
+  if (!isFinite(v)) return 'Inf';
+  if (Number.isInteger(v) || Math.abs(v - Math.round(v)) < 1e-10) return String(Math.round(v));
+  return v.toFixed(2);
+}
+
+// =========================================================
+// 2x2 行列演算
+// =========================================================
+function det2(M) { return M[0][0]*M[1][1] - M[0][1]*M[1][0]; }
+
+function eig2(M) {
+  const tr = M[0][0]+M[1][1], dt = det2(M), disc = tr*tr - 4*dt;
+  if (disc >= -1e-14) {
+    const d = Math.sqrt(Math.max(0, disc));
+    return [{re:(tr+d)/2, im:0}, {re:(tr-d)/2, im:0}];
+  }
+  return [{re:tr/2, im:Math.sqrt(-disc)/2}, {re:tr/2, im:-Math.sqrt(-disc)/2}];
+}
+
+function fmtEig(c) {
+  if (Math.abs(c.im) < 1e-6) return fN(c.re);
+  return `${fN(c.re)}${c.im>=0?'+':''}${fN(c.im)}j`;
+}
+
+// =========================================================
+// パラメータ読み取り
+// =========================================================
+function getParams() {
+  const m = Math.max(+document.getElementById('param_m').value, 0.01);
+  const l = Math.max(+document.getElementById('param_l').value, 0.01);
+  const k = Math.max(+document.getElementById('param_k').value, 0);
+  const equilRadio = document.querySelector('input[name="equil"]:checked');
+  const thetaStar = equilRadio.value === 'pi' ? Math.PI : 0;
+  const dtheta0 = +document.getElementById('dtheta0').value;
+  const ddtheta0 = +document.getElementById('ddtheta0').value;
+  const fbEnabled = document.getElementById('fb_enable').checked;
+  const p1 = +document.getElementById('p1').value;
+  const p2 = +document.getElementById('p2').value;
+  const tEnd = Math.max(+document.getElementById('tEnd').value, 0.1);
+  const dt = Math.min(Math.max(+document.getElementById('dt').value, 0.0001), 0.5);
+  return { m, l, k, thetaStar, dtheta0, ddtheta0, fbEnabled, p1, p2, tEnd, dt };
+}
+
+// =========================================================
+// 線形化行列の計算
+// =========================================================
+function computeLinearization(m, l, k, thetaStar) {
+  // f(x,u) = [x2, -(g/l)sin(x1) - (k/m)x2 + (1/(ml))u]
+  // A = df/dx at (thetaStar, 0, 0)
+  // cos(0) = 1, cos(pi) = -1
+  const cosThStar = Math.cos(thetaStar);
+  const A = [
+    [0, 1],
+    [-(G/l)*cosThStar, -k/m]
+  ];
+  const B = [0, 1/(m*l)];
+  return { A, B };
+}
+
+// =========================================================
+// 極配置によるK計算（係数比較法）
+// =========================================================
+function computeK(A, B, p1, p2) {
+  // For system with B = [0, b2]^T where b2 = 1/(ml)
+  // A+BK = [[0, 1], [-(g/l)cos(th*)+b2*k1, -k/m+b2*k2]]
+  // char poly: s^2 - (a11+a22+b1*k1+b2*k2)s + (a11*a22+a11*b2*k2-a12*a21-a12*b2*k1+...) ...
+  // Using general coefficient matching for 2x2:
+  // det(sI - (A+BK)) = s^2 - tr(A+BK)s + det(A+BK)
+  // desired: s^2 - (p1+p2)s + p1*p2
+  const b1 = B[0], b2 = B[1];
+  const trA = A[0][0] + A[1][1];
+  const detA = det2(A);
+
+  // tr(A+BK) = trA + b1*k1 + b2*k2 = p1+p2
+  // det(A+BK) = (a11+b1*k1)(a22+b2*k2) - (a12)(a21+b2*k1) ... wait, B=[b1,b2], K=[k1,k2]
+  // A+BK = [[a11+b1*k1, a12+b1*k2], [a21+b2*k1, a22+b2*k2]]
+  // Actually for column B: BK = [[b1*k1, b1*k2], [b2*k1, b2*k2]]
+  // det(A+BK) = (a11+b1*k1)(a22+b2*k2) - (a12+b1*k2)(a21+b2*k1)
+  // = a11*a22 + a11*b2*k2 + b1*k1*a22 + b1*k1*b2*k2
+  //   - a12*a21 - a12*b2*k1 - b1*k2*a21 - b1*k2*b2*k1
+  // = detA + a11*b2*k2 + a22*b1*k1 - a12*b2*k1 - a21*b1*k2 + b1*b2*k1*k2 - b1*b2*k1*k2
+  // = detA + (a22*b1 - a12*b2)*k1 + (a11*b2 - a21*b1)*k2
+  // (the b1*b2 terms cancel for column vector B)
+  // Wait actually BK where B is column and K is row: BK = [[b1],[b2]] * [[k1,k2]] = [[b1*k1, b1*k2],[b2*k1, b2*k2]]
+  // So A + BK:
+  // [[a11+b1*k1, a12+b1*k2], [a21+b2*k1, a22+b2*k2]]
+  // det = (a11+b1*k1)(a22+b2*k2) - (a12+b1*k2)(a21+b2*k1)
+  // Expanding:
+  // = a11*a22 + a11*b2*k2 + b1*k1*a22 + b1*b2*k1*k2
+  //   - a12*a21 - a12*b2*k1 - b1*k2*a21 - b1*b2*k2*k1
+  // = detA + (a22*b1 - a12*b2)*k1 + (a11*b2 - a21*b1)*k2
+  // (b1*b2*k1*k2 cancels)
+
+  const c1 = A[1][1]*b1 - A[0][1]*b2;
+  const c2 = A[0][0]*b2 - A[1][0]*b1;
+
+  const sumP = p1 + p2;
+  const prodP = p1 * p2;
+  const rhs1 = sumP - trA;  // b1*k1 + b2*k2 = rhs1
+  const rhs2 = prodP - detA; // c1*k1 + c2*k2 = rhs2
+
+  const M = [[b1, b2], [c1, c2]];
+  const detM = det2(M);
+
+  if (Math.abs(detM) > 1e-10) {
+    const k1 = (rhs1 * c2 - rhs2 * b2) / detM;
+    const k2 = (rhs2 * b1 - rhs1 * c1) / detM;
+    return { K: [k1, k2], solvable: true };
+  }
+  return { K: null, solvable: false };
+}
+
+// =========================================================
+// 非線形システムの状態方程式
+// =========================================================
+function fNonlinear(x, u, m, l, k) {
+  // x = [theta, theta_dot]
+  // f = [theta_dot, -(g/l)*sin(theta) - (k/m)*theta_dot + (1/(ml))*u]
+  return [
+    x[1],
+    -(G/l)*Math.sin(x[0]) - (k/m)*x[1] + (1/(m*l))*u
+  ];
+}
+
+// =========================================================
+// 線形化システムの状態方程式（偏差座標）
+// =========================================================
+function fLinear(xbar, ubar, A, B) {
+  // xbar_dot = A*xbar + B*ubar
+  return [
+    A[0][0]*xbar[0] + A[0][1]*xbar[1] + B[0]*ubar,
+    A[1][0]*xbar[0] + A[1][1]*xbar[1] + B[1]*ubar
+  ];
+}
+
+// =========================================================
+// RK4 シミュレーション
+// =========================================================
+function simulateNonlinear(m, l, k, thetaStar, x0, K, fbEnabled, tEnd, dt) {
+  const steps = Math.ceil(tEnd / dt);
+  const n = steps + 1;
+  const t = new Float64Array(n);
+  const theta = new Float64Array(n);
+  const thetaDot = new Float64Array(n);
+
+  let x = [x0[0], x0[1]];
+  const CLIP_TH = 20, CLIP_TD = 100;
+
+  for (let i = 0; i < n; i++) {
+    t[i] = i * dt;
+    theta[i] = x[0];
+    thetaDot[i] = x[1];
+    if (i === n - 1) break;
+
+    // Control input
+    let u = 0;
+    if (fbEnabled && K) {
+      u = K[0] * (x[0] - thetaStar) + K[1] * (x[1] - 0);
+    }
+
+    const f = (xx) => {
+      let uu = 0;
+      if (fbEnabled && K) {
+        uu = K[0] * (xx[0] - thetaStar) + K[1] * (xx[1] - 0);
+      }
+      return fNonlinear(xx, uu, m, l, k);
+    };
+
+    const k1 = f(x);
+    const x2 = [x[0]+0.5*dt*k1[0], x[1]+0.5*dt*k1[1]];
+    const k2 = f(x2);
+    const x3 = [x[0]+0.5*dt*k2[0], x[1]+0.5*dt*k2[1]];
+    const k3 = f(x3);
+    const x4 = [x[0]+dt*k3[0], x[1]+dt*k3[1]];
+    const k4 = f(x4);
+
+    x[0] += (dt/6)*(k1[0]+2*k2[0]+2*k3[0]+k4[0]);
+    x[1] += (dt/6)*(k1[1]+2*k2[1]+2*k3[1]+k4[1]);
+
+    // Clip
+    if (!isFinite(x[0]) || Math.abs(x[0]) > CLIP_TH) x[0] = CLIP_TH * (x[0] > 0 ? 1 : -1);
+    if (!isFinite(x[1]) || Math.abs(x[1]) > CLIP_TD) x[1] = CLIP_TD * (x[1] > 0 ? 1 : -1);
+  }
+
+  return { t, theta, thetaDot };
+}
+
+function simulateLinear(A, B, thetaStar, xbar0, K, fbEnabled, tEnd, dt) {
+  const steps = Math.ceil(tEnd / dt);
+  const n = steps + 1;
+  const t = new Float64Array(n);
+  const theta = new Float64Array(n);    // absolute theta = thetaStar + xbar[0]
+  const thetaDot = new Float64Array(n);
+
+  let xbar = [xbar0[0], xbar0[1]]; // deviation from equilibrium
+  const CLIP_TH = 20, CLIP_TD = 100;
+
+  for (let i = 0; i < n; i++) {
+    t[i] = i * dt;
+    theta[i] = thetaStar + xbar[0];
+    thetaDot[i] = xbar[1];
+    if (i === n - 1) break;
+
+    const f = (xx) => {
+      let ubar = 0;
+      if (fbEnabled && K) {
+        ubar = K[0] * xx[0] + K[1] * xx[1];
+      }
+      return fLinear(xx, ubar, A, B);
+    };
+
+    const k1 = f(xbar);
+    const x2 = [xbar[0]+0.5*dt*k1[0], xbar[1]+0.5*dt*k1[1]];
+    const k2 = f(x2);
+    const x3 = [xbar[0]+0.5*dt*k2[0], xbar[1]+0.5*dt*k2[1]];
+    const k3 = f(x3);
+    const x4 = [xbar[0]+dt*k3[0], xbar[1]+dt*k3[1]];
+    const k4 = f(x4);
+
+    xbar[0] += (dt/6)*(k1[0]+2*k2[0]+2*k3[0]+k4[0]);
+    xbar[1] += (dt/6)*(k1[1]+2*k2[1]+2*k3[1]+k4[1]);
+
+    // Clip (deviation)
+    if (!isFinite(xbar[0]) || Math.abs(xbar[0]) > CLIP_TH) xbar[0] = CLIP_TH * (xbar[0] > 0 ? 1 : -1);
+    if (!isFinite(xbar[1]) || Math.abs(xbar[1]) > CLIP_TD) xbar[1] = CLIP_TD * (xbar[1] > 0 ? 1 : -1);
+  }
+
+  return { t, theta, thetaDot };
+}
+
+// =========================================================
+// UIトグル
+// =========================================================
+function toggleFB() {
+  const enabled = document.getElementById('fb_enable').checked;
+  const params = document.getElementById('fb_params');
+  if (enabled) {
+    params.classList.remove('disabled');
+  } else {
+    params.classList.add('disabled');
+  }
+}
+
+function markCustom() {
+  document.getElementById('preset').value = 'custom';
+}
+
+// =========================================================
+// プリセット
+// =========================================================
+const PRESETS = {
+  bottom_small: { m: 1, l: 1, k: 0.5, equil: '0', dtheta0: 0.3, ddtheta0: 0, fb: false, p1: -3, p2: -3, tEnd: 10 },
+  bottom_large: { m: 1, l: 1, k: 0.5, equil: '0', dtheta0: 1.5, ddtheta0: 0, fb: false, p1: -3, p2: -3, tEnd: 10 },
+  top_unstable: { m: 1, l: 1, k: 0.5, equil: 'pi', dtheta0: 0.1, ddtheta0: 0, fb: false, p1: -3, p2: -3, tEnd: 10 },
+  top_fb:       { m: 1, l: 1, k: 0.5, equil: 'pi', dtheta0: 0.3, ddtheta0: 0, fb: true,  p1: -3, p2: -3, tEnd: 10 },
+};
+
+function applyPreset() {
+  const key = document.getElementById('preset').value;
+  if (key === 'custom') return;
+  const p = PRESETS[key];
+  document.getElementById('param_m').value = p.m;
+  document.getElementById('param_l').value = p.l;
+  document.getElementById('param_k').value = p.k;
+  document.querySelectorAll('input[name="equil"]').forEach(r => {
+    r.checked = (r.value === p.equil);
+  });
+  document.getElementById('dtheta0').value = p.dtheta0;
+  document.getElementById('ddtheta0').value = p.ddtheta0;
+  document.getElementById('fb_enable').checked = p.fb;
+  document.getElementById('p1').value = p.p1;
+  document.getElementById('p2').value = p.p2;
+  document.getElementById('tEnd').value = p.tEnd;
+  toggleFB();
+  runSimulation();
+}
+
+// =========================================================
+// メインシミュレーション
+// =========================================================
+function runSimulation() {
+  stopAnimation();
+
+  const params = getParams();
+  const { m, l, k, thetaStar, dtheta0, ddtheta0, fbEnabled, p1, p2, tEnd, dt } = params;
+
+  // Linearize
+  const lin = computeLinearization(m, l, k, thetaStar);
+  const A = lin.A;
+  const B = lin.B;
+
+  // Compute K if feedback enabled
+  let K = null;
+  let kResult = null;
+  if (fbEnabled) {
+    kResult = computeK(A, B, p1, p2);
+    if (kResult.solvable) {
+      K = kResult.K;
+    }
+  }
+
+  // Initial state
+  const theta0_nl = thetaStar + dtheta0;
+  const thetaDot0 = ddtheta0;
+
+  // Simulate nonlinear
+  const nlSim = simulateNonlinear(m, l, k, thetaStar, [theta0_nl, thetaDot0], K, fbEnabled, tEnd, dt);
+
+  // Simulate linear (in deviation coordinates)
+  const linSim = simulateLinear(A, B, thetaStar, [dtheta0, ddtheta0], K, fbEnabled, tEnd, dt);
+
+  // Compute max error
+  let maxErr = 0;
+  for (let i = 0; i < nlSim.theta.length; i++) {
+    const err = Math.abs(nlSim.theta[i] - linSim.theta[i]);
+    if (isFinite(err) && err > maxErr) maxErr = err;
+  }
+
+  // Eigenvalues
+  const olEigs = eig2(A);
+
+  // Closed-loop eigenvalues
+  let clEigs = null;
+  if (K) {
+    const Acl = [
+      [A[0][0] + B[0]*K[0], A[0][1] + B[0]*K[1]],
+      [A[1][0] + B[1]*K[0], A[1][1] + B[1]*K[1]]
+    ];
+    clEigs = eig2(Acl);
+  }
+
+  // Store data
+  simData = {
+    params, A, B, K, kResult,
+    nlSim, linSim,
+    olEigs, clEigs,
+    maxErr, thetaStar
+  };
+
+  // Update UI
+  updateResults();
+  updateKDisplay();
+  drawPendulum();
+  drawPhase();
+  drawTimePlot();
+
+  // Update info bar
+  const eqLabel = thetaStar === 0 ? 'θ*=0（下死点）' : 'θ*=π（上死点）';
+  const stabLabel = olEigs.every(e => e.re < -1e-9) ? '安定' : (olEigs.every(e => e.re < 1e-9) ? '臨界' : '不安定');
+  document.getElementById('ctrl-info').textContent = `平衡点: ${eqLabel} → ${stabLabel}`;
+
+  // Reset animation
+  animFrame = 0;
+  updateAnimInfo();
+}
+
+// =========================================================
+// 結果パネル更新
+// =========================================================
+function updateResults() {
+  if (!simData) return;
+  const { A, B, K, olEigs, clEigs, maxErr, thetaStar, params } = simData;
+
+  let html = '';
+
+  // Linearized matrices
+  html += `<div style="font-size:0.66rem;color:#2e7dd1;margin-bottom:4px;">線形化行列</div>`;
+  html += `<div class="res-row"><span class="res-key">A</span><span class="res-val">[${fN(A[0][0])}, ${fN(A[0][1])}; ${fN(A[1][0])}, ${fN(A[1][1])}]</span></div>`;
+  html += `<div class="res-row"><span class="res-key">B</span><span class="res-val">[${fN(B[0])}; ${fN(B[1])}]</span></div>`;
+
+  html += `<hr class="res-sep">`;
+
+  // Eigenvalues
+  html += `<div style="font-size:0.66rem;color:#2e7dd1;margin-bottom:4px;">A の固有値</div>`;
+  olEigs.forEach((e, i) => {
+    const st = e.re < -1e-9;
+    html += `<div class="res-row"><span class="res-key">λ${i+1}</span><span class="res-val ${st?'stable':'unstable'}">${fmtEig(e)}</span></div>`;
+  });
+
+  // Stability badge
+  const allStable = olEigs.every(e => e.re < -1e-9);
+  const allMarginal = olEigs.every(e => e.re < 1e-9);
+  let badge, bclass;
+  if (allStable) { badge = '安定'; bclass = 'ctrl'; }
+  else if (allMarginal) { badge = '臨界安定'; bclass = 'stab'; }
+  else { badge = '不安定'; bclass = 'unstab'; }
+  html += `<div style="text-align:center;margin-top:4px;"><span class="badge ${bclass}">${badge}</span></div>`;
+
+  // Feedback results
+  if (params.fbEnabled) {
+    html += `<hr class="res-sep">`;
+    html += `<div style="font-size:0.66rem;color:#2e7dd1;margin-bottom:4px;">状態フィードバック</div>`;
+    if (K) {
+      html += `<div class="res-row"><span class="res-key">K</span><span class="res-val">[${fN(K[0])}, ${fN(K[1])}]</span></div>`;
+      if (clEigs) {
+        clEigs.forEach((e, i) => {
+          const st = e.re < -1e-9;
+          html += `<div class="res-row"><span class="res-key">閉λ${i+1}</span><span class="res-val ${st?'stable':'unstable'}">${fmtEig(e)}</span></div>`;
+        });
+        const clStable = clEigs.every(e => e.re < -1e-9);
+        html += `<div style="text-align:center;margin-top:4px;"><span class="badge ${clStable?'ctrl':'unstab'}">${clStable?'閉ループ安定':'閉ループ不安定'}</span></div>`;
+      }
+    } else {
+      html += `<div style="color:#dc2626;font-size:0.76rem;">極配置の解が見つかりません</div>`;
+    }
+  }
+
+  html += `<hr class="res-sep">`;
+  html += `<div style="font-size:0.66rem;color:#2e7dd1;margin-bottom:4px;">近似誤差</div>`;
+  html += `<div class="res-row"><span class="res-key">max|θ_NL−θ_L|</span><span class="res-val">${fN(maxErr)} rad</span></div>`;
+
+  document.getElementById('result-box').innerHTML = html;
+}
+
+function updateKDisplay() {
+  const el = document.getElementById('k_display');
+  if (simData && simData.K) {
+    el.textContent = `K = [${fN2(simData.K[0])}, ${fN2(simData.K[1])}]`;
+  } else {
+    el.textContent = 'K = [-, -]';
+  }
+}
+
+// =========================================================
+// 振り子アニメーション描画
+// =========================================================
+function drawPendulum(frameIdx) {
+  const canvas = document.getElementById('pendulum');
+  const par = canvas.parentElement;
+  const legendH = par.querySelector('.legend') ? par.querySelector('.legend').offsetHeight : 0;
+  const headerH = par.querySelector('.plot-header') ? par.querySelector('.plot-header').offsetHeight : 0;
+  const controlsH = par.querySelector('.anim-controls') ? par.querySelector('.anim-controls').offsetHeight : 0;
+  const W = par.clientWidth;
+  const H = par.clientHeight - legendH - headerH - controlsH - 4;
+  canvas.width = W;
+  canvas.height = Math.max(H, 100);
+  const ctx = canvas.getContext('2d');
+
+  if (!simData) {
+    ctx.clearRect(0, 0, W, H);
+    return;
+  }
+
+  const idx = frameIdx !== undefined ? frameIdx : animFrame;
+  const { nlSim, linSim, thetaStar, params } = simData;
+  const { l } = params;
+
+  const thetaNL = nlSim.theta[Math.min(idx, nlSim.theta.length - 1)];
+  const thetaLin = linSim.theta[Math.min(idx, linSim.theta.length - 1)];
+
+  ctx.clearRect(0, 0, W, canvas.height);
+
+  // Scale: pendulum length in pixels
+  const maxLen = Math.min(W, canvas.height) * 0.35;
+  const rodPx = maxLen;
+
+  // Pivot point
+  const pivotX = W / 2;
+  const pivotY = canvas.height * 0.3;
+
+  const bobRadius = Math.max(8, rodPx * 0.08);
+
+  // Helper to draw a pendulum
+  function drawPend(theta, color, alpha, lineWidth, dashed) {
+    // theta=0 means straight down, theta=pi means straight up
+    // In canvas: down is +y, so bob position:
+    // bobX = pivotX + rodPx * sin(theta)
+    // bobY = pivotY + rodPx * cos(theta)
+    const bobX = pivotX + rodPx * Math.sin(theta);
+    const bobY = pivotY + rodPx * Math.cos(theta);
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // Rod
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    if (dashed) ctx.setLineDash([6, 4]);
+    else ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(pivotX, pivotY);
+    ctx.lineTo(bobX, bobY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Bob
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(bobX, bobY, bobRadius, 0, 2 * Math.PI);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // Draw pivot
+  ctx.fillStyle = '#1f2d3a';
+  ctx.beginPath();
+  ctx.arc(pivotX, pivotY, 4, 0, 2 * Math.PI);
+  ctx.fill();
+
+  // Draw pivot bracket
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(pivotX - 20, pivotY - 2);
+  ctx.lineTo(pivotX + 20, pivotY - 2);
+  ctx.stroke();
+  // Hatch marks
+  for (let i = -2; i <= 2; i++) {
+    ctx.beginPath();
+    ctx.moveTo(pivotX + i * 8, pivotY - 2);
+    ctx.lineTo(pivotX + i * 8 - 5, pivotY - 10);
+    ctx.stroke();
+  }
+
+  // Draw equilibrium pendulum (gray, thin)
+  drawPend(thetaStar, '#94a3b8', 0.3, 1.5, false);
+
+  // Draw linear pendulum (orange, dashed)
+  drawPend(thetaLin, '#ffa657', 0.6, 2, true);
+
+  // Draw nonlinear pendulum (blue, solid)
+  drawPend(thetaNL, '#2e7dd1', 0.9, 2.5, false);
+
+  // Draw angle arc for nonlinear
+  const arcRadius = rodPx * 0.25;
+  ctx.strokeStyle = '#2e7dd1';
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.5;
+  ctx.beginPath();
+  // Arc from vertical (downward) to theta
+  // In canvas coords: down is 0 degrees (from pivot), and angles go clockwise
+  // Canvas arc: 0 = right, pi/2 = down. So "down" from pivot is pi/2.
+  // theta=0 means bob at bottom, which is canvas angle pi/2 from pivot.
+  // general: canvas angle = pi/2 - theta  (wait, let me think)
+  // bobX = pivotX + rodPx*sin(theta), bobY = pivotY + rodPx*cos(theta)
+  // canvas arc angle for this direction: atan2(cos(theta), sin(theta)) = pi/2 - theta
+  // Actually the arc() angles: 0=right, pi/2=down, pi=left, -pi/2=up
+  // Direction to bob: atan2(bobY-pivotY, bobX-pivotX) = atan2(rodPx*cos(theta), rodPx*sin(theta)) = atan2(cos(theta), sin(theta))
+  // For theta=0: atan2(1,0) = pi/2 (down) - correct
+  // For theta=pi: atan2(-1,0) = -pi/2 (up) - correct
+  if (Math.abs(thetaNL - thetaStar) > 0.01) {
+    const angleDown = Math.PI / 2; // canvas angle for straight down
+    const angleEq = Math.atan2(Math.cos(thetaStar), Math.sin(thetaStar));
+    const angleNL = Math.atan2(Math.cos(thetaNL), Math.sin(thetaNL));
+    const start = Math.min(angleEq, angleNL);
+    const end = Math.max(angleEq, angleNL);
+    // Check if we should go the other way
+    if (end - start <= Math.PI) {
+      ctx.arc(pivotX, pivotY, arcRadius, start, end);
+    } else {
+      ctx.arc(pivotX, pivotY, arcRadius, end, start);
+    }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // Draw gravity arrow
+  const arrowX = W - 30;
+  const arrowY1 = pivotY + 10;
+  const arrowY2 = pivotY + 40;
+  ctx.strokeStyle = '#5b7184';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(arrowX, arrowY1);
+  ctx.lineTo(arrowX, arrowY2);
+  ctx.stroke();
+  // Arrowhead
+  ctx.beginPath();
+  ctx.moveTo(arrowX, arrowY2);
+  ctx.lineTo(arrowX - 4, arrowY2 - 6);
+  ctx.lineTo(arrowX + 4, arrowY2 - 6);
+  ctx.closePath();
+  ctx.fillStyle = '#5b7184';
+  ctx.fill();
+  ctx.font = '10px sans-serif';
+  ctx.fillStyle = '#5b7184';
+  ctx.textAlign = 'center';
+  ctx.fillText('g', arrowX, arrowY2 + 12);
+
+  // Show current values
+  const mob = W < 400;
+  const fs = mob ? 9 : 11;
+  ctx.font = `${fs}px 'Courier New', monospace`;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#2e7dd1';
+  ctx.fillText(`NL: θ=${fN2(thetaNL)}`, 8, canvas.height - 24);
+  ctx.fillStyle = '#ffa657';
+  ctx.fillText(`Lin: θ=${fN2(thetaLin)}`, 8, canvas.height - 10);
+}
+
+// =========================================================
+// 位相平面描画
+// =========================================================
+function drawPhase(frameIdx) {
+  const canvas = document.getElementById('phase');
+  const par = canvas.parentElement;
+  const legendH = par.querySelector('.legend') ? par.querySelector('.legend').offsetHeight : 0;
+  const headerH = par.querySelector('.plot-header') ? par.querySelector('.plot-header').offsetHeight : 0;
+  const W = par.clientWidth;
+  const H = par.clientHeight - legendH - headerH - 4;
+  canvas.width = W;
+  canvas.height = Math.max(H, 100);
+  const ctx = canvas.getContext('2d');
+
+  if (!simData) {
+    ctx.clearRect(0, 0, W, canvas.height);
+    return;
+  }
+
+  const idx = frameIdx !== undefined ? frameIdx : (simData.nlSim.theta.length - 1);
+  const { nlSim, linSim, thetaStar } = simData;
+
+  const mob = W < 500;
+  const pad = mob ? { l: 36, r: 12, t: 12, b: 26 } : { l: 50, r: 16, t: 14, b: 34 };
+  const pw = W - pad.l - pad.r;
+  const ph = canvas.height - pad.t - pad.b;
+  const fs = mob ? 8 : 10;
+
+  // Determine ranges from data up to idx
+  const nlDevTheta = [];
+  const nlThetaDot = [];
+  const linDevTheta = [];
+  const linThetaDot = [];
+
+  const drawLen = Math.min(idx + 1, nlSim.theta.length);
+
+  for (let i = 0; i < drawLen; i++) {
+    nlDevTheta.push(nlSim.theta[i] - thetaStar);
+    nlThetaDot.push(nlSim.thetaDot[i]);
+    linDevTheta.push(linSim.theta[i] - thetaStar);
+    linThetaDot.push(linSim.thetaDot[i]);
+  }
+
+  // Also consider full trajectory for range
+  const allDevTh = [];
+  const allThetaDot = [];
+  for (let i = 0; i < nlSim.theta.length; i++) {
+    allDevTh.push(nlSim.theta[i] - thetaStar);
+    allThetaDot.push(nlSim.thetaDot[i]);
+    allDevTh.push(linSim.theta[i] - thetaStar);
+    allThetaDot.push(linSim.thetaDot[i]);
+  }
+
+  const xMax = Math.max(Math.abs(Math.max(...allDevTh)), Math.abs(Math.min(...allDevTh)), 0.1) * 1.2;
+  const yMax = Math.max(Math.abs(Math.max(...allThetaDot)), Math.abs(Math.min(...allThetaDot)), 0.1) * 1.2;
+
+  const toX = v => pad.l + (v + xMax) / (2 * xMax) * pw;
+  const toY = v => pad.t + (1 - (v + yMax) / (2 * yMax)) * ph;
+
+  ctx.clearRect(0, 0, W, canvas.height);
+
+  // Grid
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + i * ph / 4;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+  }
+  for (let i = 0; i <= 4; i++) {
+    const x = pad.l + i * pw / 4;
+    ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + ph); ctx.stroke();
+  }
+
+  // Axes through origin
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(pad.l, toY(0)); ctx.lineTo(W - pad.r, toY(0)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(toX(0), pad.t); ctx.lineTo(toX(0), pad.t + ph); ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = '#5b7184';
+  ctx.font = `${fs}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('θ−θ*', W - pad.r, toY(0) - 4);
+  ctx.textAlign = 'center';
+  ctx.fillText('θ̇', toX(0) + (mob ? 10 : 16), pad.t + 10);
+
+  // Axis tick labels
+  const nTicks = mob ? 3 : 5;
+  ctx.textAlign = 'center';
+  for (let i = 0; i <= nTicks; i++) {
+    const v = -xMax + i * 2 * xMax / nTicks;
+    ctx.fillText(fN2(v), toX(v), pad.t + ph + 14);
+  }
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const v = yMax - i * 2 * yMax / 4;
+    ctx.fillText(fN2(v), pad.l - 4, pad.t + i * ph / 4 + 4);
+  }
+
+  // Border
+  ctx.strokeStyle = '#d4dde6';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(pad.l, pad.t, pw, ph);
+
+  // Draw linear trajectory (orange dashed)
+  ctx.strokeStyle = '#ffa657';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 3]);
+  ctx.beginPath();
+  for (let i = 0; i < drawLen; i++) {
+    const px = toX(linDevTheta[i]), py = toY(linThetaDot[i]);
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw nonlinear trajectory (blue solid)
+  ctx.strokeStyle = '#2e7dd1';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < drawLen; i++) {
+    const px = toX(nlDevTheta[i]), py = toY(nlThetaDot[i]);
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+
+  // Draw equilibrium point
+  ctx.strokeStyle = '#16a34a';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(toX(0), toY(0), 6, 0, 2 * Math.PI);
+  ctx.stroke();
+
+  // Draw initial point
+  if (drawLen > 0) {
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.arc(toX(nlDevTheta[0]), toY(nlThetaDot[0]), 4, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+
+  // Draw current point
+  if (drawLen > 0 && frameIdx !== undefined) {
+    const ci = drawLen - 1;
+    // Nonlinear current
+    ctx.fillStyle = '#2e7dd1';
+    ctx.beginPath();
+    ctx.arc(toX(nlDevTheta[ci]), toY(nlThetaDot[ci]), 4, 0, 2 * Math.PI);
+    ctx.fill();
+    // Linear current
+    ctx.fillStyle = '#ffa657';
+    ctx.beginPath();
+    ctx.arc(toX(linDevTheta[ci]), toY(linThetaDot[ci]), 4, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+}
+
+// =========================================================
+// 時間応答プロット描画
+// =========================================================
+function drawTimePlot(frameIdx) {
+  const canvas = document.getElementById('timeplot');
+  const par = canvas.parentElement;
+  const legendH = par.querySelector('.legend') ? par.querySelector('.legend').offsetHeight : 0;
+  const headerH = par.querySelector('.plot-header') ? par.querySelector('.plot-header').offsetHeight : 0;
+  const W = par.clientWidth;
+  const H = par.clientHeight - legendH - headerH - 4;
+  canvas.width = W;
+  canvas.height = Math.max(H, 80);
+  const ctx = canvas.getContext('2d');
+
+  if (!simData) {
+    ctx.clearRect(0, 0, W, canvas.height);
+    return;
+  }
+
+  const { nlSim, linSim, thetaStar, params } = simData;
+  const { tEnd } = params;
+  const mob = W < 500;
+  const pad = mob ? { l: 36, r: 8, t: 10, b: 26 } : { l: 50, r: 14, t: 12, b: 32 };
+  const pw = W - pad.l - pad.r;
+  const ph = canvas.height - pad.t - pad.b;
+  const fs = mob ? 8 : 10;
+
+  // Determine y range from all theta values
+  const allVals = [...Array.from(nlSim.theta), ...Array.from(linSim.theta)];
+  const rawMax = Math.max(...allVals);
+  const rawMin = Math.min(...allVals);
+  const margin = Math.max((rawMax - rawMin) * 0.15, 0.1);
+  const yMax = rawMax + margin;
+  const yMin = rawMin - margin;
+
+  const toX = t => pad.l + (t / tEnd) * pw;
+  const toY = v => pad.t + (1 - (v - yMin) / (yMax - yMin)) * ph;
+
+  ctx.clearRect(0, 0, W, canvas.height);
+
+  // Grid
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + i * ph / 4;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+  }
+  for (let i = 0; i <= 5; i++) {
+    const x = pad.l + i * pw / 5;
+    ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + ph); ctx.stroke();
+  }
+
+  // Zero / equilibrium line
+  if (toY(thetaStar) >= pad.t && toY(thetaStar) <= pad.t + ph) {
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(pad.l, toY(thetaStar));
+    ctx.lineTo(W - pad.r, toY(thetaStar));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Label
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = `${fs}px sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText(`θ*=${fN2(thetaStar)}`, W - pad.r - (mob ? 40 : 55), toY(thetaStar) - 3);
+  }
+
+  // Border
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(pad.l, pad.t, pw, ph);
+
+  // Axis labels
+  ctx.fillStyle = '#5b7184';
+  ctx.font = `${fs}px monospace`;
+  ctx.textAlign = 'center';
+  const tSteps = mob ? 4 : 5;
+  for (let i = 0; i <= tSteps; i++) ctx.fillText((i * tEnd / tSteps).toFixed(1), pad.l + i * pw / tSteps, canvas.height - pad.b + 14);
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const v = yMax - i * (yMax - yMin) / 4;
+    ctx.fillText(fN2(v), pad.l - 3, pad.t + i * ph / 4 + 4);
+  }
+  ctx.textAlign = 'center';
+  ctx.fillText('t [s]', W - pad.r, canvas.height - pad.b + 14);
+
+  // Draw linear theta (orange dashed)
+  ctx.strokeStyle = '#ffa657';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 3]);
+  ctx.beginPath();
+  for (let i = 0; i < linSim.t.length; i++) {
+    const px = toX(linSim.t[i]), py = toY(linSim.theta[i]);
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw nonlinear theta (blue solid)
+  ctx.strokeStyle = '#2e7dd1';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < nlSim.t.length; i++) {
+    const px = toX(nlSim.t[i]), py = toY(nlSim.theta[i]);
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+
+  // Vertical time marker
+  if (frameIdx !== undefined && frameIdx < nlSim.t.length) {
+    const tx = toX(nlSim.t[frameIdx]);
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 2]);
+    ctx.beginPath();
+    ctx.moveTo(tx, pad.t);
+    ctx.lineTo(tx, pad.t + ph);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+// =========================================================
+// アニメーション制御
+// =========================================================
+const SPEEDS = [0.5, 1, 2];
+
+function getSpeed() {
+  return SPEEDS[+document.getElementById('speed').value];
+}
+
+document.getElementById('speed').addEventListener('input', function() {
+  document.getElementById('speed-label').textContent = getSpeed() + 'x';
+});
+
+function togglePlay() {
+  if (!simData) return;
+  if (animPlaying) {
+    stopAnimation();
+  } else {
+    // If at end, restart
+    if (animFrame >= simData.nlSim.theta.length - 1) {
+      animFrame = 0;
+    }
+    animPlaying = true;
+    document.getElementById('btn-play').innerHTML = '&#x23F8;';
+    lastAnimTime = performance.now();
+    animRAF = requestAnimationFrame(animStep);
+  }
+}
+
+function stopAnimation() {
+  animPlaying = false;
+  document.getElementById('btn-play').innerHTML = '&#x25B6;';
+  if (animRAF) {
+    cancelAnimationFrame(animRAF);
+    animRAF = null;
+  }
+}
+
+function animStep(now) {
+  if (!animPlaying || !simData) return;
+
+  const dt = simData.params.dt;
+  const speed = getSpeed();
+  const elapsed = (now - lastAnimTime) / 1000; // seconds
+  lastAnimTime = now;
+
+  // Advance frames based on elapsed real time
+  const framesToAdvance = Math.max(1, Math.round(elapsed / dt * speed));
+  animFrame = Math.min(animFrame + framesToAdvance, simData.nlSim.theta.length - 1);
+
+  drawPendulum(animFrame);
+  drawPhase(animFrame);
+  drawTimePlot(animFrame);
+  updateAnimInfo();
+
+  if (animFrame >= simData.nlSim.theta.length - 1) {
+    stopAnimation();
+    return;
+  }
+
+  animRAF = requestAnimationFrame(animStep);
+}
+
+function updateAnimInfo() {
+  if (!simData) return;
+  const t = simData.nlSim.t[Math.min(animFrame, simData.nlSim.t.length - 1)];
+  const thetaNL = simData.nlSim.theta[Math.min(animFrame, simData.nlSim.theta.length - 1)];
+  const thetaLin = simData.linSim.theta[Math.min(animFrame, simData.linSim.theta.length - 1)];
+  document.getElementById('anim-info').textContent = `t=${fN2(t)}`;
+  document.getElementById('anim-sub').textContent = `t = ${fN2(t)} s`;
+}
+
+// =========================================================
+// リサイズ対応
+// =========================================================
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (simData) {
+      drawPendulum(animFrame);
+      drawPhase(animPlaying ? animFrame : undefined);
+      drawTimePlot(animPlaying ? animFrame : undefined);
+    }
+  }, 80);
+});
+
+// =========================================================
+// 初期実行
+// =========================================================
+runSimulation();
+</script>
+</body>
+</html>

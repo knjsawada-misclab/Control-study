@@ -945,55 +945,55 @@ function drawAnimation(frameIdx) {
 }
 
 function drawVibSystem(ctx, cx, sysW, H, yVal, vscale, color, label, tNow, mob, showActuator, params) {
-  var ceilY = H * 0.1;
-  var restMassY = H * 0.65;
+  var groundY = H * 0.88;
+  var restMassY = H * 0.30;
   var massH = mob ? 18 : 24;
-  var massW = sysW * 0.55;
+  var massW = sysW * 0.65;
   var halfW = massW / 2;
 
-  // Displacement: positive y = downward displacement
-  var dy = yVal * vscale;
+  // Displacement: positive y = upward in physical coords, but downward on screen
+  var dy = -yVal * vscale;
   var massY = restMassY + dy;
 
-  // Draw ceiling (fixed structure)
+  // Draw ground (fixed base at bottom)
   ctx.strokeStyle = '#5b7184';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(cx - halfW - 10, ceilY);
-  ctx.lineTo(cx + halfW + 10, ceilY);
+  ctx.moveTo(cx - halfW - 10, groundY);
+  ctx.lineTo(cx + halfW + 10, groundY);
   ctx.stroke();
-  // Hatch marks on ceiling
+  // Hatch marks on ground (downward)
   ctx.lineWidth = 1;
   var hatchCount = 7;
   for (var i = 0; i < hatchCount; i++) {
     var hx = cx - halfW - 10 + i * (massW + 20) / (hatchCount - 1);
     ctx.beginPath();
-    ctx.moveTo(hx, ceilY);
-    ctx.lineTo(hx - 5, ceilY - 8);
+    ctx.moveTo(hx, groundY);
+    ctx.lineTo(hx + 5, groundY + 8);
     ctx.stroke();
   }
 
-  // Spring (left side): zigzag from ceiling to mass
-  var springX = cx - halfW * 0.6;
-  var springTop = ceilY + 4;
-  var springBot = massY - massH / 2 - 2;
+  // Spring (left side): from ground up to mass
+  var springX = cx - halfW * 0.5;
+  var springBot = groundY - 4;
+  var springTop = massY + massH / 2 + 2;
   drawSpring(ctx, springX, springTop, springBot, color, 8, mob ? 5 : 7);
 
-  // Damper (middle): rectangle + piston
+  // Damper (middle): from ground up to mass
   var damperX = cx;
-  var damperTop = ceilY + 4;
-  var damperBot = springBot;
+  var damperBot = groundY - 4;
+  var damperTop = springTop;
   drawDamper(ctx, damperX, damperTop, damperBot, color, mob);
 
-  // Actuator (right side): circle with arrow
+  // Actuator (right side): from ground up to mass
   if (showActuator) {
-    var actX = cx + halfW * 0.6;
-    var actTop = ceilY + 4;
-    var actBot = springBot;
+    var actX = cx + halfW * 0.5;
+    var actBot = groundY - 4;
+    var actTop = springTop;
     drawActuator(ctx, actX, actTop, actBot, color, mob, params, yVal);
   }
 
-  // Mass block
+  // Mass block (台: table/platform)
   ctx.fillStyle = color;
   ctx.globalAlpha = 0.15;
   ctx.fillRect(cx - halfW, massY - massH / 2, massW, massH);
@@ -1009,11 +1009,37 @@ function drawVibSystem(ctx, cx, sysW, H, yVal, vscale, color, label, tNow, mob, 
   ctx.textAlign = 'center';
   ctx.fillText('m', cx, massY + 4);
 
-  // Label below
+  // y(t) arrow showing displacement direction
+  if (Math.abs(yVal) > 0.001) {
+    var arrowX = cx + halfW + 8;
+    var arrowFrom = restMassY;
+    var arrowTo = massY;
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.5;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(arrowX, arrowFrom);
+    ctx.lineTo(arrowX, arrowTo);
+    ctx.stroke();
+    var arrowDir = arrowTo < arrowFrom ? -1 : 1;
+    ctx.beginPath();
+    ctx.moveTo(arrowX, arrowTo);
+    ctx.lineTo(arrowX - 3, arrowTo - arrowDir * 5);
+    ctx.lineTo(arrowX + 3, arrowTo - arrowDir * 5);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.font = (mob ? 7 : 9) + 'px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('y', arrowX + 4, (arrowFrom + arrowTo) / 2 + 3);
+  }
+
+  // Label below ground
   ctx.font = (mob ? 9 : 11) + 'px sans-serif';
   ctx.fillStyle = color;
   ctx.textAlign = 'center';
-  ctx.fillText(label, cx, H * 0.87);
+  ctx.fillText(label, cx, H * 0.98);
 
   // Rest position line (dashed)
   ctx.strokeStyle = color;
@@ -1147,24 +1173,30 @@ function drawActuator(ctx, x, top, bot, color, mob, params, yVal) {
 }
 
 function drawDistArrow(ctx, cx, H, mob) {
-  // Arrow pointing downward from above the mass to represent f(t)
+  // Arrow pointing downward from above onto the mass to represent f(t)
   var arrowX = cx;
-  var arrowTop = H * 0.88;
-  var arrowBot = H * 0.95;
+  var arrowTop = H * 0.05;
+  var arrowBot = H * 0.20;
   ctx.strokeStyle = '#dc2626';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
   ctx.moveTo(arrowX, arrowTop);
   ctx.lineTo(arrowX, arrowBot);
   ctx.stroke();
-  // arrowhead
+  // arrowhead pointing down
   ctx.beginPath();
   ctx.moveTo(arrowX, arrowBot);
-  ctx.lineTo(arrowX - 4, arrowBot - 6);
-  ctx.lineTo(arrowX + 4, arrowBot - 6);
+  ctx.lineTo(arrowX - 5, arrowBot - 7);
+  ctx.lineTo(arrowX + 5, arrowBot - 7);
   ctx.closePath();
   ctx.fillStyle = '#dc2626';
   ctx.fill();
+  // f(t) label
+  var fs = mob ? 8 : 10;
+  ctx.font = 'bold ' + fs + 'px sans-serif';
+  ctx.fillStyle = '#dc2626';
+  ctx.textAlign = 'center';
+  ctx.fillText('f(t)', arrowX, arrowTop - 4);
   var fs = mob ? 8 : 10;
   ctx.font = fs + 'px sans-serif';
   ctx.fillStyle = '#dc2626';

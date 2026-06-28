@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>プロトコル会話シミュレータ</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+  background: #eef2f6;
+  color: #1f2d3a;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+header {
+  background: #ffffff;
+  border-bottom: 1px solid #d4dde6;
+  padding: 14px 24px;
+  text-align: center;
+}
+header h1 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #2e7dd1;
+  margin-bottom: 2px;
+}
+header .subtitle {
+  font-size: 0.78rem;
+  color: #5b7184;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 20px 40px;
+}
+
+/* ─── Protocol Selector ──────────────────────────── */
+.protocol-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+.proto-btn {
+  background: #ffffff;
+  border: 2px solid #d4dde6;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #5b7184;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 0 1 auto;
+  min-width: 150px;
+  text-align: center;
+}
+.proto-btn:hover {
+  border-color: #2e7dd1;
+  color: #2e7dd1;
+  background: #f0f6ff;
+}
+.proto-btn.active {
+  border-color: #2e7dd1;
+  background: #2e7dd1;
+  color: #fff;
+}
+
+/* ─── Chat Area ─────────────────────────────────── */
+.chat-card {
+  background: #ffffff;
+  border: 1px solid #d4dde6;
+  border-radius: 10px;
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+
+/* Endpoint header bar */
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  border-bottom: 1px solid #d4dde6;
+  background: #f8fafc;
+}
+.endpoint {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+}
+.endpoint-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.endpoint-info {
+  display: flex;
+  flex-direction: column;
+}
+.endpoint-role {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1f2d3a;
+}
+.endpoint-addr {
+  font-size: 0.7rem;
+  font-family: 'Courier New', monospace;
+  color: #5b7184;
+}
+.endpoint.client {
+  border-right: 1px solid #d4dde6;
+}
+.endpoint.server {
+  justify-content: flex-end;
+  text-align: right;
+}
+.endpoint.server .endpoint-info {
+  align-items: flex-end;
+}
+.chat-header-divider {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  font-size: 0.68rem;
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+/* Chat message area */
+.chat-area {
+  min-height: 320px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding: 18px 16px;
+  scroll-behavior: smooth;
+  background: #f4f6f9;
+}
+.chat-area::-webkit-scrollbar {
+  width: 6px;
+}
+.chat-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chat-area::-webkit-scrollbar-thumb {
+  background: #c4cdd6;
+  border-radius: 3px;
+}
+
+.chat-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  text-align: center;
+  line-height: 1.7;
+}
+
+/* Message row */
+.msg-row {
+  display: flex;
+  margin-bottom: 12px;
+  animation: msgAppear 0.35s ease-out;
+}
+@keyframes msgAppear {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.msg-row.dir-right {
+  justify-content: flex-start;
+}
+.msg-row.dir-left {
+  justify-content: flex-end;
+}
+
+/* Message bubble */
+.msg-bubble {
+  max-width: 75%;
+  position: relative;
+  padding: 10px 14px;
+  border-radius: 12px;
+  line-height: 1.5;
+}
+
+/* Client bubble (blue, on left, arrow pointing right = sent to server) */
+.msg-row.dir-right .msg-bubble {
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
+  border-bottom-left-radius: 4px;
+  margin-left: 10px;
+}
+.msg-row.dir-right .msg-bubble::before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 12px;
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 7px solid #93c5fd;
+}
+.msg-row.dir-right .msg-bubble::after {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 13px;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-right: 6px solid #dbeafe;
+}
+
+/* Server bubble (green, on right, arrow pointing left = sent to client) */
+.msg-row.dir-left .msg-bubble {
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-bottom-right-radius: 4px;
+  margin-right: 10px;
+}
+.msg-row.dir-left .msg-bubble::before {
+  content: '';
+  position: absolute;
+  right: -7px;
+  top: 12px;
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 7px solid #86efac;
+}
+.msg-row.dir-left .msg-bubble::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  top: 13px;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid #dcfce7;
+}
+
+/* TCP handshake: lighter gray bubbles */
+.msg-row.dir-right .msg-bubble.tcp-msg {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+.msg-row.dir-right .msg-bubble.tcp-msg::before {
+  border-right-color: #cbd5e1;
+}
+.msg-row.dir-right .msg-bubble.tcp-msg::after {
+  border-right-color: #f1f5f9;
+}
+.msg-row.dir-left .msg-bubble.tcp-msg {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+.msg-row.dir-left .msg-bubble.tcp-msg::before {
+  border-left-color: #cbd5e1;
+}
+.msg-row.dir-left .msg-bubble.tcp-msg::after {
+  border-left-color: #f1f5f9;
+}
+
+/* Protocol tag */
+.msg-tag {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-right: 6px;
+  vertical-align: middle;
+  letter-spacing: 0.03em;
+}
+.msg-tag.tag-tcp {
+  background: #64748b;
+  color: #fff;
+}
+.msg-tag.tag-smtp {
+  background: #dc2626;
+  color: #fff;
+}
+.msg-tag.tag-http {
+  background: #2e7dd1;
+  color: #fff;
+}
+.msg-tag.tag-dhcp {
+  background: #d97706;
+  color: #fff;
+}
+.msg-tag.tag-modbus {
+  background: #7c3aed;
+  color: #fff;
+}
+
+/* Message command text */
+.msg-cmd {
+  font-size: 0.78rem;
+  font-family: 'Courier New', monospace;
+  color: #1f2d3a;
+  word-break: break-all;
+}
+.tcp-msg .msg-cmd {
+  color: #475569;
+}
+
+/* Message explanation */
+.msg-explain {
+  font-size: 0.7rem;
+  color: #5b7184;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.tcp-msg .msg-explain {
+  color: #94a3b8;
+}
+
+/* Port badge */
+.msg-ports {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-family: 'Courier New', monospace;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* Step counter between messages */
+.step-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 6px 0;
+  gap: 8px;
+}
+.step-divider .step-num {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #94a3b8;
+  background: #e2e8f0;
+  border-radius: 10px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+.step-divider::before,
+.step-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+/* Current step highlight */
+.msg-row.current .msg-bubble {
+  box-shadow: 0 0 0 3px rgba(46, 125, 209, 0.3);
+}
+
+/* ─── Controls ───────────────────────────────────── */
+.controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.ctrl-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  color: #fff;
+  min-height: 42px;
+}
+.ctrl-btn:active { transform: scale(0.97); }
+.ctrl-btn.next-btn { background: #2e7dd1; }
+.ctrl-btn.next-btn:hover { background: #2569b3; }
+.ctrl-btn.prev-btn { background: #16a34a; }
+.ctrl-btn.prev-btn:hover { background: #15803d; }
+.ctrl-btn.all-btn { background: #d97706; }
+.ctrl-btn.all-btn:hover { background: #b45309; }
+.ctrl-btn.reset-btn { background: #64748b; }
+.ctrl-btn.reset-btn:hover { background: #475569; }
+.ctrl-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Step counter display */
+.step-display {
+  font-size: 0.78rem;
+  color: #5b7184;
+  font-weight: 600;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
+/* ─── Info Panel ─────────────────────────────────── */
+.info-card {
+  background: #ffffff;
+  border: 1px solid #d4dde6;
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+.info-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #2e7dd1;
+  margin-bottom: 12px;
+}
+.info-placeholder {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  text-align: center;
+  padding: 20px;
+}
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.info-item.full-width {
+  grid-column: 1 / -1;
+}
+.info-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #2e7dd1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.info-value {
+  font-size: 0.82rem;
+  color: #1f2d3a;
+  line-height: 1.55;
+}
+.info-value code {
+  font-family: 'Courier New', monospace;
+  background: #f1f5f9;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+/* ─── Mobile ─────────────────────────────────────── */
+@media (max-width: 820px) {
+  header { padding: 10px 14px; }
+  header h1 { font-size: 1rem; }
+  header .subtitle { font-size: 0.7rem; }
+  .container { padding: 10px 10px 30px; }
+  .protocol-selector { gap: 6px; }
+  .proto-btn {
+    padding: 8px 12px;
+    min-width: 120px;
+    /* iOS auto-zoom prevention */
+    font-size: 16px;
+  }
+  .ctrl-btn {
+    padding: 10px 16px;
+    font-size: 0.82rem;
+    min-height: 44px;
+  }
+  .chat-area { min-height: 260px; max-height: 420px; padding: 12px 10px; }
+  .msg-bubble { max-width: 85%; }
+  .endpoint { padding: 10px 12px; gap: 8px; }
+  .endpoint-icon { font-size: 1.2rem; }
+  .endpoint-role { font-size: 0.76rem; }
+  .endpoint-addr { font-size: 0.65rem; }
+  .chat-header-divider { font-size: 0.6rem; padding: 0 6px; }
+  .info-grid { grid-template-columns: 1fr; }
+  .info-item.full-width { grid-column: 1; }
+}
+
+@media (max-width: 480px) {
+  .proto-btn { min-width: 0; flex: 1 1 calc(50% - 4px); }
+  .msg-bubble { max-width: 92%; padding: 8px 10px; }
+  .msg-cmd { font-size: 0.72rem; }
+  .msg-explain { font-size: 0.65rem; }
+  .msg-tag { font-size: 0.58rem; padding: 1px 4px; }
+  .endpoint { padding: 8px 10px; }
+  .chat-area { min-height: 220px; max-height: 380px; }
+  .ctrl-btn { padding: 10px 14px; font-size: 0.78rem; flex: 1 1 auto; }
+  .controls { gap: 6px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>プロトコル会話シミュレータ</h1>
+  <div class="subtitle">クライアントとサーバの要求・応答を1ステップずつ確認</div>
+</header>
+
+<div class="container">
+
+  <!-- Protocol selector -->
+  <div class="protocol-selector">
+    <button class="proto-btn active" data-proto="smtp">SMTP (メール送信)</button>
+    <button class="proto-btn" data-proto="http">HTTP (Web閲覧)</button>
+    <button class="proto-btn" data-proto="dhcp">DHCP (IP自動取得)</button>
+    <button class="proto-btn" data-proto="modbus">Modbus/TCP (制御通信)</button>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="ctrl-btn prev-btn" id="btnPrev" disabled>&#9664; 前のステップ</button>
+    <button class="ctrl-btn next-btn" id="btnNext">次のステップ &#9654;</button>
+    <button class="ctrl-btn all-btn" id="btnAll">全て表示</button>
+    <button class="ctrl-btn reset-btn" id="btnReset" disabled>リセット</button>
+    <span class="step-display" id="stepDisplay">0 / 16</span>
+  </div>
+
+  <!-- Chat area -->
+  <div class="chat-card">
+    <div class="chat-header" id="chatHeader">
+      <div class="endpoint client">
+        <span class="endpoint-icon">&#x1F5A5;</span>
+        <div class="endpoint-info">
+          <span class="endpoint-role">Client</span>
+          <span class="endpoint-addr" id="clientAddr">192.168.1.180</span>
+        </div>
+      </div>
+      <div class="chat-header-divider">&#x2194; TCP/IP</div>
+      <div class="endpoint server">
+        <div class="endpoint-info">
+          <span class="endpoint-role">Server</span>
+          <span class="endpoint-addr" id="serverAddr">192.168.1.34:25</span>
+        </div>
+        <span class="endpoint-icon">&#x1F5C4;</span>
+      </div>
+    </div>
+    <div class="chat-area" id="chatArea">
+      <div class="chat-empty">「次のステップ &#9654;」を押してプロトコル会話を開始してください。<br>コマンド&#x2192;応答の繰り返しを1ステップずつ確認できます。</div>
+    </div>
+  </div>
+
+  <!-- Info panel -->
+  <div class="info-card" id="infoCard">
+    <div class="info-title">ステップ詳細</div>
+    <div id="infoContent">
+      <div class="info-placeholder">ステップを進めると、各メッセージの詳細がここに表示されます。</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ================================================================
+   Protocol conversation scripts
+   ================================================================ */
+var PROTOCOLS = {
+  smtp: {
+    name: 'SMTP (メール送信)',
+    clientLabel: 'Client',
+    serverLabel: 'Server',
+    clientAddr: '192.168.1.180',
+    serverAddr: '192.168.1.34:25',
+    dividerText: '↔ TCP/IP',
+    steps: [
+      {
+        dir: 'right', tag: 'TCP', tagClass: 'tag-tcp', isTcp: true,
+        cmd: 'SYN',
+        ports: '49152 → 25',
+        explain: 'TCP 3ウェイハンドシェイク開始',
+        layer: '第4層 (トランスポート層)',
+        detail: 'クライアントがサーバのポート25番に対してTCP接続を開始します。SYNフラグをセットしたセグメントを送信します。',
+        wireshark: 'tcp.port == 25 && tcp.flags.syn == 1'
+      },
+      {
+        dir: 'left', tag: 'TCP', tagClass: 'tag-tcp', isTcp: true,
+        cmd: 'SYN+ACK',
+        ports: '25 → 49152',
+        explain: 'サーバが接続を承諾',
+        layer: '第4層 (トランスポート層)',
+        detail: 'サーバが接続要求を受け入れ、SYN+ACKで応答します。サーバ側の初期シーケンス番号も通知されます。',
+        wireshark: 'tcp.port == 25 && tcp.flags.syn == 1 && tcp.flags.ack == 1'
+      },
+      {
+        dir: 'right', tag: 'TCP', tagClass: 'tag-tcp', isTcp: true,
+        cmd: 'ACK',
+        ports: '49152 → 25',
+        explain: '接続確立',
+        layer: '第4層 (トランスポート層)',
+        detail: 'クライアントがACKを返し、3ウェイハンドシェイクが完了します。これ以降、アプリケーション層(SMTP)の通信が可能になります。',
+        wireshark: 'tcp.port == 25 && tcp.flags.ack == 1 && tcp.flags.syn == 0'
+      },
+      {
+        dir: 'left', tag: 'SMTP', tagClass: 'tag-smtp', isTcp: false,
+        cmd: '220 icscoe.localdomain ESMTP Postfix',
+        ports: '25 → 49152',
+        explain: 'サーバの挨拶',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'SMTPサーバが最初に挨拶メッセージを送ります。220は「サービス準備完了」を意味します。PostfixはLinuxの代表的なメールサーバソフトウェアです。',
+        wireshark: 'smtp && tcp.port == 25'
+      },
+      {
+        dir: 'right', tag: 'SMTP', tagClass: 'tag-smtp', isTcp: false,
+        cmd: 'EHLO student.local',
+        ports: '49152 → 25',
+        explain: 'クライアントが名乗る',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'EHLOコマンドでクライアントが自分のホスト名を名乗ります。EHLOはHELOの拡張版で、ESMTPの拡張機能を問い合わせる意味もあります。',
+        wireshark: 'smtp.req.command == "EHLO"'
+      },
+      {
+        dir: 'left', tag: 'SMTP', tagClass: 'tag-smtp', isTcp: false,
+        cmd: '250 icscoe.localdomain',
+        ports: '25 → 49152',
+        explain: '了解',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'サーバが250(OK)で応答します。SMTPでは「コマンド→応答の繰り返し」で会話が進みます。応答の先頭3桁がステータスコードです。',
+        wireshark: 'smtp.response.code == 250'
+      },
+      {
+        dir: 'right', tag: 'SMTP', tagClass: 'tag-smtp', isTcp: false,
+        cmd: 'MAIL FROM:<user1@icscoe.localdomain>',
+        ports: '49152 → 25',
+        explain: '送信者指定',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'MAIL FROMコマンドでメールの送信者アドレスを指定します。これはエンベロープの「FROM」に相当します。',
+        wireshark: 'smtp.req.command == "MAIL"'
+      },
+      {
+        dir: 'left', tag: 'SMTP', tagClass: 'tag-smtp', isTcp: false,
+        cmd: '250 2.1.0 Ok',
+        ports: '25 → 49152',
+        explain: '了解',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'サーバが送信者アドレスを受け入れました。2.1.0は拡張ステータスコードで、より詳細な結果を示します。',
+        wireshark: 'smtp.response.code == 250'
+      },
+      {
+        dir: 'right', tag: 'SMTP', tagClass: 'tag-smtp', isTcp: false,
+        cmd: 'RCPT TO:<user2@icscoe.localdomain>',
+        ports: '49152 → 25',
+        explain: '受信者指定',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'RCPT TOコマンドでメールの受信者アドレスを指定します。複数の受信者がいる場合はこのコマンドを繰り返します。',
+        wireshark: 'smtp.req.command == "RCPT"'
+      },
+      {
+        dir: 'left', tag: 'SMTP', tagClass: 'tag-smtp', isTcp: false,
+        cmd: '250 2.1.5 Ok',
+        ports: '25 → 49152',
+        explain: '了解',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'サーバが受信者アドレスを受け入れました。2.1.5は「宛先アドレス有効」を意味します。',
+        wireshark: 'smtp.response.code == 250'
+      },
+      {
+        dir: 'right', tag: 'SMTP', tagClass: 'tag-smtp', isTcp: false,
+        cmd: 'DATA',
+        ports: '49152 → 25',
+        explain: '本文入力開始',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'DATAコマンドでメール本文の入力開始を宣言します。サーバが354で応答したら、本文を送信できます。',
+        wireshark: 'smtp.req.command == "DATA"'
+      },
+      {
+        dir: 'left', tag: 'SMTP', tagClass: 'tag-smtp', isTcp: false,
+        cmd: '354 End data with <CR><LF>.<CR><LF>',
+        ports: '25 → 49152',
+        explain: '本文を入力してください',
+        layer: '第7層 (アプリケーション層)',
+        detail: '354は「本文入力を開始してください」という意味です。本文の終わりは「改行 + ピリオド(.) + 改行」で示します。',
+        wireshark: 'smtp.response.code == 354'
+      },
+      {
+        dir: 'right', tag: 'SMTP', tagClass: 'tag-smtp', isTcp: false,
+        cmd: 'Subject: Test\\r\\n\\r\\nHello!\\r\\n.',
+        ports: '49152 → 25',
+        explain: '本文送信、.で終了',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'メールのヘッダ(Subject)と本文(Hello!)を送信します。最後の「.」(ドット)だけの行が本文の終端を示します。',
+        wireshark: 'smtp.data.fragment'
+      },
+      {
+        dir: 'left', tag: 'SMTP', tagClass: 'tag-smtp', isTcp: false,
+        cmd: '250 2.0.0 Ok: queued',
+        ports: '25 → 49152',
+        explain: '送信完了',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'サーバがメールを受け付け、キューに入れました。queuedは「配送待ち」を意味します。実際の配送は別のプロセスで行われます。',
+        wireshark: 'smtp.response.code == 250'
+      },
+      {
+        dir: 'right', tag: 'SMTP', tagClass: 'tag-smtp', isTcp: false,
+        cmd: 'QUIT',
+        ports: '49152 → 25',
+        explain: 'セッション終了',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'QUITコマンドでSMTPセッションの終了を要求します。この後、TCP接続も切断されます。',
+        wireshark: 'smtp.req.command == "QUIT"'
+      },
+      {
+        dir: 'left', tag: 'SMTP', tagClass: 'tag-smtp', isTcp: false,
+        cmd: '221 2.0.0 Bye',
+        ports: '25 → 49152',
+        explain: 'さようなら',
+        layer: '第7層 (アプリケーション層)',
+        detail: '221は「サービス終了」を意味します。SMTPの会話は「コマンド→応答の繰り返し」であることが確認できました。',
+        wireshark: 'smtp.response.code == 221'
+      }
+    ]
+  },
+
+  http: {
+    name: 'HTTP (Web閲覧)',
+    clientLabel: 'Client',
+    serverLabel: 'Server',
+    clientAddr: '192.168.1.180',
+    serverAddr: '192.168.1.34:80',
+    dividerText: '↔ TCP/IP',
+    steps: [
+      {
+        dir: 'right', tag: 'TCP', tagClass: 'tag-tcp', isTcp: true,
+        cmd: 'SYN',
+        ports: '52431 → 80',
+        explain: 'TCP 3ウェイハンドシェイク開始',
+        layer: '第4層 (トランスポート層)',
+        detail: 'クライアントがWebサーバ(ポート80)に対してTCP接続を開始します。HTTPはTCP上で動作するため、まずハンドシェイクが必要です。',
+        wireshark: 'tcp.port == 80 && tcp.flags.syn == 1'
+      },
+      {
+        dir: 'left', tag: 'TCP', tagClass: 'tag-tcp', isTcp: true,
+        cmd: 'SYN+ACK',
+        ports: '80 → 52431',
+        explain: 'サーバが接続を承諾',
+        layer: '第4層 (トランスポート層)',
+        detail: 'Webサーバが接続要求を受け入れ、SYN+ACKで応答します。',
+        wireshark: 'tcp.port == 80 && tcp.flags.syn == 1 && tcp.flags.ack == 1'
+      },
+      {
+        dir: 'right', tag: 'TCP', tagClass: 'tag-tcp', isTcp: true,
+        cmd: 'ACK',
+        ports: '52431 → 80',
+        explain: '接続確立',
+        layer: '第4層 (トランスポート層)',
+        detail: '3ウェイハンドシェイク完了。これ以降、HTTPのリクエストを送信できます。',
+        wireshark: 'tcp.port == 80 && tcp.flags.ack == 1'
+      },
+      {
+        dir: 'right', tag: 'HTTP', tagClass: 'tag-http', isTcp: false,
+        cmd: 'GET / HTTP/1.1\\r\\nHost: 192.168.1.34',
+        ports: '52431 → 80',
+        explain: 'ページ要求',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'HTTP GETメソッドでルートページ「/」を要求します。Hostヘッダでアクセス先のサーバを指定します。HTTP/1.1ではHostヘッダが必須です。',
+        wireshark: 'http.request.method == "GET"'
+      },
+      {
+        dir: 'left', tag: 'HTTP', tagClass: 'tag-http', isTcp: false,
+        cmd: 'HTTP/1.1 200 OK\\r\\nContent-Type: text/html\\r\\n\\r\\n<html>...',
+        ports: '80 → 52431',
+        explain: 'ページ返却',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'サーバが200 OKで応答し、HTMLコンテンツを返します。Content-Typeヘッダでデータの種類を示します。ブラウザはこのHTMLを解釈して画面に表示します。',
+        wireshark: 'http.response.code == 200'
+      },
+      {
+        dir: 'right', tag: 'HTTP', tagClass: 'tag-http', isTcp: false,
+        cmd: 'GET /style.css HTTP/1.1',
+        ports: '52431 → 80',
+        explain: 'CSS要求',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'HTML内の<link>タグを解釈し、CSSファイルを追加で要求します。HTTP/1.1では同じTCP接続を再利用(Keep-Alive)します。',
+        wireshark: 'http.request.uri contains "css"'
+      },
+      {
+        dir: 'left', tag: 'HTTP', tagClass: 'tag-http', isTcp: false,
+        cmd: 'HTTP/1.1 200 OK\\r\\nContent-Type: text/css',
+        ports: '80 → 52431',
+        explain: 'CSS返却',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'サーバがCSSファイルを200 OKで返します。Content-Type: text/cssが指定されているため、ブラウザはスタイルシートとして適用します。',
+        wireshark: 'http.content_type contains "css"'
+      }
+    ]
+  },
+
+  dhcp: {
+    name: 'DHCP (IP自動取得)',
+    clientLabel: 'Client',
+    serverLabel: 'DHCP Server',
+    clientAddr: '0.0.0.0 (IP未取得)',
+    serverAddr: '192.168.1.34:67',
+    dividerText: '↔ UDP',
+    steps: [
+      {
+        dir: 'right', tag: 'DHCP', tagClass: 'tag-dhcp', isTcp: false,
+        cmd: 'DHCP Discover',
+        ports: '68 → 67 (Broadcast: 255.255.255.255)',
+        explain: 'DHCPサーバを探す',
+        layer: '第7層 (アプリケーション層) / UDP',
+        detail: 'クライアントはIPアドレスを持っていないため、ブロードキャスト(255.255.255.255)でDHCPサーバを探します。UDPポート68から67に送信します。DHCPはTCPではなくUDPを使用します。',
+        wireshark: 'dhcp.option.dhcp == 1 (Discover)'
+      },
+      {
+        dir: 'left', tag: 'DHCP', tagClass: 'tag-dhcp', isTcp: false,
+        cmd: 'DHCP Offer — IP: 192.168.1.180',
+        ports: '67 → 68',
+        explain: 'このIPを使えます',
+        layer: '第7層 (アプリケーション層) / UDP',
+        detail: 'DHCPサーバが利用可能なIPアドレス(192.168.1.180)を提案します。まだ確定ではなく、クライアントの承諾が必要です。',
+        wireshark: 'dhcp.option.dhcp == 2 (Offer)'
+      },
+      {
+        dir: 'right', tag: 'DHCP', tagClass: 'tag-dhcp', isTcp: false,
+        cmd: 'DHCP Request — IP: 192.168.1.180',
+        ports: '68 → 67',
+        explain: 'そのIPを使います',
+        layer: '第7層 (アプリケーション層) / UDP',
+        detail: 'クライアントが提案されたIPアドレスの使用を要求します。複数のDHCPサーバがある場合、どのサーバの提案を選んだかを示します。',
+        wireshark: 'dhcp.option.dhcp == 3 (Request)'
+      },
+      {
+        dir: 'left', tag: 'DHCP', tagClass: 'tag-dhcp', isTcp: false,
+        cmd: 'DHCP Ack — IP: 192.168.1.180, Lease: 3600s',
+        ports: '67 → 68',
+        explain: '利用を許可',
+        layer: '第7層 (アプリケーション層) / UDP',
+        detail: 'サーバがIPアドレスの使用を許可します。Lease: 3600sは「リース期限3600秒(1時間)」を意味し、その間このIPアドレスを使用できます。この4ステップをDORA(Discover-Offer-Request-Ack)と呼びます。',
+        wireshark: 'dhcp.option.dhcp == 5 (Ack)'
+      }
+    ]
+  },
+
+  modbus: {
+    name: 'Modbus/TCP (制御通信)',
+    clientLabel: 'HMI',
+    serverLabel: 'PLC',
+    clientAddr: '192.168.1.10',
+    serverAddr: '192.168.1.195:502',
+    dividerText: '↔ TCP/IP',
+    steps: [
+      {
+        dir: 'right', tag: 'TCP', tagClass: 'tag-tcp', isTcp: true,
+        cmd: 'SYN',
+        ports: '49200 → 502',
+        explain: 'TCP 3ウェイハンドシェイク開始',
+        layer: '第4層 (トランスポート層)',
+        detail: 'HMIがPLCのModbus/TCPポート(502)に対してTCP接続を開始します。制御システムでは、HMIがマスタ、PLCがスレーブの役割です。',
+        wireshark: 'tcp.port == 502 && tcp.flags.syn == 1'
+      },
+      {
+        dir: 'left', tag: 'TCP', tagClass: 'tag-tcp', isTcp: true,
+        cmd: 'SYN+ACK',
+        ports: '502 → 49200',
+        explain: 'PLCが接続を承諾',
+        layer: '第4層 (トランスポート層)',
+        detail: 'PLCが接続要求を受け入れます。Modbus/TCPは、従来のModbus RTU(シリアル通信)をTCP/IP上で実現したプロトコルです。',
+        wireshark: 'tcp.port == 502 && tcp.flags.syn == 1 && tcp.flags.ack == 1'
+      },
+      {
+        dir: 'right', tag: 'TCP', tagClass: 'tag-tcp', isTcp: true,
+        cmd: 'ACK',
+        ports: '49200 → 502',
+        explain: '接続確立',
+        layer: '第4層 (トランスポート層)',
+        detail: '3ウェイハンドシェイク完了。これ以降、Modbusのリクエストを送信できます。',
+        wireshark: 'tcp.port == 502 && tcp.flags.ack == 1'
+      },
+      {
+        dir: 'right', tag: 'Modbus', tagClass: 'tag-modbus', isTcp: false,
+        cmd: 'FC03 Read Holding Registers, Addr=0, Count=3',
+        ports: '49200 → 502',
+        explain: 'SP/PV/MV読み取り要求',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'ファンクションコード03(Read Holding Registers)で、アドレス0から3個のレジスタを読み取ります。SP(設定値)、PV(現在値)、MV(操作量)に対応します。',
+        wireshark: 'modbus.func_code == 3'
+      },
+      {
+        dir: 'left', tag: 'Modbus', tagClass: 'tag-modbus', isTcp: false,
+        cmd: 'Response: [SP=150, PV=148, MV=47500]',
+        ports: '502 → 49200',
+        explain: '値を返す',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'PLCが保持レジスタの値を返します。SP=150(設定値150℃)、PV=148(現在148℃)、MV=47500(操作量47.5%)。PID制御が動作中であることがわかります。',
+        wireshark: 'modbus.func_code == 3 && modbus.reference_num == 0'
+      },
+      {
+        dir: 'right', tag: 'Modbus', tagClass: 'tag-modbus', isTcp: false,
+        cmd: 'FC06 Write Single Register, Addr=0, Value=200',
+        ports: '49200 → 502',
+        explain: 'SP=200に変更',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'ファンクションコード06(Write Single Register)で、アドレス0のレジスタ(SP)を200に書き換えます。HMIからの設定値変更操作です。',
+        wireshark: 'modbus.func_code == 6'
+      },
+      {
+        dir: 'left', tag: 'Modbus', tagClass: 'tag-modbus', isTcp: false,
+        cmd: 'Response: OK, Addr=0, Value=200',
+        ports: '502 → 49200',
+        explain: '書き込み完了',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'PLCが書き込み完了を応答します。FC06の応答は、書き込んだアドレスと値をそのまま返すことで確認とします。',
+        wireshark: 'modbus.func_code == 6'
+      },
+      {
+        dir: 'right', tag: 'Modbus', tagClass: 'tag-modbus', isTcp: false,
+        cmd: 'FC03 Read Holding Registers, Addr=0, Count=3',
+        ports: '49200 → 502',
+        explain: '再度読み取り',
+        layer: '第7層 (アプリケーション層)',
+        detail: '設定値変更後、再度レジスタを読み取ります。HMIは定期的にポーリング(繰り返し読み取り)を行い、PLCの状態を監視します。',
+        wireshark: 'modbus.func_code == 3'
+      },
+      {
+        dir: 'left', tag: 'Modbus', tagClass: 'tag-modbus', isTcp: false,
+        cmd: 'Response: [SP=200, PV=155, MV=52000]',
+        ports: '502 → 49200',
+        explain: 'PIDが追従中',
+        layer: '第7層 (アプリケーション層)',
+        detail: 'SP=200に変更後、PV=155でまだ追従中です。MV=52000(52.0%)に増加し、PID制御器が温度を上げようとしていることがわかります。',
+        wireshark: 'modbus.func_code == 3 && modbus.reference_num == 0'
+      }
+    ]
+  }
+};
+
+/* ================================================================
+   State
+   ================================================================ */
+var currentProto = 'smtp';
+var currentStep = 0; // 0 = nothing shown, 1 = first message, etc.
+
+/* ================================================================
+   DOM references
+   ================================================================ */
+var $chatArea = document.getElementById('chatArea');
+var $infoContent = document.getElementById('infoContent');
+var $btnNext = document.getElementById('btnNext');
+var $btnPrev = document.getElementById('btnPrev');
+var $btnAll = document.getElementById('btnAll');
+var $btnReset = document.getElementById('btnReset');
+var $stepDisplay = document.getElementById('stepDisplay');
+var $clientAddr = document.getElementById('clientAddr');
+var $serverAddr = document.getElementById('serverAddr');
+
+/* ================================================================
+   Helpers
+   ================================================================ */
+function esc(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function getProto() {
+  return PROTOCOLS[currentProto];
+}
+
+function updateButtons() {
+  var proto = getProto();
+  var total = proto.steps.length;
+  $btnPrev.disabled = currentStep <= 0;
+  $btnNext.disabled = currentStep >= total;
+  $btnAll.disabled = currentStep >= total;
+  $btnReset.disabled = currentStep <= 0;
+  $stepDisplay.textContent = currentStep + ' / ' + total;
+}
+
+function updateHeader() {
+  var proto = getProto();
+  $clientAddr.textContent = proto.clientAddr;
+  $serverAddr.textContent = proto.serverAddr;
+  // Update roles
+  $clientAddr.parentElement.querySelector('.endpoint-role').textContent = proto.clientLabel;
+  $serverAddr.parentElement.querySelector('.endpoint-role').textContent = proto.serverLabel;
+  // Update divider
+  document.querySelector('.chat-header-divider').innerHTML = proto.dividerText;
+}
+
+function scrollToBottom() {
+  // Defer scroll to allow DOM to render
+  requestAnimationFrame(function() {
+    $chatArea.scrollTop = $chatArea.scrollHeight;
+  });
+}
+
+/* ================================================================
+   Render conversation
+   ================================================================ */
+function renderChat() {
+  var proto = getProto();
+  if (currentStep === 0) {
+    $chatArea.innerHTML = '<div class="chat-empty">「次のステップ &#9654;」を押してプロトコル会話を開始してください。<br>コマンド→応答の繰り返しを1ステップずつ確認できます。</div>';
+    $infoContent.innerHTML = '<div class="info-placeholder">ステップを進めると、各メッセージの詳細がここに表示されます。</div>';
+    return;
+  }
+
+  var html = '';
+  for (var i = 0; i < currentStep; i++) {
+    var step = proto.steps[i];
+    var isCurrent = (i === currentStep - 1);
+
+    // Step divider
+    html += '<div class="step-divider"><span class="step-num">Step ' + (i + 1) + '</span></div>';
+
+    // Message row
+    var dirClass = step.dir === 'right' ? 'dir-right' : 'dir-left';
+    var currentClass = isCurrent ? ' current' : '';
+    var tcpClass = step.isTcp ? ' tcp-msg' : '';
+    html += '<div class="msg-row ' + dirClass + currentClass + '">';
+    html += '<div class="msg-bubble' + tcpClass + '">';
+    html += '<div><span class="msg-tag ' + step.tagClass + '">' + step.tag + '</span>';
+    html += '<span class="msg-cmd">' + esc(step.cmd) + '</span></div>';
+    html += '<div class="msg-explain">' + step.explain + '</div>';
+    html += '<div class="msg-ports">' + esc(step.ports) + '</div>';
+    html += '</div>';
+    html += '</div>';
+  }
+
+  $chatArea.innerHTML = html;
+  scrollToBottom();
+
+  // Show info for current step
+  showStepInfo(currentStep - 1);
+}
+
+function showStepInfo(idx) {
+  var proto = getProto();
+  if (idx < 0 || idx >= proto.steps.length) {
+    $infoContent.innerHTML = '<div class="info-placeholder">ステップを進めると、各メッセージの詳細がここに表示されます。</div>';
+    return;
+  }
+
+  var step = proto.steps[idx];
+  var dirLabel = step.dir === 'right' ? (proto.clientLabel + ' → ' + proto.serverLabel) : (proto.serverLabel + ' → ' + proto.clientLabel);
+
+  var html = '<div class="info-grid">';
+  html += '<div class="info-item"><span class="info-label">方向</span>';
+  html += '<span class="info-value">' + dirLabel + '</span></div>';
+  html += '<div class="info-item"><span class="info-label">レイヤ</span>';
+  html += '<span class="info-value">' + step.layer + '</span></div>';
+  html += '<div class="info-item full-width"><span class="info-label">説明</span>';
+  html += '<span class="info-value">' + step.detail + '</span></div>';
+  html += '<div class="info-item full-width"><span class="info-label">Wireshark フィルタ</span>';
+  html += '<span class="info-value"><code>' + esc(step.wireshark) + '</code></span></div>';
+  html += '</div>';
+
+  $infoContent.innerHTML = html;
+}
+
+/* ================================================================
+   Actions
+   ================================================================ */
+function nextStep() {
+  var proto = getProto();
+  if (currentStep >= proto.steps.length) return;
+  currentStep++;
+  renderChat();
+  updateButtons();
+}
+
+function prevStep() {
+  if (currentStep <= 0) return;
+  currentStep--;
+  renderChat();
+  updateButtons();
+}
+
+function showAll() {
+  var proto = getProto();
+  currentStep = proto.steps.length;
+  renderChat();
+  updateButtons();
+}
+
+function resetConversation() {
+  currentStep = 0;
+  renderChat();
+  updateButtons();
+}
+
+function switchProtocol(proto) {
+  if (currentProto === proto) return;
+  currentProto = proto;
+  currentStep = 0;
+  updateHeader();
+  renderChat();
+  updateButtons();
+}
+
+/* ================================================================
+   Init
+   ================================================================ */
+(function init() {
+  // Protocol buttons
+  var btns = document.querySelectorAll('.proto-btn');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].addEventListener('click', function() {
+      for (var j = 0; j < btns.length; j++) btns[j].classList.remove('active');
+      this.classList.add('active');
+      switchProtocol(this.getAttribute('data-proto'));
+    });
+  }
+
+  $btnNext.addEventListener('click', nextStep);
+  $btnPrev.addEventListener('click', prevStep);
+  $btnAll.addEventListener('click', showAll);
+  $btnReset.addEventListener('click', resetConversation);
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === ' ') {
+      e.preventDefault();
+      nextStep();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      prevStep();
+    }
+  });
+
+  updateHeader();
+  renderChat();
+  updateButtons();
+})();
+</script>
+</body>
+</html>

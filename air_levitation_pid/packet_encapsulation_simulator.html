@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>パケットカプセル化シミュレータ</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+  background: #eef2f6;
+  color: #1f2d3a;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+header {
+  background: #ffffff;
+  border-bottom: 1px solid #d4dde6;
+  padding: 14px 24px;
+  text-align: center;
+}
+header h1 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #2e7dd1;
+  margin-bottom: 2px;
+}
+header .subtitle {
+  font-size: 0.78rem;
+  color: #5b7184;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 20px 40px;
+}
+
+/* ─── Protocol Selector ──────────────────────────── */
+.protocol-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+.proto-btn {
+  background: #ffffff;
+  border: 2px solid #d4dde6;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #5b7184;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 0 1 auto;
+  min-width: 150px;
+  text-align: center;
+}
+.proto-btn:hover {
+  border-color: #2e7dd1;
+  color: #2e7dd1;
+  background: #f0f6ff;
+}
+.proto-btn.active {
+  border-color: #2e7dd1;
+  background: #2e7dd1;
+  color: #fff;
+}
+
+/* ─── Explanation ────────────────────────────────── */
+.explanation {
+  background: #ffffff;
+  border: 1px solid #d4dde6;
+  border-radius: 8px;
+  padding: 12px 18px;
+  margin-bottom: 18px;
+  font-size: 0.82rem;
+  color: #5b7184;
+  line-height: 1.65;
+  min-height: 60px;
+  transition: opacity 0.3s;
+}
+.explanation strong { color: #1f2d3a; }
+
+/* ─── Controls ───────────────────────────────────── */
+.controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.ctrl-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  color: #fff;
+  min-height: 42px;
+}
+.ctrl-btn:active { transform: scale(0.97); }
+.ctrl-btn.encap { background: #2e7dd1; }
+.ctrl-btn.encap:hover { background: #2569b3; }
+.ctrl-btn.decap { background: #16a34a; }
+.ctrl-btn.decap:hover { background: #15803d; }
+.ctrl-btn.reset-btn { background: #64748b; }
+.ctrl-btn.reset-btn:hover { background: #475569; }
+.ctrl-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #5b7184;
+}
+.speed-control input[type="range"] {
+  width: 90px;
+  accent-color: #2e7dd1;
+}
+
+/* ─── Visualization ──────────────────────────────── */
+.viz-card {
+  background: #ffffff;
+  border: 1px solid #d4dde6;
+  border-radius: 10px;
+  padding: 28px 20px;
+  margin-bottom: 18px;
+  overflow-x: auto;
+}
+.viz-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #2e7dd1;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.packet-viz {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  position: relative;
+}
+
+/* Nested layers */
+.layer-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 3px solid transparent;
+  position: relative;
+  cursor: pointer;
+  background: transparent;
+  /* Animated properties */
+  transition: padding 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s;
+  padding: 0;
+}
+.layer-box:hover:not(.layer-collapsed) {
+  filter: brightness(0.97);
+}
+.layer-box.selected {
+  box-shadow: 0 0 0 4px rgba(46,125,209,0.35);
+}
+
+/* Visible (expanded) state */
+.layer-box.layer-visible {
+  border-width: 3px;
+}
+
+/* Collapsed (hidden) state - no padding, transparent border */
+.layer-box.layer-collapsed {
+  padding: 0 !important;
+  border-color: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Layer label on left */
+.layer-label {
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  transform: translate(-100%, -50%);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: 4px;
+  color: #fff;
+  letter-spacing: 0.03em;
+  opacity: 1;
+  transition: opacity 0.3s;
+}
+.layer-collapsed .layer-label { opacity: 0; pointer-events: none; }
+
+/* Layer inner info */
+.layer-info {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.62rem;
+  font-family: 'Courier New', monospace;
+  white-space: nowrap;
+  opacity: 0.85;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.layer-collapsed .layer-info { opacity: 0; }
+
+/* Layer colors */
+.layer-l2.layer-visible {
+  border-color: #64748b;
+  background: rgba(100, 116, 139, 0.07);
+}
+.layer-l2 .layer-label { background: #64748b; }
+.layer-l2 .layer-info { color: #475569; }
+
+.layer-l3.layer-visible {
+  border-color: #2e7dd1;
+  background: rgba(46, 125, 209, 0.07);
+}
+.layer-l3 .layer-label { background: #2e7dd1; }
+.layer-l3 .layer-info { color: #1e5a9a; }
+
+.layer-l4-tcp.layer-visible {
+  border-color: #16a34a;
+  background: rgba(22, 163, 74, 0.07);
+}
+.layer-l4-tcp .layer-label { background: #16a34a; }
+.layer-l4-tcp .layer-info { color: #15803d; }
+
+.layer-l4-udp.layer-visible {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.07);
+}
+.layer-l4-udp .layer-label { background: #b45309; }
+.layer-l4-udp .layer-info { color: #92400e; }
+
+.layer-l7.layer-visible {
+  border-color: #dc2626;
+  background: rgba(220, 38, 38, 0.08);
+}
+.layer-l7 .layer-label { background: #dc2626; }
+.layer-l7 .layer-info { color: #991b1b; }
+
+/* Data core (innermost text) */
+.data-core {
+  min-width: 130px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-family: 'Courier New', monospace;
+  color: #991b1b;
+  text-align: center;
+  padding: 8px 12px;
+  word-break: break-all;
+  max-width: 360px;
+  line-height: 1.45;
+  pointer-events: none;
+}
+
+/* ─── Detail Panel ───────────────────────────────── */
+.detail-card {
+  background: #ffffff;
+  border: 1px solid #d4dde6;
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+.detail-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #2e7dd1;
+  margin-bottom: 12px;
+}
+.detail-placeholder {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  text-align: center;
+  padding: 20px;
+}
+.detail-layer-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1f2d3a;
+  margin-bottom: 10px;
+}
+
+.field-bar {
+  display: flex;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #d4dde6;
+  min-height: 60px;
+}
+.field-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 4px;
+  border-right: 1px solid rgba(255,255,255,0.4);
+  min-width: 0;
+  overflow: hidden;
+}
+.field-block:last-child { border-right: none; }
+.field-name {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.92);
+  text-align: center;
+  line-height: 1.25;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.field-value {
+  font-size: 0.62rem;
+  font-family: 'Courier New', monospace;
+  color: #fff;
+  text-align: center;
+  line-height: 1.25;
+  word-break: break-all;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.field-size {
+  font-size: 0.5rem;
+  color: rgba(255,255,255,0.6);
+  margin-top: 2px;
+}
+
+/* Field bar colors per layer */
+.field-bar.bar-l2 .field-block { background: #64748b; }
+.field-bar.bar-l2 .field-block.data-block { background: #94a3b8; }
+.field-bar.bar-l3 .field-block { background: #2e7dd1; }
+.field-bar.bar-l3 .field-block.data-block { background: #60a5fa; }
+.field-bar.bar-l4-tcp .field-block { background: #16a34a; }
+.field-bar.bar-l4-tcp .field-block.data-block { background: #4ade80; }
+.field-bar.bar-l4-udp .field-block { background: #d97706; }
+.field-bar.bar-l4-udp .field-block.data-block { background: #fbbf24; }
+.field-bar.bar-l7 .field-block { background: #dc2626; }
+.field-bar.bar-l7 .field-block.data-block { background: #f87171; }
+
+/* Byte size legend below field bar */
+.field-legend {
+  display: flex;
+  margin-top: 6px;
+  font-size: 0.6rem;
+  color: #94a3b8;
+  text-align: center;
+}
+.field-legend span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Mobile ─────────────────────────────────────── */
+@media (max-width: 820px) {
+  header { padding: 10px 14px; }
+  header h1 { font-size: 1rem; }
+  header .subtitle { font-size: 0.7rem; }
+  .container { padding: 10px 10px 30px; }
+  .protocol-selector { gap: 6px; }
+  .proto-btn {
+    padding: 8px 12px;
+    min-width: 120px;
+    /* iOS auto-zoom prevention */
+    font-size: 16px;
+  }
+  .ctrl-btn {
+    padding: 10px 16px;
+    font-size: 0.82rem;
+    min-height: 44px;
+  }
+  .packet-viz { min-height: 240px; }
+  .layer-label { font-size: 0.6rem; padding: 2px 6px; }
+  .layer-info { font-size: 0.54rem; }
+  .field-name { font-size: 0.52rem; }
+  .field-value { font-size: 0.52rem; }
+  .explanation { font-size: 0.76rem; padding: 10px 12px; }
+  .data-core { font-size: 0.65rem; min-width: 100px; max-width: 260px; }
+}
+
+@media (max-width: 480px) {
+  .proto-btn { min-width: 0; flex: 1 1 calc(50% - 4px); }
+  .layer-label {
+    left: auto;
+    top: -2px;
+    transform: translate(-50%, -100%);
+    left: 50%;
+    font-size: 0.54rem;
+    padding: 2px 5px;
+  }
+  .layer-info { font-size: 0.48rem; top: 4px; }
+  .packet-viz { min-height: 200px; }
+  .data-core { font-size: 0.58rem; min-width: 80px; max-width: 200px; padding: 6px 8px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>パケットカプセル化シミュレータ</h1>
+  <div class="subtitle">OSI階層モデルとヘッダの積み重ね &mdash; 封筒の入れ子</div>
+</header>
+
+<div class="container">
+
+  <!-- Protocol selector -->
+  <div class="protocol-selector">
+    <button class="proto-btn active" data-proto="http">HTTP (Web閲覧)</button>
+    <button class="proto-btn" data-proto="smtp">SMTP (メール送信)</button>
+    <button class="proto-btn" data-proto="modbus">Modbus/TCP (制御通信)</button>
+    <button class="proto-btn" data-proto="dhcp">DHCP (IP自動取得)</button>
+  </div>
+
+  <!-- Explanation -->
+  <div class="explanation" id="explanation">
+    プロトコルを選択し、<strong>「カプセル化」</strong>ボタンを押すと、アプリケーションデータに各層のヘッダが順に付加される様子をアニメーションで確認できます。各層の色つき枠をクリックすると、その層のヘッダフィールドの詳細が下部に表示されます。
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="ctrl-btn encap" id="btnEncap">&#9654; カプセル化</button>
+    <button class="ctrl-btn decap" id="btnDecap">&#9664; デカプセル化</button>
+    <button class="ctrl-btn reset-btn" id="btnReset">リセット</button>
+    <div class="speed-control">
+      <span>遅い</span>
+      <input type="range" id="speedSlider" min="1" max="5" value="3" step="1">
+      <span>速い</span>
+    </div>
+  </div>
+
+  <!-- Main Visualization -->
+  <div class="viz-card">
+    <div class="viz-title">パケット構造 &mdash; ネストされた封筒</div>
+    <div class="packet-viz" id="packetViz"></div>
+  </div>
+
+  <!-- Detail Panel -->
+  <div class="detail-card" id="detailCard">
+    <div class="detail-title">ヘッダフィールド詳細</div>
+    <div id="detailContent">
+      <div class="detail-placeholder">上の図の各層をクリックすると、ヘッダフィールドの詳細が表示されます。</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ================================================================
+   Protocol scenario data
+   ================================================================ */
+const PROTOCOLS = {
+  http: {
+    name: 'HTTP (Web閲覧)',
+    transport: 'tcp',
+    l7: {
+      label: 'L7 アプリケーション層',
+      tag: 'L7',
+      summary: 'HTTP GET / HTTP/1.1',
+      data: 'GET / HTTP/1.1\\r\\nHost: 192.168.1.34',
+      fields: [
+        { name: 'メソッド', value: 'GET', bytes: 3 },
+        { name: 'パス', value: '/', bytes: 1 },
+        { name: 'バージョン', value: 'HTTP/1.1', bytes: 8 },
+        { name: 'ヘッダ', value: 'Host: 192.168.1.34', bytes: 20, isPayload: true }
+      ]
+    },
+    l4: {
+      label: 'L4 トランスポート層 (TCP)',
+      tag: 'L4',
+      summary: 'TCP 52431 → 80 [PSH,ACK]',
+      fields: [
+        { name: 'Src Port', value: '52431', bytes: 2 },
+        { name: 'Dst Port', value: '80', bytes: 2 },
+        { name: 'Seq Number', value: '0x3A1B…', bytes: 4 },
+        { name: 'Ack Number', value: '0x7C2D…', bytes: 4 },
+        { name: 'Flags', value: 'PSH,ACK', bytes: 2 },
+        { name: 'Window', value: '65535', bytes: 2 },
+        { name: 'Checksum', value: '0xA3F1', bytes: 2 },
+        { name: 'Data', value: 'HTTP…', bytes: 32, isPayload: true }
+      ]
+    },
+    l3: {
+      label: 'L3 ネットワーク層 (IPv4)',
+      tag: 'L3',
+      summary: '192.168.1.180 → 192.168.1.34',
+      fields: [
+        { name: 'Ver', value: '4', bytes: 0.5 },
+        { name: 'IHL', value: '5', bytes: 0.5 },
+        { name: 'Total Len', value: '52+', bytes: 2 },
+        { name: 'TTL', value: '64', bytes: 1 },
+        { name: 'Protocol', value: '6 (TCP)', bytes: 1 },
+        { name: 'Header Chk', value: '0xB4E2', bytes: 2 },
+        { name: 'Src IP', value: '192.168.1.180', bytes: 4 },
+        { name: 'Dst IP', value: '192.168.1.34', bytes: 4 },
+        { name: 'Data', value: 'TCP+HTTP', bytes: 52, isPayload: true }
+      ]
+    },
+    l2: {
+      label: 'L2 データリンク層 (Ethernet)',
+      tag: 'L2',
+      summary: '3c:fd:fe:ab:cd:01 → 2c:f0:5d:12:34:56',
+      fields: [
+        { name: 'Dst MAC', value: '2c:f0:5d:12:34:56', bytes: 6 },
+        { name: 'Src MAC', value: '3c:fd:fe:ab:cd:01', bytes: 6 },
+        { name: 'EtherType', value: '0x0800 (IPv4)', bytes: 2 },
+        { name: 'Data', value: 'IP+TCP+HTTP', bytes: 72, isPayload: true },
+        { name: 'FCS', value: '0x1A2B3C4D', bytes: 4 }
+      ]
+    }
+  },
+
+  smtp: {
+    name: 'SMTP (メール送信)',
+    transport: 'tcp',
+    l7: {
+      label: 'L7 アプリケーション層',
+      tag: 'L7',
+      summary: 'SMTP EHLO student.local',
+      data: 'EHLO student.local',
+      fields: [
+        { name: 'コマンド', value: 'EHLO', bytes: 4 },
+        { name: 'パラメータ', value: 'student.local', bytes: 13, isPayload: true }
+      ]
+    },
+    l4: {
+      label: 'L4 トランスポート層 (TCP)',
+      tag: 'L4',
+      summary: 'TCP 49152 → 25 [PSH,ACK]',
+      fields: [
+        { name: 'Src Port', value: '49152', bytes: 2 },
+        { name: 'Dst Port', value: '25', bytes: 2 },
+        { name: 'Seq Number', value: '0x5E4A…', bytes: 4 },
+        { name: 'Ack Number', value: '0x1B3C…', bytes: 4 },
+        { name: 'Flags', value: 'PSH,ACK', bytes: 2 },
+        { name: 'Window', value: '65535', bytes: 2 },
+        { name: 'Checksum', value: '0xD7A2', bytes: 2 },
+        { name: 'Data', value: 'SMTP…', bytes: 17, isPayload: true }
+      ]
+    },
+    l3: {
+      label: 'L3 ネットワーク層 (IPv4)',
+      tag: 'L3',
+      summary: '192.168.1.180 → 192.168.1.34',
+      fields: [
+        { name: 'Ver', value: '4', bytes: 0.5 },
+        { name: 'IHL', value: '5', bytes: 0.5 },
+        { name: 'Total Len', value: '37+', bytes: 2 },
+        { name: 'TTL', value: '64', bytes: 1 },
+        { name: 'Protocol', value: '6 (TCP)', bytes: 1 },
+        { name: 'Header Chk', value: '0xC1F8', bytes: 2 },
+        { name: 'Src IP', value: '192.168.1.180', bytes: 4 },
+        { name: 'Dst IP', value: '192.168.1.34', bytes: 4 },
+        { name: 'Data', value: 'TCP+SMTP', bytes: 37, isPayload: true }
+      ]
+    },
+    l2: {
+      label: 'L2 データリンク層 (Ethernet)',
+      tag: 'L2',
+      summary: '3c:fd:fe:ab:cd:01 → 2c:f0:5d:12:34:56',
+      fields: [
+        { name: 'Dst MAC', value: '2c:f0:5d:12:34:56', bytes: 6 },
+        { name: 'Src MAC', value: '3c:fd:fe:ab:cd:01', bytes: 6 },
+        { name: 'EtherType', value: '0x0800 (IPv4)', bytes: 2 },
+        { name: 'Data', value: 'IP+TCP+SMTP', bytes: 57, isPayload: true },
+        { name: 'FCS', value: '0x4E5F6A7B', bytes: 4 }
+      ]
+    }
+  },
+
+  modbus: {
+    name: 'Modbus/TCP (制御通信)',
+    transport: 'tcp',
+    l7: {
+      label: 'L7 アプリケーション層',
+      tag: 'L7',
+      summary: 'Modbus FC03 Read Holding Registers',
+      data: 'FC03 Read Holding Registers\nAddr=0, Count=3',
+      fields: [
+        { name: 'Trans ID', value: '0x0001', bytes: 2 },
+        { name: 'Protocol', value: '0x0000', bytes: 2 },
+        { name: 'Length', value: '0x0006', bytes: 2 },
+        { name: 'Unit ID', value: '0x01', bytes: 1 },
+        { name: 'FC', value: '03 (Read)', bytes: 1 },
+        { name: 'Start Addr', value: '0x0000', bytes: 2 },
+        { name: 'Quantity', value: '0x0003', bytes: 2, isPayload: true }
+      ]
+    },
+    l4: {
+      label: 'L4 トランスポート層 (TCP)',
+      tag: 'L4',
+      summary: 'TCP 49200 → 502 [PSH,ACK]',
+      fields: [
+        { name: 'Src Port', value: '49200', bytes: 2 },
+        { name: 'Dst Port', value: '502', bytes: 2 },
+        { name: 'Seq Number', value: '0x0012…', bytes: 4 },
+        { name: 'Ack Number', value: '0x0045…', bytes: 4 },
+        { name: 'Flags', value: 'PSH,ACK', bytes: 2 },
+        { name: 'Window', value: '65535', bytes: 2 },
+        { name: 'Checksum', value: '0xE4B1', bytes: 2 },
+        { name: 'Data', value: 'Modbus…', bytes: 12, isPayload: true }
+      ]
+    },
+    l3: {
+      label: 'L3 ネットワーク層 (IPv4)',
+      tag: 'L3',
+      summary: '192.168.1.10 (HMI) → 192.168.1.195 (PLC)',
+      fields: [
+        { name: 'Ver', value: '4', bytes: 0.5 },
+        { name: 'IHL', value: '5', bytes: 0.5 },
+        { name: 'Total Len', value: '32+', bytes: 2 },
+        { name: 'TTL', value: '64', bytes: 1 },
+        { name: 'Protocol', value: '6 (TCP)', bytes: 1 },
+        { name: 'Header Chk', value: '0xA9D3', bytes: 2 },
+        { name: 'Src IP', value: '192.168.1.10', bytes: 4 },
+        { name: 'Dst IP', value: '192.168.1.195', bytes: 4 },
+        { name: 'Data', value: 'TCP+Modbus', bytes: 32, isPayload: true }
+      ]
+    },
+    l2: {
+      label: 'L2 データリンク層 (Ethernet)',
+      tag: 'L2',
+      summary: 'dc:a6:32:xx:xx:xx → 00:1a:2b:xx:xx:xx',
+      fields: [
+        { name: 'Dst MAC', value: '00:1a:2b:xx:xx:xx', bytes: 6 },
+        { name: 'Src MAC', value: 'dc:a6:32:xx:xx:xx', bytes: 6 },
+        { name: 'EtherType', value: '0x0800 (IPv4)', bytes: 2 },
+        { name: 'Data', value: 'IP+TCP+Modbus', bytes: 52, isPayload: true },
+        { name: 'FCS', value: '0x8A9BCCDD', bytes: 4 }
+      ]
+    }
+  },
+
+  dhcp: {
+    name: 'DHCP (IP自動取得)',
+    transport: 'udp',
+    l7: {
+      label: 'L7 アプリケーション層',
+      tag: 'L7',
+      summary: 'DHCP Discover (Type=1)',
+      data: 'DHCP Discover\n(Message Type=1)',
+      fields: [
+        { name: 'Op', value: '1 (Request)', bytes: 1 },
+        { name: 'HW Type', value: '1 (Eth)', bytes: 1 },
+        { name: 'HW Len', value: '6', bytes: 1 },
+        { name: 'Trans ID', value: '0x3903F326', bytes: 4 },
+        { name: 'Client MAC', value: '3c:fd:fe:ab:cd:01', bytes: 6 },
+        { name: 'Options', value: 'Type=1 (Discover)', bytes: 3, isPayload: true }
+      ]
+    },
+    l4: {
+      label: 'L4 トランスポート層 (UDP)',
+      tag: 'L4',
+      summary: 'UDP 68 → 67',
+      fields: [
+        { name: 'Src Port', value: '68', bytes: 2 },
+        { name: 'Dst Port', value: '67', bytes: 2 },
+        { name: 'Length', value: '308', bytes: 2 },
+        { name: 'Checksum', value: '0x0000', bytes: 2 },
+        { name: 'Data', value: 'DHCP…', bytes: 300, isPayload: true }
+      ]
+    },
+    l3: {
+      label: 'L3 ネットワーク層 (IPv4)',
+      tag: 'L3',
+      summary: '0.0.0.0 → 255.255.255.255',
+      fields: [
+        { name: 'Ver', value: '4', bytes: 0.5 },
+        { name: 'IHL', value: '5', bytes: 0.5 },
+        { name: 'Total Len', value: '328', bytes: 2 },
+        { name: 'TTL', value: '128', bytes: 1 },
+        { name: 'Protocol', value: '17 (UDP)', bytes: 1 },
+        { name: 'Header Chk', value: '0x0000', bytes: 2 },
+        { name: 'Src IP', value: '0.0.0.0', bytes: 4 },
+        { name: 'Dst IP', value: '255.255.255.255', bytes: 4 },
+        { name: 'Data', value: 'UDP+DHCP', bytes: 308, isPayload: true }
+      ]
+    },
+    l2: {
+      label: 'L2 データリンク層 (Ethernet)',
+      tag: 'L2',
+      summary: '3c:fd:fe:ab:cd:01 → ff:ff:ff:ff:ff:ff',
+      fields: [
+        { name: 'Dst MAC', value: 'ff:ff:ff:ff:ff:ff', bytes: 6 },
+        { name: 'Src MAC', value: '3c:fd:fe:ab:cd:01', bytes: 6 },
+        { name: 'EtherType', value: '0x0800 (IPv4)', bytes: 2 },
+        { name: 'Data', value: 'IP+UDP+DHCP', bytes: 328, isPayload: true },
+        { name: 'FCS', value: '0x12345678', bytes: 4 }
+      ]
+    }
+  }
+};
+
+/* Explanation text for each animation step */
+const EXPLAIN_ENCAP = {
+  l7: '<strong>① アプリケーション層 (L7):</strong> アプリケーションが生成したデータ（ペイロード）が最初の「手紙」です。これがカプセル化の出発点になります。',
+  l4: '<strong>② トランスポート層 (L4):</strong> TCP/UDPヘッダが付加されます。送信元・宛先<strong>ポート番号</strong>で、どのアプリケーション同士が通信しているかを識別します。手紙を最初の封筒に入れるイメージです。',
+  l3: '<strong>③ ネットワーク層 (L3):</strong> IPヘッダが付加されます。送信元・宛先<strong>IPアドレス</strong>で、ネットワーク上のどの機器宛かを指定します。封筒にさらに大きな封筒をかぶせます。',
+  l2: '<strong>④ データリンク層 (L2):</strong> Ethernetフレームヘッダ(<strong>MACアドレス</strong>)とFCSが付加されます。同一ネットワーク内の隣接機器間の配送を担います。最外側の封筒が完成しました。'
+};
+const EXPLAIN_DECAP = {
+  l2: '<strong>① データリンク層 (L2):</strong> 受信側はまずEthernetフレームヘッダを確認します。宛先MACアドレスが自分宛であれば、ヘッダとFCSを除去して上位層に渡します。',
+  l3: '<strong>② ネットワーク層 (L3):</strong> IPヘッダを確認します。宛先IPアドレスが自分宛であれば、ヘッダを除去してトランスポート層に渡します。',
+  l4: '<strong>③ トランスポート層 (L4):</strong> TCP/UDPヘッダの宛先ポート番号を確認し、該当するアプリケーションにデータを渡します。ヘッダを除去します。',
+  done: '<strong>デカプセル化完了:</strong> 全てのヘッダが除去され、元のアプリケーションデータが取り出されました。手紙が全ての封筒から取り出された状態です。'
+};
+const EXPLAIN_DONE = 'カプセル化が完了しました。全ての層のヘッダが付加され、Ethernetフレームとしてネットワークに送出される準備ができました。各層をクリックして詳細を確認してください。';
+const EXPLAIN_INIT = 'プロトコルを選択し、<strong>「カプセル化」</strong>ボタンを押すと、アプリケーションデータに各層のヘッダが順に付加される様子をアニメーションで確認できます。各層の色つき枠をクリックすると、その層のヘッダフィールドの詳細が下部に表示されます。';
+
+/* ================================================================
+   State
+   ================================================================ */
+let currentProto = 'http';
+let visibleLayers = [];   // which layers are shown: subset of LAYER_ORDER
+let animating = false;
+let selectedLayer = null;
+let animTimers = [];       // track scheduled timeouts for clean cancel
+
+// encapsulation order (inside-out): L7 first, then L4, L3, L2
+const LAYER_ORDER = ['l7', 'l4', 'l3', 'l2'];
+
+/* ================================================================
+   DOM references
+   ================================================================ */
+const $viz = document.getElementById('packetViz');
+const $explain = document.getElementById('explanation');
+const $detail = document.getElementById('detailContent');
+const $btnE = document.getElementById('btnEncap');
+const $btnD = document.getElementById('btnDecap');
+const $btnR = document.getElementById('btnReset');
+
+/* ================================================================
+   Helpers
+   ================================================================ */
+function esc(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/\\r\\n/g, '<br>').replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
+}
+
+function getDelay() {
+  var v = parseInt(document.getElementById('speedSlider').value, 10);
+  // v=1 -> 1800ms, v=3 -> 1100ms, v=5 -> 400ms
+  return 2150 - v * 350;
+}
+
+function setButtons(e, d, r) {
+  $btnE.disabled = !e;
+  $btnD.disabled = !d;
+  $btnR.disabled = !r;
+}
+
+function clearTimers() {
+  animTimers.forEach(function(t) { clearTimeout(t); });
+  animTimers = [];
+}
+
+function layerColorClass(lid, proto) {
+  if (lid === 'l4') return proto.transport === 'udp' ? 'layer-l4-udp' : 'layer-l4-tcp';
+  return 'layer-' + lid;
+}
+
+/* ================================================================
+   Build the nested-rectangle visualization
+   ================================================================ */
+function buildViz() {
+  var proto = PROTOCOLS[currentProto];
+  // We always render all 4 layers as nested divs.
+  // Visible ones get padding/border/bg; collapsed ones are transparent with 0 padding.
+  var nestOrder = ['l2', 'l3', 'l4', 'l7']; // outside to inside
+  var paddings = { l2: [30, 24], l3: [26, 20], l4: [22, 16], l7: [16, 12] };
+
+  var html = '';
+  var closes = 0;
+  for (var i = 0; i < nestOrder.length; i++) {
+    var lid = nestOrder[i];
+    var ld = proto[lid];
+    var vis = visibleLayers.indexOf(lid) >= 0;
+    var cc = layerColorClass(lid, proto);
+    var stateClass = vis ? 'layer-visible' : 'layer-collapsed';
+    var selClass = selectedLayer === lid ? ' selected' : '';
+    var pad = vis ? 'padding:' + paddings[lid][0] + 'px ' + paddings[lid][1] + 'px;' : 'padding:0;';
+    html += '<div class="layer-box ' + cc + ' ' + stateClass + selClass + '" data-layer="' + lid + '" style="' + pad + '">';
+    html += '<span class="layer-label">' + ld.tag + '</span>';
+    html += '<span class="layer-info">' + ld.summary + '</span>';
+    closes++;
+  }
+
+  // innermost: data core
+  html += '<div class="data-core">' + esc(proto.l7.data) + '</div>';
+
+  for (var j = 0; j < closes; j++) html += '</div>';
+  $viz.innerHTML = html;
+}
+
+function onVizClick(e) {
+  if (animating) return;
+  // Find the closest layer-box to the click target
+  var target = e.target;
+  // Walk up to find the *innermost* visible layer-box that was actually clicked
+  // But we want the layer whose border/padding area was directly clicked,
+  // not a parent layer. The trick: the event target's closest .layer-box
+  // gives us the deepest nested one. But if user clicks the border area of
+  // an outer layer, the target is that outer layer itself.
+  // Simple approach: find the clicked layer-box directly
+  var box = target.closest('.layer-box');
+  if (!box) return;
+
+  var lid = box.getAttribute('data-layer');
+  if (visibleLayers.indexOf(lid) < 0) {
+    // Clicked on a collapsed layer; ignore, try parent
+    var parent = box.parentElement ? box.parentElement.closest('.layer-box') : null;
+    if (parent) {
+      lid = parent.getAttribute('data-layer');
+      if (visibleLayers.indexOf(lid) < 0) return;
+    } else return;
+  }
+
+  // If the click actually landed inside a deeper visible child, prefer that child
+  // (i.e., user clicked the data-core inside l7 -> select l7)
+  // closest gives us the right one in most cases. Good enough.
+
+  e.stopPropagation();
+  selectLayer(lid);
+}
+
+/* ================================================================
+   Layer selection & detail panel
+   ================================================================ */
+function selectLayer(lid) {
+  if (selectedLayer === lid) {
+    selectedLayer = null;
+    showDetail(null);
+  } else {
+    selectedLayer = lid;
+    showDetail(lid);
+  }
+  updateSelectionHighlight();
+}
+
+function updateSelectionHighlight() {
+  var boxes = $viz.querySelectorAll('.layer-box');
+  for (var i = 0; i < boxes.length; i++) {
+    var b = boxes[i];
+    if (b.getAttribute('data-layer') === selectedLayer) {
+      b.classList.add('selected');
+    } else {
+      b.classList.remove('selected');
+    }
+  }
+}
+
+function showDetail(lid) {
+  if (!lid) {
+    $detail.innerHTML = '<div class="detail-placeholder">上の図の各層をクリックすると、ヘッダフィールドの詳細が表示されます。</div>';
+    return;
+  }
+  var proto = PROTOCOLS[currentProto];
+  var ld = proto[lid];
+  var barClass = 'bar-' + lid;
+  if (lid === 'l4') barClass = proto.transport === 'udp' ? 'bar-l4-udp' : 'bar-l4-tcp';
+
+  var totalBytes = 0;
+  for (var i = 0; i < ld.fields.length; i++) totalBytes += ld.fields[i].bytes;
+
+  var html = '<div class="detail-layer-name">' + ld.label + '</div>';
+  html += '<div class="field-bar ' + barClass + '">';
+  for (var i = 0; i < ld.fields.length; i++) {
+    var f = ld.fields[i];
+    var flex = Math.max(f.bytes / totalBytes * 100, 5);
+    var dc = f.isPayload ? ' data-block' : '';
+    var bl = f.bytes >= 1 ? Math.round(f.bytes) + 'B' : '';
+    html += '<div class="field-block' + dc + '" style="flex:' + flex + ' 1 0;">';
+    html += '<div class="field-name">' + f.name + '</div>';
+    html += '<div class="field-value">' + f.value + '</div>';
+    if (bl) html += '<div class="field-size">' + bl + '</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+  $detail.innerHTML = html;
+}
+
+/* ================================================================
+   Animation: transition a single layer between collapsed/visible
+   ================================================================ */
+function animateLayerIn(lid) {
+  var proto = PROTOCOLS[currentProto];
+  var paddings = { l2: [30, 24], l3: [26, 20], l4: [22, 16], l7: [16, 12] };
+  var box = $viz.querySelector('.layer-box[data-layer="' + lid + '"]');
+  if (!box) return;
+
+  // Start collapsed, then expand
+  box.style.padding = '0';
+  box.classList.remove('layer-visible');
+  box.classList.add('layer-collapsed');
+
+  // Force layout
+  box.offsetHeight; // eslint-disable-line no-unused-expressions
+
+  // Now animate to visible
+  box.classList.remove('layer-collapsed');
+  box.classList.add('layer-visible');
+  box.style.padding = paddings[lid][0] + 'px ' + paddings[lid][1] + 'px';
+}
+
+function animateLayerOut(lid, callback) {
+  var box = $viz.querySelector('.layer-box[data-layer="' + lid + '"]');
+  if (!box) { if (callback) callback(); return; }
+
+  box.classList.remove('layer-visible');
+  box.classList.add('layer-collapsed');
+  box.style.padding = '0';
+
+  var t = animTimers.push(setTimeout(function() {
+    if (callback) callback();
+  }, 550)) - 1; // slightly longer than CSS transition duration
+}
+
+/* ================================================================
+   Encapsulation animation
+   ================================================================ */
+function startEncapsulation() {
+  if (animating) return;
+  animating = true;
+  clearTimers();
+  setButtons(false, false, false);
+  selectedLayer = null;
+  showDetail(null);
+
+  var toAdd = [];
+  for (var i = 0; i < LAYER_ORDER.length; i++) {
+    if (visibleLayers.indexOf(LAYER_ORDER[i]) < 0) toAdd.push(LAYER_ORDER[i]);
+  }
+  if (toAdd.length === 0) {
+    animating = false;
+    setButtons(false, true, true);
+    return;
+  }
+
+  var step = 0;
+  function next() {
+    if (step >= toAdd.length) {
+      animating = false;
+      setButtons(false, true, true);
+      $explain.innerHTML = EXPLAIN_DONE;
+      return;
+    }
+    var lid = toAdd[step];
+    visibleLayers.push(lid);
+    $explain.innerHTML = EXPLAIN_ENCAP[lid];
+
+    // Rebuild DOM so the layer div exists, then animate it in
+    buildViz();
+    animateLayerIn(lid);
+
+    step++;
+    animTimers.push(setTimeout(next, getDelay()));
+  }
+  next();
+}
+
+/* ================================================================
+   Decapsulation animation
+   ================================================================ */
+function startDecapsulation() {
+  if (animating) return;
+  animating = true;
+  clearTimers();
+  setButtons(false, false, false);
+  selectedLayer = null;
+  showDetail(null);
+
+  // Remove from outside in: l2, l3, l4
+  var removeOrder = ['l2', 'l3', 'l4'];
+  var toRemove = [];
+  for (var i = 0; i < removeOrder.length; i++) {
+    if (visibleLayers.indexOf(removeOrder[i]) >= 0) toRemove.push(removeOrder[i]);
+  }
+  if (toRemove.length === 0) {
+    animating = false;
+    setButtons(true, false, true);
+    return;
+  }
+
+  var step = 0;
+  function next() {
+    if (step >= toRemove.length) {
+      animating = false;
+      setButtons(true, false, true);
+      $explain.innerHTML = EXPLAIN_DECAP.done;
+      return;
+    }
+    var lid = toRemove[step];
+    $explain.innerHTML = EXPLAIN_DECAP[lid];
+
+    animateLayerOut(lid, function() {
+      // Remove from visible list and rebuild
+      visibleLayers = visibleLayers.filter(function(l) { return l !== lid; });
+      buildViz();
+      step++;
+      animTimers.push(setTimeout(next, getDelay() * 0.35));
+    });
+  }
+  next();
+}
+
+/* ================================================================
+   Reset
+   ================================================================ */
+function resetViz() {
+  clearTimers();
+  animating = false;
+  visibleLayers = ['l7'];
+  selectedLayer = null;
+  showDetail(null);
+  setButtons(true, false, true);
+  buildViz();
+  $explain.innerHTML = EXPLAIN_INIT;
+}
+
+/* ================================================================
+   Init
+   ================================================================ */
+(function init() {
+  // Protocol buttons
+  var btns = document.querySelectorAll('.proto-btn');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].addEventListener('click', function() {
+      if (animating) return;
+      for (var j = 0; j < btns.length; j++) btns[j].classList.remove('active');
+      this.classList.add('active');
+      currentProto = this.getAttribute('data-proto');
+      resetViz();
+    });
+  }
+
+  $btnE.addEventListener('click', startEncapsulation);
+  $btnD.addEventListener('click', startDecapsulation);
+  $btnR.addEventListener('click', resetViz);
+
+  // Single event delegation for layer clicks
+  $viz.addEventListener('click', onVizClick);
+
+  resetViz();
+})();
+</script>
+</body>
+</html>

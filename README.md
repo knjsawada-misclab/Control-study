@@ -8,11 +8,15 @@
 ---
 
 ## 機械情報システム入門（学問の扉）
+2026年度の学問の扉にて開講中の機械情報システム入門の講義中で利用した実験器のシミュレータを公開しています．
 
 | シミュレータ | 解説資料 | 概要 |
 |:--|:--:|:--|
 | [空気浮上系の PID 制御](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/air_levitation_pid.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/air_levitation_pid/air_levitation_pid_guide.md) | ファンでピンポン球を浮上させる PID 制御の体験 |
 | [空気浮上系のパラメータ同定](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/identification_sim.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/air_levitation_pid/parameter_identification.md) | 静的・動的実験によるモデルパラメータの推定 |
+| [パケットカプセル化可視化](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/packet_encapsulation_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/air_levitation_pid/packet_encapsulation_simulator_guide.md) | OSI各層のヘッダ積み重ね（封筒の入れ子）をアニメーションで体験 |
+| [プロトコル会話シミュレータ](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/protocol_conversation_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/air_levitation_pid/protocol_conversation_simulator_guide.md) | SMTP/HTTP/DHCP/Modbusの要求・応答を1ステップずつ確認 |
+| [Modbus/TCP制御通信](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/modbus_control_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/air_levitation_pid/modbus_control_simulator_guide.md) | 空気浮上系のHMI⇔PLC通信可視化とDoS/Replay攻撃体験 |
 
 ## 制御工学（応用理工学科 機械工学科目 3年）
 制御工学の後半「現代制御編」の講義資料に基づき，シミュレータを構築しています．そのため，幾つかのシミュレータは講義を受けて，かつ，解説を読まないと意味がわからない仕様になっています．

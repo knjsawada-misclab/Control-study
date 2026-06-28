@@ -136,7 +136,8 @@ header .subtitle {
 /* ─── Packet Log ────────────────────────────────── */
 .log-container {
   flex: 1;
-  min-height: 280px;
+  min-height: 200px;
+  max-height: 320px;
   overflow-y: auto;
   font-family: 'Courier New', Consolas, monospace;
   font-size: 0.68rem;
@@ -194,6 +195,10 @@ header .subtitle {
   border: 1px solid #d4dde6;
   border-radius: 10px;
   padding: 16px 20px;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
 }
 .controls-row {
   display: flex;
@@ -368,17 +373,29 @@ header .subtitle {
     min-height: 240px;
   }
   .log-container {
-    min-height: 240px;
-    max-height: 300px;
+    min-height: 180px;
+    max-height: 250px;
+  }
+  .controls-card {
+    position: sticky;
+    bottom: 0;
+    border-radius: 10px 10px 0 0;
   }
 }
 
 @media (max-width: 480px) {
   .controls-row {
-    gap: 8px;
+    gap: 6px;
   }
   .diagram-svg {
-    height: 120px;
+    height: 110px;
+  }
+  .graph-container {
+    min-height: 200px;
+  }
+  .log-container {
+    min-height: 150px;
+    max-height: 200px;
   }
 }
 </style>

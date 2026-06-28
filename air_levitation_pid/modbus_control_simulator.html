@@ -195,10 +195,7 @@ header .subtitle {
   border: 1px solid #d4dde6;
   border-radius: 10px;
   padding: 16px 20px;
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
-  box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+  margin-bottom: 18px;
 }
 .controls-row {
   display: flex;
@@ -377,9 +374,7 @@ header .subtitle {
     max-height: 250px;
   }
   .controls-card {
-    position: sticky;
-    bottom: 0;
-    border-radius: 10px 10px 0 0;
+    margin-bottom: 12px;
   }
 }
 
@@ -415,38 +410,7 @@ header .subtitle {
     <svg class="diagram-svg" id="diagramSvg" viewBox="0 0 800 145" preserveAspectRatio="xMidYMid meet"></svg>
   </div>
 
-  <!-- Middle: Graph + Log -->
-  <div class="middle-row">
-    <div class="col-graph">
-      <div class="panel-card">
-        <div class="panel-title">PID制御グラフ</div>
-        <div class="graph-container">
-          <canvas id="pidCanvas"></canvas>
-        </div>
-        <div class="graph-legend">
-          <div class="legend-item"><div class="legend-swatch sp"></div> SP (設定値)</div>
-          <div class="legend-item"><div class="legend-swatch pv" style="background:#dc2626;height:3px;border:none;"></div> PV (位置)</div>
-          <div class="legend-item"><div class="legend-swatch mv" style="background:#f59e0b;height:3px;border:none;"></div> MV (出力)</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-log">
-      <div class="panel-card">
-        <div class="panel-title">Modbusパケットログ</div>
-        <div class="log-container" id="logContainer">
-          <div class="log-header">
-            <span class="log-col-time">Time</span>
-            <span class="log-col-dir">Direction</span>
-            <span class="log-col-fc">FC</span>
-            <span class="log-col-info">Info</span>
-          </div>
-          <div class="log-entries" id="logEntries"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Controls -->
+  <!-- Controls (グラフ・ログの上に配置) -->
   <div class="controls-card">
     <div class="controls-row">
       <button class="ctrl-btn start" id="btnStart">&#9654; シミュレーション開始</button>
@@ -476,6 +440,37 @@ header .subtitle {
     </div>
 
     <div class="attack-desc hidden" id="attackDesc"></div>
+  </div>
+
+  <!-- Middle: Graph + Log -->
+  <div class="middle-row">
+    <div class="col-graph">
+      <div class="panel-card">
+        <div class="panel-title">PID制御グラフ</div>
+        <div class="graph-container">
+          <canvas id="pidCanvas"></canvas>
+        </div>
+        <div class="graph-legend">
+          <div class="legend-item"><div class="legend-swatch sp"></div> SP (設定値)</div>
+          <div class="legend-item"><div class="legend-swatch pv" style="background:#dc2626;height:3px;border:none;"></div> PV (位置)</div>
+          <div class="legend-item"><div class="legend-swatch mv" style="background:#f59e0b;height:3px;border:none;"></div> MV (出力)</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-log">
+      <div class="panel-card">
+        <div class="panel-title">Modbusパケットログ</div>
+        <div class="log-container" id="logContainer">
+          <div class="log-header">
+            <span class="log-col-time">Time</span>
+            <span class="log-col-dir">Direction</span>
+            <span class="log-col-fc">FC</span>
+            <span class="log-col-info">Info</span>
+          </div>
+          <div class="log-entries" id="logEntries"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
 </div>

@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(gh api *)",
-      "PowerShell(Invoke-RestMethod -Uri \"https://raw.githubusercontent.com/knjsawada-misclab/Control-study/main/equivalent_transform_simulator_guide.md\" -OutFile \"C:\\\\Users\\\\knjsa\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-knjsa-Dropbox-07-github-Control-study\\\\560f3dda-c806-46c7-8b1a-cd196df48008\\\\scratchpad\\\\guide_from_github.md\")"
+      "PowerShell(Invoke-RestMethod -Uri \"https://raw.githubusercontent.com/knjsawada-misclab/Control-study/main/equivalent_transform_simulator_guide.md\" -OutFile \"C:\\\\Users\\\\knjsa\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-knjsa-Dropbox-07-github-Control-study\\\\560f3dda-c806-46c7-8b1a-cd196df48008\\\\scratchpad\\\\guide_from_github.md\")",
+      "Bash(git ls-files *)",
+      "Bash(git mv *)"
     ]
   }
 }

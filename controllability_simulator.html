@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>可制御性シミュレータ</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+  background: #eef2f6;
+  color: #1f2d3a;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+header {
+  background: #ffffff;
+  border-bottom: 1px solid #d4dde6;
+  padding: 10px 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-shrink: 0;
+}
+header h1 { font-size: 1rem; font-weight: 600; color: #2e7dd1; }
+header .eq { font-size: 0.78rem; color: #5b7184; font-family: 'Courier New', monospace; }
+
+.body { display: flex; flex: 1; overflow: hidden; }
+
+.sidebar {
+  width: 320px;
+  background: #ffffff;
+  border-right: 1px solid #d4dde6;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.sidebar-inner { padding: 12px; flex: 1; }
+
+.section { margin-bottom: 14px; }
+.sec-title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #2e7dd1;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+select {
+  width: 100%;
+  background: #f1f5f9;
+  border: 1px solid #d4dde6;
+  color: #1f2d3a;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+select:focus { outline: none; border-color: #2e7dd1; }
+
+.matrix-label { font-size: 0.75rem; color: #5b7184; margin-bottom: 5px; }
+.mat-grid { display: grid; gap: 5px; margin-bottom: 8px; }
+.mat-2x2 { grid-template-columns: 1fr 1fr; }
+.mat-2x1 { grid-template-columns: 1fr; }
+
+input[type="number"] {
+  background: #f1f5f9;
+  border: 1px solid #d4dde6;
+  color: #1f2d3a;
+  padding: 5px 6px;
+  border-radius: 5px;
+  width: 100%;
+  font-size: 0.82rem;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  transition: border-color 0.15s;
+}
+input[type="number"]:focus { outline: none; border-color: #2e7dd1; }
+
+.input-label { font-size: 0.7rem; color: #5b7184; margin-bottom: 2px; }
+
+.pole-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 6px; }
+.pole-field label { display: block; font-size: 0.7rem; color: #5b7184; margin-bottom: 3px; }
+
+.btn-compute {
+  width: 100%;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  padding: 9px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 12px;
+}
+.btn-compute:hover { background: #15803d; }
+.btn-compute:active { background: #166534; }
+
+.result-box {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.res-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+.res-key { color: #5b7184; }
+.res-val { color: #2e7dd1; }
+.res-val.stable { color: #16a34a; }
+.res-val.unstable { color: #dc2626; }
+.res-sep { border: none; border-top: 1px solid #e2e8f0; margin: 6px 0; }
+.error-msg { color: #dc2626; font-size: 0.78rem; margin-top: 6px; min-height: 16px; }
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.badge.ctrl { background: rgba(22,163,74,0.12); color: #16a34a; border: 1px solid #16a34a; }
+.badge.stab { background: rgba(245,158,11,0.12); color: #d97706; border: 1px solid #d97706; }
+.badge.unstab { background: rgba(220,38,38,0.12); color: #dc2626; border: 1px solid #dc2626; }
+
+.poly-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin: 4px 0;
+  font-size: 0.73rem;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 10px;
+  overflow: hidden;
+}
+.plots-row {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  overflow: hidden;
+}
+.plot-card {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #d4dde6;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.plot-card.splane { flex: 0 0 auto; width: 45%; }
+.plot-card.timeplot { flex: 1; }
+
+.plot-header {
+  padding: 8px 12px 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.plot-title { font-size: 0.8rem; font-weight: 600; color: #1f2d3a; }
+.plot-sub { font-size: 0.7rem; color: #5b7184; }
+
+.legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 12px 6px;
+  flex-shrink: 0;
+}
+.leg-item { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: #5b7184; }
+.leg-icon { width: 14px; text-align: center; font-size: 0.8rem; }
+.leg-line { width: 14px; height: 2px; }
+
+canvas {
+  flex: 1;
+  width: 100%;
+  display: block;
+}
+
+/* ─── Narrow desktop / landscape tablet ───────────────────── */
+@media (max-width: 1024px) {
+  .sidebar { width: 260px; }
+  .plot-card.splane { width: 38%; }
+}
+
+/* ─── Tablet / Mobile ─────────────────────────────────────── */
+@media (max-width: 820px) {
+  body {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-y: auto;
+  }
+  header {
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    gap: 4px;
+  }
+  header h1 { font-size: 0.9rem; }
+  header .eq { font-size: 0.65rem; line-height: 1.5; display: block; }
+  .body {
+    flex-direction: column;
+    overflow: visible;
+    flex: none;
+  }
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #d4dde6;
+    overflow-y: visible;
+    max-height: none;
+  }
+  .sidebar-inner { padding: 10px; }
+  .section { margin-bottom: 10px; }
+  .mat-grid { gap: 3px; }
+  .main {
+    overflow: visible;
+    flex: none;
+    padding: 8px;
+  }
+  .plots-row {
+    flex-direction: column;
+    overflow: visible;
+    flex-shrink: 0;
+    gap: 8px;
+  }
+  .plot-card.splane {
+    width: 100% !important;
+    height: min(70vw, 320px);
+    flex: none;
+  }
+  .plot-card.timeplot {
+    width: 100% !important;
+    height: min(90vw, 400px);
+    flex: none;
+  }
+  canvas {
+    flex: none !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+  .legend {
+    gap: 4px 8px;
+    padding: 4px 8px;
+    flex-wrap: wrap;
+  }
+  .leg-item { font-size: 0.6rem; }
+  .plot-header {
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 6px 8px 2px;
+  }
+  .plot-title { font-size: 0.75rem; }
+  .plot-sub { font-size: 0.62rem; }
+  .info-bar {
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 0.6rem;
+    padding: 6px 10px;
+  }
+  /* iOS auto-zoom prevention */
+  input[type="number"],
+  select {
+    font-size: 16px;
+  }
+  input[type="number"] {
+    padding: 7px 6px;
+  }
+  .btn-compute {
+    padding: 12px;
+    font-size: 0.9rem;
+    min-height: 44px;
+  }
+  .result-box {
+    font-size: 0.7rem;
+    overflow: hidden;
+  }
+  .res-row {
+    gap: 2px 4px;
+  }
+  .res-key {
+    flex-shrink: 0;
+  }
+  .res-val {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.66rem;
+    overflow-wrap: anywhere;
+  }
+  .poly-box {
+    font-size: 0.68rem;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .badge {
+    font-size: 0.68rem;
+  }
+  .pole-row {
+    gap: 4px;
+  }
+}
+
+.info-bar {
+  background: #ffffff;
+  border-top: 1px solid #d4dde6;
+  padding: 5px 16px;
+  font-size: 0.7rem;
+  color: #5b7184;
+  flex-shrink: 0;
+  display: flex;
+  gap: 20px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>可制御性シミュレータ</h1>
+  <span class="eq">ẋ = Ax + Bu, &nbsp; u = Kx &nbsp;→&nbsp; ẋ = (A+BK)x</span>
+</header>
+
+<div class="body">
+  <div class="sidebar">
+    <div class="sidebar-inner">
+
+      <div class="section">
+        <div class="sec-title">プリセット</div>
+        <select id="preset" onchange="applyPreset()">
+          <option value="custom">── カスタム ──</option>
+          <option value="prob1" selected>問題1: 可制御系</option>
+          <option value="prob2">問題2: 不可制御（不可安定）</option>
+          <option value="prob3">問題3: 不可制御（可安定）</option>
+          <option value="prob4">問題4: 可安定（重複固有値）</option>
+          <option value="prob5a">問題5-1: 可制御正準系</option>
+          <option value="prob5b">問題5-2: 不可制御系</option>
+        </select>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">システム行列</div>
+        <div class="matrix-label">A（2×2）</div>
+        <div class="mat-grid mat-2x2">
+          <input type="number" id="a11" value="0"  step="0.1" onchange="markCustom()">
+          <input type="number" id="a12" value="1"  step="0.1" onchange="markCustom()">
+          <input type="number" id="a21" value="-3" step="0.1" onchange="markCustom()">
+          <input type="number" id="a22" value="4"  step="0.1" onchange="markCustom()">
+        </div>
+        <div class="matrix-label">B（2×1）</div>
+        <div class="mat-grid mat-2x1">
+          <input type="number" id="b1" value="0" step="0.1" onchange="markCustom()">
+          <input type="number" id="b2" value="1" step="0.1" onchange="markCustom()">
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">目標極（実数）</div>
+        <div class="pole-row">
+          <div class="pole-field">
+            <label>P₁</label>
+            <input type="number" id="p1" value="-1" step="0.1">
+          </div>
+          <div class="pole-field">
+            <label>P₂</label>
+            <input type="number" id="p2" value="-1" step="0.1">
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">初期状態 x₀</div>
+        <div class="pole-row">
+          <div class="pole-field">
+            <label>x₁(0)</label>
+            <input type="number" id="x01" value="1" step="0.1">
+          </div>
+          <div class="pole-field">
+            <label>x₂(0)</label>
+            <input type="number" id="x02" value="0" step="0.1">
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">シミュレーション</div>
+        <div class="pole-row">
+          <div class="pole-field">
+            <label>終了時刻 T [s]</label>
+            <input type="number" id="tEnd" value="5" step="0.5" min="0.5">
+          </div>
+          <div class="pole-field">
+            <label>刻み幅 dt</label>
+            <input type="number" id="dt" value="0.01" step="0.001" min="0.001" max="0.1">
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-compute" onclick="compute()">▶ 計算・更新</button>
+
+      <div class="section">
+        <div class="sec-title">解析結果</div>
+        <div id="result-box" class="result-box">
+          <div style="color:#5b7184;">「計算・更新」を押してください</div>
+        </div>
+        <div id="error-msg" class="error-msg"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="plots-row">
+      <div class="plot-card splane">
+        <div class="plot-header">
+          <span class="plot-title">複素平面（s 平面）</span>
+          <span class="plot-sub">左半平面 = 安定</span>
+        </div>
+        <div class="legend">
+          <div class="leg-item"><span class="leg-icon" style="color:#16a34a;">✕</span> 可制御極</div>
+          <div class="leg-item"><span class="leg-icon" style="color:#dc2626;">✕</span> 不可制御極</div>
+          <div class="leg-item"><span class="leg-icon" style="color:#2e7dd1;">◎</span> 目標極</div>
+          <div class="leg-item"><span class="leg-icon" style="color:#ffa657;">●</span> 閉ループ極</div>
+        </div>
+        <canvas id="splane"></canvas>
+      </div>
+
+      <div class="plot-card timeplot">
+        <div class="plot-header">
+          <span class="plot-title">初期状態応答 x(t)</span>
+          <span class="plot-sub" id="time-sub"></span>
+        </div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> x₁ 閉ループ</div>
+          <div class="leg-item"><div class="leg-line" style="background:#ffa657;"></div> x₂ 閉ループ</div>
+          <div class="leg-item"><div class="leg-line" style="background:#94a3b8; opacity:0.5;"></div> 開ループ応答</div>
+        </div>
+        <canvas id="timeplot"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="info-bar">
+  <span>可制御性行列・ペンシルに基づく可制御性解析 &nbsp;|&nbsp; RK4 数値積分</span>
+  <span id="ctrl-info"></span>
+</div>
+
+<script>
+// =========================================================
+// 行列演算
+// =========================================================
+const zeros = (r, c) => Array.from({length:r}, () => Array(c).fill(0));
+const eye = n => Array.from({length:n}, (_,i) => Array.from({length:n}, (_,j) => i===j?1:0));
+
+function matMul(A, B) {
+  const rA=A.length, cB=B[0].length, cA=B.length;
+  const C = zeros(rA, cB);
+  for(let i=0;i<rA;i++) for(let j=0;j<cB;j++) for(let k=0;k<cA;k++) C[i][j]+=A[i][k]*B[k][j];
+  return C;
+}
+function matVecMul(A, x) { return A.map(r => r.reduce((s,v,j)=>s+v*x[j],0)); }
+
+function det2(M) { return M[0][0]*M[1][1] - M[0][1]*M[1][0]; }
+function inv2(M) {
+  const d = det2(M);
+  if(Math.abs(d) < 1e-12) return null;
+  return [[M[1][1]/d, -M[0][1]/d], [-M[1][0]/d, M[0][0]/d]];
+}
+
+function eig2(M) {
+  const tr = M[0][0]+M[1][1], dt = det2(M), disc = tr*tr - 4*dt;
+  if(disc >= -1e-14) {
+    const d = Math.sqrt(Math.max(0, disc));
+    return [{re:(tr+d)/2, im:0}, {re:(tr-d)/2, im:0}];
+  }
+  return [{re:tr/2, im:Math.sqrt(-disc)/2}, {re:tr/2, im:-Math.sqrt(-disc)/2}];
+}
+
+// =========================================================
+// 可制御性解析
+// =========================================================
+function analyzeControllability(A, b1, b2) {
+  const ab1 = A[0][0]*b1 + A[0][1]*b2;
+  const ab2 = A[1][0]*b1 + A[1][1]*b2;
+
+  const Vc = [[b1, ab1], [b2, ab2]];
+  const detVc = det2(Vc);
+  const controllable = Math.abs(detVc) > 1e-10;
+
+  const eigenvalues = eig2(A);
+  const isComplex = Math.abs(eigenvalues[0].im) > 1e-10;
+
+  const uncontrollablePoles = [];
+  const controllablePoles = [];
+
+  if (controllable) {
+    eigenvalues.forEach(ev => controllablePoles.push(ev));
+  } else if (isComplex) {
+    eigenvalues.forEach(ev => uncontrollablePoles.push(ev));
+  } else {
+    const checked = new Set();
+    eigenvalues.forEach(ev => {
+      const key = ev.re.toFixed(8);
+      if (checked.has(key)) return;
+      checked.add(key);
+      const lam = ev.re;
+      const minor13 = (lam - A[0][0]) * b2 + A[1][0] * b1;
+      const minor23 = -A[0][1] * b2 + (A[1][1] - lam) * b1;
+      if (Math.abs(minor13) < 1e-10 && Math.abs(minor23) < 1e-10) {
+        uncontrollablePoles.push(ev);
+      } else {
+        controllablePoles.push(ev);
+      }
+    });
+    const eigCopy = [...eigenvalues];
+    if (uncontrollablePoles.length === 1 && controllablePoles.length === 0) {
+      const uc = uncontrollablePoles[0];
+      const other = eigCopy.find(e => Math.abs(e.re - uc.re) > 1e-8);
+      if (other) controllablePoles.push(other);
+      else controllablePoles.push({re: uc.re, im: 0});
+    }
+  }
+
+  const hasImagAxisUC = uncontrollablePoles.some(p => Math.abs(p.re) < 1e-10);
+  const stabilizable = uncontrollablePoles.every(p => p.re < 1e-10);
+
+  return { Vc, detVc, controllable, eigenvalues, isComplex,
+           uncontrollablePoles, controllablePoles, stabilizable, hasImagAxisUC };
+}
+
+// =========================================================
+// 極配置（係数比較法）
+// =========================================================
+function attemptPolePlacement(A, b1, b2, P1, P2) {
+  const trA = A[0][0] + A[1][1];
+  const detA = det2(A);
+  const c1 = A[1][1]*b1 - A[0][1]*b2;
+  const c2 = A[0][0]*b2 - A[1][0]*b1;
+
+  const sumP = P1 + P2;
+  const prodP = P1 * P2;
+  const rhs1 = sumP - trA;
+  const rhs2 = prodP - detA;
+
+  const M = [[b1, b2], [c1, c2]];
+  const detM = det2(M);
+
+  let K = null, solvable = false, msg = '';
+
+  if (Math.abs(detM) > 1e-10) {
+    const k1 = (rhs1 * c2 - rhs2 * b2) / detM;
+    const k2 = (rhs2 * b1 - rhs1 * c1) / detM;
+    K = [k1, k2];
+    solvable = true;
+  } else {
+    if (Math.abs(b1) > 1e-10 || Math.abs(b2) > 1e-10) {
+      let eq1_ok, eq2_ok;
+      if (Math.abs(b1) > 1e-10) {
+        if (Math.abs(c1) < 1e-10) {
+          eq1_ok = true;
+          eq2_ok = Math.abs(rhs2) < 1e-10;
+        } else {
+          const ratio = c1 / b1;
+          eq1_ok = true;
+          eq2_ok = Math.abs(rhs2 - ratio * rhs1) < 1e-8;
+        }
+      } else {
+        if (Math.abs(c2) < 1e-10) {
+          eq1_ok = true;
+          eq2_ok = Math.abs(rhs2) < 1e-10;
+        } else {
+          const ratio = c2 / b2;
+          eq1_ok = true;
+          eq2_ok = Math.abs(rhs2 - ratio * rhs1) < 1e-8;
+        }
+      }
+      if (eq1_ok && eq2_ok) {
+        solvable = true;
+        if (Math.abs(b2) > 1e-10) {
+          K = [0, rhs1 / b2];
+        } else {
+          K = [rhs1 / b1, 0];
+        }
+        msg = '（解は一意でない）';
+      } else {
+        solvable = false;
+        msg = '解無し';
+      }
+    } else {
+      solvable = false;
+      msg = 'B = 0 のため極配置不能';
+    }
+  }
+
+  return { K, solvable, msg, M, detM, rhs: [rhs1, rhs2], c1, c2, trA, detA };
+}
+
+// =========================================================
+// 特性多項式の文字列生成
+// =========================================================
+function buildCharPolyStr(A, b1, b2, uncontrollablePoles) {
+  const trA = A[0][0] + A[1][1];
+  const detA = det2(A);
+  const c1 = A[1][1]*b1 - A[0][1]*b2;
+  const c2 = A[0][0]*b2 - A[1][0]*b1;
+
+  if (uncontrollablePoles.length === 0) {
+    let sCoeff = fmtCoeff(-trA, 'k', -b1, -b2);
+    let cCoeff = fmtCoeff(detA, 'c', c1, c2);
+    return { type: 'general', str: `s² + (${sCoeff})s + (${cCoeff})` };
+  }
+
+  if (uncontrollablePoles.length >= 2) {
+    const e = eig2(A);
+    if (Math.abs(e[0].im) > 1e-10) {
+      return { type: 'fixed', str: `s² + ${fN(-trA)}s + ${fN(detA)}（固定）` };
+    }
+    return { type: 'fixed', str: `(s${fSign(-e[0].re)})(s${fSign(-e[1].re)})（固定）` };
+  }
+
+  const r = uncontrollablePoles[0].re;
+  let adj = '';
+  if (Math.abs(b1) > 1e-10 && Math.abs(b2) > 1e-10) {
+    const other = trA - r;
+    adj = `s − (${fN(other)}+${fN(b1)}k₁+${fN(b2)}k₂)`;
+  } else if (Math.abs(b2) > 1e-10) {
+    const other = trA - r;
+    adj = `s − (${fN(other)}+${fN(b2)}k₂)`;
+  } else if (Math.abs(b1) > 1e-10) {
+    const other = trA - r;
+    adj = `s − (${fN(other)}+${fN(b1)}k₁)`;
+  } else {
+    adj = `s − ${fN(trA - r)}`;
+  }
+  return { type: 'factored', str: `(s${fSign(-r)}) · (${adj})`, fixedPole: r };
+}
+
+function fN(v) {
+  if (Number.isInteger(v) || Math.abs(v - Math.round(v)) < 1e-10) return String(Math.round(v));
+  return v.toFixed(2);
+}
+function fSign(v) {
+  if (Math.abs(v) < 1e-10) return '';
+  return v >= 0 ? `+${fN(v)}` : `${fN(v)}`;
+}
+function fmtCoeff(c0, label, c1, c2) {
+  let parts = [];
+  if (Math.abs(c0) > 1e-10 || (Math.abs(c1) < 1e-10 && Math.abs(c2) < 1e-10)) parts.push(fN(c0));
+  if (Math.abs(c1) > 1e-10) {
+    const s = c1 > 0 && parts.length ? '+' : '';
+    parts.push(`${s}${Math.abs(c1)===1?(c1<0?'−':''):(fN(c1))}k₁`);
+  }
+  if (Math.abs(c2) > 1e-10) {
+    const s = c2 > 0 && parts.length ? '+' : '';
+    parts.push(`${s}${Math.abs(c2)===1?(c2<0?'−':''):(fN(c2))}k₂`);
+  }
+  return parts.join('') || '0';
+}
+
+// =========================================================
+// RK4 数値積分
+// =========================================================
+function simulate(Acl, x0, tEnd, dt) {
+  const steps = Math.ceil(tEnd / dt), n = steps + 1;
+  const t = new Float64Array(n), x1 = new Float64Array(n), x2 = new Float64Array(n);
+  let xi = [x0[0], x0[1]];
+  const CLIP = 1e6;
+  for (let i = 0; i < n; i++) {
+    t[i] = i * dt; x1[i] = xi[0]; x2[i] = xi[1];
+    if (i === n - 1) break;
+    const k1 = matVecMul(Acl, xi);
+    const k2 = matVecMul(Acl, [xi[0]+.5*dt*k1[0], xi[1]+.5*dt*k1[1]]);
+    const k3 = matVecMul(Acl, [xi[0]+.5*dt*k2[0], xi[1]+.5*dt*k2[1]]);
+    const k4 = matVecMul(Acl, [xi[0]+dt*k3[0],    xi[1]+dt*k3[1]]);
+    xi[0] += (dt/6)*(k1[0]+2*k2[0]+2*k3[0]+k4[0]);
+    xi[1] += (dt/6)*(k1[1]+2*k2[1]+2*k3[1]+k4[1]);
+    if (!isFinite(xi[0])||Math.abs(xi[0])>CLIP) xi[0]=CLIP*(xi[0]>0?1:-1);
+    if (!isFinite(xi[1])||Math.abs(xi[1])>CLIP) xi[1]=CLIP*(xi[1]>0?1:-1);
+  }
+  return {t, x1, x2};
+}
+
+// =========================================================
+// メイン計算
+// =========================================================
+let state = null;
+
+function compute() {
+  const A = [
+    [+document.getElementById('a11').value, +document.getElementById('a12').value],
+    [+document.getElementById('a21').value, +document.getElementById('a22').value]
+  ];
+  const b1v = +document.getElementById('b1').value, b2v = +document.getElementById('b2').value;
+  const P1 = +document.getElementById('p1').value, P2 = +document.getElementById('p2').value;
+  const x0 = [+document.getElementById('x01').value, +document.getElementById('x02').value];
+  const tEnd = Math.max(+document.getElementById('tEnd').value, 0.1);
+  const dt = Math.min(Math.max(+document.getElementById('dt').value, 0.0001), 0.5);
+  const errEl = document.getElementById('error-msg');
+  errEl.textContent = '';
+
+  const ca = analyzeControllability(A, b1v, b2v);
+  const pp = attemptPolePlacement(A, b1v, b2v, P1, P2);
+  const cpStr = buildCharPolyStr(A, b1v, b2v, ca.uncontrollablePoles);
+
+  const olPoles = ca.eigenvalues;
+
+  let Acl = null, clPoles = null, simCL = null;
+  if (pp.solvable && pp.K) {
+    Acl = [
+      [A[0][0]+b1v*pp.K[0], A[0][1]+b1v*pp.K[1]],
+      [A[1][0]+b2v*pp.K[0], A[1][1]+b2v*pp.K[1]]
+    ];
+    clPoles = eig2(Acl);
+    simCL = simulate(Acl, x0, tEnd, dt);
+  }
+  const simOL = simulate(A, x0, tEnd, dt);
+
+  state = { A, b1v, b2v, ca, pp, cpStr, olPoles, clPoles, simCL, simOL, tEnd, dt, P1, P2, x0 };
+
+  updateResults();
+  drawSplane();
+  drawTimePlot();
+
+  const ctrlText = ca.controllable ? '可制御' : (ca.stabilizable ? '不可制御（可安定）' : '不可制御（不可安定）');
+  document.getElementById('ctrl-info').textContent =
+    `det(Vc) = ${ca.detVc.toFixed(4)}  →  ${ctrlText}`;
+}
+
+// =========================================================
+// 結果パネル更新
+// =========================================================
+function updateResults() {
+  const { ca, pp, cpStr, olPoles, clPoles, P1, P2 } = state;
+  const fmt = v => isFinite(v) ? v.toFixed(4) : '∞';
+  const fmtC = c => {
+    if (Math.abs(c.im) < 1e-6) return fmt(c.re);
+    return `${fmt(c.re)}${c.im>=0?'+':''}${fmt(c.im)}j`;
+  };
+
+  let badge, bclass;
+  if (ca.controllable) { badge = '可制御'; bclass = 'ctrl'; }
+  else if (ca.stabilizable) { badge = '不可制御（可安定）'; bclass = 'stab'; }
+  else { badge = '不可制御（不可安定）'; bclass = 'unstab'; }
+
+  let html = `<div style="text-align:center;margin-bottom:8px;"><span class="badge ${bclass}">${badge}</span></div>`;
+
+  html += `<hr class="res-sep">`;
+  html += `<div style="font-size:0.66rem;color:#2e7dd1;margin-bottom:4px;">② 可制御性行列 Vc = [B, AB]</div>`;
+  html += `<div class="res-row"><span class="res-key">Vc</span><span class="res-val">[${fN(ca.Vc[0][0])}, ${fN(ca.Vc[0][1])}; ${fN(ca.Vc[1][0])}, ${fN(ca.Vc[1][1])}]</span></div>`;
+  html += `<div class="res-row"><span class="res-key">det(Vc)</span><span class="res-val ${Math.abs(ca.detVc)>1e-10?'stable':'unstable'}">${fN(ca.detVc)} ${Math.abs(ca.detVc)>1e-10?'≠ 0 → フルランク':'= 0 → ランク落ち'}</span></div>`;
+
+  html += `<hr class="res-sep">`;
+  html += `<div style="font-size:0.66rem;color:#2e7dd1;margin-bottom:4px;">③ 固有値と可制御性ペンシル</div>`;
+
+  olPoles.forEach((p, i) => {
+    const isUC = ca.uncontrollablePoles.some(u =>
+      Math.abs(u.re - p.re) < 1e-8 && Math.abs(u.im - p.im) < 1e-8);
+    const label = isUC ? '<span style="color:#dc2626;">不可制御極</span>' :
+                         '<span style="color:#16a34a;">可制御極</span>';
+    html += `<div class="res-row"><span class="res-key">λ${i+1}</span><span class="res-val">${fmtC(p)} ${label}</span></div>`;
+  });
+
+  if (ca.uncontrollablePoles.length > 0) {
+    if (ca.stabilizable) {
+      if (ca.hasImagAxisUC) {
+        html += `<div style="font-size:0.68rem;margin-top:4px;color:#d97706;">`;
+        html += '不可制御極は虚軸上 → 可安定（漸近安定化は不可）';
+        html += `</div>`;
+      } else {
+        html += `<div style="font-size:0.68rem;margin-top:4px;color:#d97706;">`;
+        html += '不可制御極は安定 → 可安定';
+        html += `</div>`;
+      }
+    } else {
+      html += `<div style="font-size:0.68rem;margin-top:4px;color:#dc2626;">`;
+      html += '不可制御極が不安定 → 不可安定';
+      html += `</div>`;
+    }
+  }
+
+  html += `<hr class="res-sep">`;
+  html += `<div style="font-size:0.66rem;color:#2e7dd1;margin-bottom:4px;">① 特性多項式 φ<sub>A+BK</sub>(s)</div>`;
+  html += `<div class="poly-box">${cpStr.str}</div>`;
+
+  if (cpStr.type === 'factored') {
+    html += `<div style="font-size:0.68rem;color:#dc2626;margin-top:2px;">`;
+    html += `(s${fSign(-cpStr.fixedPole)}) は固定（制御不可）`;
+    html += `</div>`;
+  }
+
+  html += `<hr class="res-sep">`;
+  html += `<div style="font-size:0.66rem;color:#2e7dd1;margin-bottom:4px;">極配置結果</div>`;
+  html += `<div class="res-row"><span class="res-key">目標極</span><span class="res-val">P₁=${fN(P1)}, P₂=${fN(P2)}</span></div>`;
+
+  if (pp.solvable && pp.K) {
+    html += `<div class="res-row"><span class="res-key">K</span><span class="res-val">[${fmt(pp.K[0])}, ${fmt(pp.K[1])}]</span></div>`;
+    if (pp.msg) html += `<div style="font-size:0.66rem;color:#d97706;">${pp.msg}</div>`;
+    if (clPoles) {
+      html += `<hr class="res-sep">`;
+      html += `<div style="font-size:0.66rem;color:#5b7184;margin-bottom:4px;">閉ループ極</div>`;
+      clPoles.forEach((p, i) => {
+        const st = p.re < -1e-9;
+        html += `<div class="res-row"><span class="res-key">λ${i+1}</span><span class="res-val ${st?'stable':'unstable'}">${fmtC(p)}</span></div>`;
+      });
+      const allStable = clPoles.every(p => p.re < -1e-9);
+      html += `<div style="text-align:center;margin-top:4px;"><span class="badge ${allStable?'ctrl':'unstab'}">${allStable?'安定':'不安定'}</span></div>`;
+    }
+  } else {
+    html += `<div style="color:#dc2626;font-size:0.76rem;font-weight:600;margin-top:4px;">⚠ ${pp.msg || '解無し'}</div>`;
+    if (ca.uncontrollablePoles.length > 0) {
+      const ucStr = ca.uncontrollablePoles.map(p => `s=${fN(p.re)}`).join(', ');
+      html += `<div style="font-size:0.68rem;color:#dc2626;margin-top:2px;">不可制御極 ${ucStr} は配置変更不能</div>`;
+    }
+  }
+
+  document.getElementById('result-box').innerHTML = html;
+
+  const narrow = window.innerWidth < 820;
+  if (clPoles) {
+    const maxRe = Math.max(...clPoles.map(p => p.re));
+    if (maxRe < -1e-9) {
+      document.getElementById('time-sub').textContent =
+        `${narrow?'τ':'閉ループ時定数'} ≈ ${(-1/maxRe).toFixed(2)}s`;
+    } else {
+      document.getElementById('time-sub').textContent = '';
+    }
+  } else {
+    document.getElementById('time-sub').textContent = narrow ? '開ループのみ' : 'K が存在しないため開ループのみ表示';
+  }
+}
+
+// =========================================================
+// s 平面プロット
+// =========================================================
+function drawSplane() {
+  const canvas = document.getElementById('splane');
+  const par = canvas.parentElement;
+  const legendH = par.querySelector('.legend').offsetHeight;
+  const headerH = par.querySelector('.plot-header').offsetHeight;
+  const W = par.clientWidth;
+  const H = par.clientHeight - legendH - headerH - 4;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!state) return;
+
+  const { ca, olPoles, clPoles, P1, P2 } = state;
+  const desiredPoles = [{re: P1, im: 0}, {re: P2, im: 0}];
+  const allPoles = [...olPoles, ...desiredPoles];
+  if (clPoles) allPoles.push(...clPoles);
+
+  const allRe = allPoles.map(p => Math.abs(p.re));
+  const allIm = allPoles.map(p => Math.abs(p.im));
+  const range = Math.max(Math.max(...allRe), Math.max(...allIm), 0.5) * 1.6;
+
+  const mob = W < 500;
+  const cx = W / 2, cy = H / 2;
+  const scl = Math.min(W, H) / 2 / range * 0.88;
+  const toS = (re, im) => ({x: cx + re * scl, y: cy - im * scl});
+  const fs = mob ? 7 : 9;
+  const fsL = mob ? 8 : 10;
+  const mkr = mob ? 7 : 10;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // 左半面シェード
+  ctx.fillStyle = 'rgba(22,163,74,0.06)';
+  ctx.fillRect(0, 0, cx, H);
+
+  // 右半面シェード（不安定域）
+  ctx.fillStyle = 'rgba(220,38,38,0.04)';
+  ctx.fillRect(cx, 0, W - cx, H);
+
+  // グリッド
+  const step = Math.pow(10, Math.floor(Math.log10(range)));
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+  ctx.font = `${fs}px monospace`; ctx.fillStyle = '#8899a8'; ctx.textAlign = 'center';
+  for (let g = -Math.ceil(range/step)*step; g <= Math.ceil(range/step)*step; g += step) {
+    if (Math.abs(g) < step * 0.01) continue;
+    const gf = parseFloat(g.toFixed(6));
+    ctx.beginPath(); ctx.moveTo(0, cy-gf*scl); ctx.lineTo(W, cy-gf*scl); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+gf*scl, 0); ctx.lineTo(cx+gf*scl, H); ctx.stroke();
+    if (cx+gf*scl > 16 && cx+gf*scl < W-5)
+      ctx.fillText(gf%1===0?gf:gf.toFixed(1), cx+gf*scl, H-3);
+    if (cy-gf*scl > 10 && cy-gf*scl < H-4) {
+      ctx.textAlign = 'right';
+      ctx.fillText(gf%1===0?gf:gf.toFixed(1), cx-2, cy-gf*scl+4);
+      ctx.textAlign = 'center';
+    }
+  }
+
+  // 軸
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+
+  ctx.fillStyle = '#5b7184'; ctx.font = `${fsL}px sans-serif`;
+  ctx.textAlign = 'right'; ctx.fillText('Re', W-3, cy-3);
+  ctx.textAlign = 'center'; ctx.fillText('Im', cx + (mob?14:20), 10);
+
+  // 安定域ラベル
+  ctx.fillStyle = 'rgba(22,163,74,0.5)'; ctx.font = `${fs}px sans-serif`;
+  ctx.textAlign = 'left'; ctx.fillText('← 安定', 4, cy-3);
+  ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(220,38,38,0.4)';
+  ctx.fillText('不安定 →', W-4, cy-3);
+
+  // 開ループ極（可制御/不可制御で色分け）
+  olPoles.forEach(p => {
+    const isUC = ca.uncontrollablePoles.some(u =>
+      Math.abs(u.re - p.re) < 1e-8 && Math.abs(u.im - p.im) < 1e-8);
+    const color = isUC ? '#dc2626' : '#16a34a';
+    drawCross(ctx, toS(p.re, p.im), color, mkr);
+    if (isUC) {
+      ctx.fillStyle = '#dc2626'; ctx.font = `bold ${fs}px sans-serif`; ctx.textAlign = 'left';
+      ctx.fillText('不可制御', toS(p.re, p.im).x + mkr+2, toS(p.re, p.im).y - 3);
+    }
+  });
+
+  // 目標極
+  desiredPoles.forEach(p => drawRing(ctx, toS(p.re, p.im), '#2e7dd1', mob?6:9));
+
+  // 閉ループ極
+  if (clPoles) clPoles.forEach(p => drawDot(ctx, toS(p.re, p.im), '#ffa657', mob?4:6));
+}
+
+function drawCross(ctx, s, color, r) {
+  ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(s.x-r, s.y-r); ctx.lineTo(s.x+r, s.y+r);
+  ctx.moveTo(s.x+r, s.y-r); ctx.lineTo(s.x-r, s.y+r);
+  ctx.stroke();
+}
+function drawRing(ctx, s, color, r) {
+  ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, 2*Math.PI); ctx.stroke();
+}
+function drawDot(ctx, s, color, r) {
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, 2*Math.PI); ctx.fill();
+}
+
+// =========================================================
+// 時間応答プロット
+// =========================================================
+function drawTimePlot() {
+  const canvas = document.getElementById('timeplot');
+  const par = canvas.parentElement;
+  const legendH = par.querySelector('.legend').offsetHeight;
+  const headerH = par.querySelector('.plot-header').offsetHeight;
+  const W = par.clientWidth;
+  const H = par.clientHeight - legendH - headerH - 4;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!state) return;
+
+  const { simCL, simOL, tEnd } = state;
+  const mob = W < 500;
+  const pad = mob ? {l:36, r:8, t:10, b:26} : {l:46, r:14, t:12, b:32};
+  const pw = W-pad.l-pad.r, ph = H-pad.t-pad.b;
+  const fs = mob ? 8 : 10;
+
+  const scaleVals = simCL
+    ? [...Array.from(simCL.x1), ...Array.from(simCL.x2)]
+    : [...Array.from(simOL.x1), ...Array.from(simOL.x2)];
+  const raw = Math.max(Math.abs(Math.max(...scaleVals)), Math.abs(Math.min(...scaleVals)), 0.1);
+  const yMax = raw * 1.25, yMin = -yMax;
+
+  const toX = t => pad.l + (t/tEnd)*pw;
+  const toY = v => pad.t + (1 - (v-yMin)/(yMax-yMin))*ph;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // グリッド
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+  for (let i=0;i<=4;i++) {
+    const y=pad.t+i*ph/4;
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+  }
+  for (let i=0;i<=5;i++) {
+    const x=pad.l+i*pw/5;
+    ctx.beginPath(); ctx.moveTo(x,pad.t); ctx.lineTo(x,H-pad.b); ctx.stroke();
+  }
+
+  // ゼロ線
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(pad.l, toY(0)); ctx.lineTo(W-pad.r, toY(0)); ctx.stroke();
+  ctx.strokeRect(pad.l, pad.t, pw, ph);
+
+  // 軸ラベル
+  ctx.fillStyle = '#5b7184'; ctx.font = `${fs}px monospace`; ctx.textAlign = 'center';
+  const tSteps = mob ? 4 : 5;
+  for (let i=0;i<=tSteps;i++) ctx.fillText((i*tEnd/tSteps).toFixed(1), pad.l+i*pw/tSteps, H-pad.b+12);
+  ctx.textAlign = 'right';
+  for (let i=0;i<=4;i++) {
+    const v = yMax-i*(yMax-yMin)/4;
+    ctx.fillText(v.toFixed(mob?1:2), pad.l-3, pad.t+i*ph/4+4);
+  }
+  ctx.textAlign = 'center';
+  ctx.fillText('t [s]', W-pad.r, H-pad.b+12);
+
+  // 開ループ応答（薄く）
+  ctx.globalAlpha = 0.35;
+  drawLine(ctx, simOL.t, simOL.x1, toX, toY, '#94a3b8', 1.5);
+  drawLine(ctx, simOL.t, simOL.x2, toX, toY, '#94a3b8', 1.5, [4,3]);
+  ctx.globalAlpha = 1;
+
+  // 閉ループ応答
+  if (simCL) {
+    drawLine(ctx, simCL.t, simCL.x1, toX, toY, '#2e7dd1', 2);
+    drawLine(ctx, simCL.t, simCL.x2, toX, toY, '#ffa657', 2);
+  } else {
+    ctx.fillStyle = '#dc2626'; ctx.font = `${mob?10:13}px sans-serif`; ctx.textAlign = 'center';
+    ctx.fillText(mob ? 'K なし（開ループのみ）' : 'K が存在しないため閉ループ応答なし', W/2, H/2);
+    drawLine(ctx, simOL.t, simOL.x1, toX, toY, '#2e7dd1', 2);
+    drawLine(ctx, simOL.t, simOL.x2, toX, toY, '#ffa657', 2);
+  }
+}
+
+function drawLine(ctx, t, x, toX, toY, color, lw, dash) {
+  ctx.strokeStyle = color; ctx.lineWidth = lw;
+  if (dash) ctx.setLineDash(dash); else ctx.setLineDash([]);
+  ctx.beginPath();
+  for (let i=0;i<t.length;i++) {
+    const px=toX(t[i]), py=toY(x[i]);
+    i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// =========================================================
+// プリセット
+// =========================================================
+const PRESETS = {
+  prob1:  { a11:0,  a12:1, a21:-3, a22:4,  b1:0, b2:1, p1:-1, p2:-1, x01:1, x02:0, tEnd:5 },
+  prob2:  { a11:1,  a12:0, a21:-3, a22:4,  b1:0, b2:1, p1:-1, p2:-1, x01:1, x02:0, tEnd:5 },
+  prob3:  { a11:-1, a12:0, a21:-3, a22:-4, b1:0, b2:1, p1:-1, p2:-1, x01:1, x02:0, tEnd:5 },
+  prob4:  { a11:-1, a12:0, a21:0,  a22:-1, b1:1, b2:1, p1:-1, p2:-1, x01:1, x02:0, tEnd:5 },
+  prob5a: { a11:0,  a12:1, a21:0,  a22:0,  b1:0, b2:1, p1:-1, p2:-2, x01:1, x02:0, tEnd:6 },
+  prob5b: { a11:0,  a12:1, a21:0,  a22:0,  b1:1, b2:0, p1:-1, p2:-2, x01:1, x02:0, tEnd:6 },
+};
+
+function applyPreset() {
+  const key = document.getElementById('preset').value;
+  if (key === 'custom') return;
+  const p = PRESETS[key];
+  for (const [id, val] of Object.entries(p)) {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  }
+  compute();
+}
+
+function markCustom() {
+  document.getElementById('preset').value = 'custom';
+}
+
+// =========================================================
+// リサイズ対応
+// =========================================================
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { if(state) { drawSplane(); drawTimePlot(); } }, 80);
+});
+
+compute();
+</script>
+</body>
+</html>

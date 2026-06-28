@@ -20,6 +20,7 @@
 |:--|:--:|:--|
 | [極の位置と相平面上の応答](https://knjsawada-misclab.github.io/Control-study/state_equation_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/state_equation_simulator_guide.md) | 2次系の固有値・位相面・時間応答の可視化 |
 | [極配置と初期状態応答](https://knjsawada-misclab.github.io/Control-study/pole_placement.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/pole_placement_guide.md) | 状態フィードバックによる極配置法の体験 |
+| [可制御性と極配置](https://knjsawada-misclab.github.io/Control-study/controllability_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/controllability_simulator_guide.md) | 可制御・不可制御・可安定の判定と極配置の可否の体験 |
 | [オブザーバによる状態推定](https://knjsawada-misclab.github.io/Control-study/observer_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/observer_simulator_guide.md) | 同一次元オブザーバの動作と可観測性の体験 |
 
 ## その他

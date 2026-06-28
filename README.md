@@ -8,6 +8,7 @@
 ---
 
 ## 機械情報システム入門（学問の扉）
+
 | シミュレータ | 解説資料 | 概要 |
 |:--|:--:|:--|
 | [空気浮上系の PID 制御](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/air_levitation_pid.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/air_levitation_pid/air_levitation_pid_guide.md) | ファンでピンポン球を浮上させる PID 制御の体験 |
@@ -15,6 +16,7 @@
 
 ## 制御工学（応用理工学科 機械工学科目 3年）
 制御工学の後半「現代制御編」の講義資料に基づき，シミュレータを構築しています．そのため，幾つかのシミュレータは講義を受けて，かつ，解説を読まないと意味がわからない仕様になっています．
+
 | シミュレータ | 解説資料 | 概要 |
 |:--|:--:|:--|
 | [極の位置と相平面上の応答](https://knjsawada-misclab.github.io/Control-study/CNTENG/state_equation_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/state_equation_simulator_guide.md) | 2次系の固有値・位相面・時間応答の可視化 |

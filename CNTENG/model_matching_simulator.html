@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>モデルマッチング制御シミュレータ（除振台）</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+  background: #eef2f6;
+  color: #1f2d3a;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+header {
+  background: #ffffff;
+  border-bottom: 1px solid #d4dde6;
+  padding: 10px 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-shrink: 0;
+}
+header h1 { font-size: 1rem; font-weight: 600; color: #2e7dd1; }
+header .eq { font-size: 0.78rem; color: #5b7184; font-family: 'Courier New', monospace; }
+
+.body { display: flex; flex: 1; overflow: hidden; }
+
+.sidebar {
+  width: 320px;
+  background: #ffffff;
+  border-right: 1px solid #d4dde6;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.sidebar-inner { padding: 12px; flex: 1; }
+
+.section { margin-bottom: 14px; }
+.sec-title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #2e7dd1;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+select {
+  width: 100%;
+  background: #f1f5f9;
+  border: 1px solid #d4dde6;
+  color: #1f2d3a;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+select:focus { outline: none; border-color: #2e7dd1; }
+
+.matrix-label { font-size: 0.75rem; color: #5b7184; margin-bottom: 5px; }
+.mat-grid { display: grid; gap: 5px; margin-bottom: 8px; }
+.mat-2x2 { grid-template-columns: 1fr 1fr; }
+.mat-2x1 { grid-template-columns: 1fr; }
+
+input[type="number"] {
+  background: #f1f5f9;
+  border: 1px solid #d4dde6;
+  color: #1f2d3a;
+  padding: 5px 6px;
+  border-radius: 5px;
+  width: 100%;
+  font-size: 0.82rem;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  transition: border-color 0.15s;
+}
+input[type="number"]:focus { outline: none; border-color: #2e7dd1; }
+
+.input-label { font-size: 0.7rem; color: #5b7184; margin-bottom: 2px; }
+
+.pole-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 6px; }
+.pole-row.three-col { grid-template-columns: 1fr 1fr 1fr; }
+.pole-field label { display: block; font-size: 0.7rem; color: #5b7184; margin-bottom: 3px; }
+
+.note-text { font-size: 0.68rem; color: #5b7184; margin-top: 2px; margin-bottom: 6px; font-style: italic; }
+
+.btn-calc {
+  width: 100%;
+  background: #2e7dd1;
+  color: #fff;
+  border: none;
+  padding: 7px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 8px;
+}
+.btn-calc:hover { background: #1d6ab8; }
+.btn-calc:active { background: #1a5fa0; }
+
+.btn-compute {
+  width: 100%;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  padding: 9px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 12px;
+}
+.btn-compute:hover { background: #15803d; }
+.btn-compute:active { background: #166534; }
+
+.result-box {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.res-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+.res-key { color: #5b7184; }
+.res-val { color: #2e7dd1; }
+.res-val.stable { color: #16a34a; }
+.res-val.unstable { color: #dc2626; }
+.res-sep { border: none; border-top: 1px solid #e2e8f0; margin: 6px 0; }
+.error-msg { color: #dc2626; font-size: 0.78rem; margin-top: 6px; min-height: 16px; }
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.badge.ctrl { background: rgba(22,163,74,0.12); color: #16a34a; border: 1px solid #16a34a; }
+.badge.stab { background: rgba(245,158,11,0.12); color: #d97706; border: 1px solid #d97706; }
+.badge.unstab { background: rgba(220,38,38,0.12); color: #dc2626; border: 1px solid #dc2626; }
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 10px;
+  overflow: hidden;
+}
+.plots-row {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  overflow: hidden;
+}
+.plot-card {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #d4dde6;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.plot-card.anim-panel { flex: 0 0 auto; width: 40%; }
+.plot-card.response-panel { flex: 1; }
+.plot-card.pole-panel { flex: none; height: 200px; }
+
+.plot-header {
+  padding: 8px 12px 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.plot-title { font-size: 0.8rem; font-weight: 600; color: #1f2d3a; }
+.plot-sub { font-size: 0.7rem; color: #5b7184; }
+
+.legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 12px 6px;
+  flex-shrink: 0;
+}
+.leg-item { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: #5b7184; }
+.leg-icon { width: 14px; text-align: center; font-size: 0.8rem; }
+.leg-line { width: 14px; height: 2px; }
+
+canvas {
+  flex: 1;
+  width: 100%;
+  display: block;
+}
+
+.anim-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-top: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+.btn-play {
+  background: #2e7dd1;
+  color: #fff;
+  border: none;
+  padding: 4px 14px;
+  border-radius: 5px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-play:hover { background: #1d6ab8; }
+.speed-label { font-size: 0.7rem; color: #5b7184; }
+.speed-slider {
+  width: 70px;
+  cursor: pointer;
+}
+.anim-info {
+  font-size: 0.7rem;
+  color: #5b7184;
+  font-family: 'Courier New', monospace;
+  margin-left: auto;
+}
+
+/* Narrow desktop / landscape tablet */
+@media (max-width: 1024px) {
+  .sidebar { width: 260px; }
+  .plot-card.anim-panel { width: 38%; }
+}
+
+/* Tablet / Mobile */
+@media (max-width: 820px) {
+  body {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-y: auto;
+  }
+  header {
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    gap: 4px;
+  }
+  header h1 { font-size: 0.9rem; }
+  header .eq { font-size: 0.65rem; line-height: 1.5; display: block; }
+  .body {
+    flex-direction: column;
+    overflow: visible;
+    flex: none;
+  }
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #d4dde6;
+    overflow-y: visible;
+    max-height: none;
+  }
+  .sidebar-inner { padding: 10px; }
+  .section { margin-bottom: 10px; }
+  .mat-grid { gap: 3px; }
+  .main {
+    overflow: visible;
+    flex: none;
+    padding: 8px;
+  }
+  .plots-row {
+    flex-direction: column;
+    overflow: visible;
+    flex-shrink: 0;
+    gap: 8px;
+  }
+  .plot-card.anim-panel {
+    width: 100% !important;
+    height: min(80vw, 350px);
+    flex: none;
+  }
+  .plot-card.response-panel {
+    width: 100% !important;
+    height: min(70vw, 300px);
+    flex: none;
+  }
+  .plot-card.pole-panel {
+    width: 100% !important;
+    height: min(60vw, 250px);
+    flex: none;
+  }
+  canvas {
+    flex: none !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+  .legend {
+    gap: 4px 8px;
+    padding: 4px 8px;
+    flex-wrap: wrap;
+  }
+  .leg-item { font-size: 0.6rem; }
+  .plot-header {
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 6px 8px 2px;
+  }
+  .plot-title { font-size: 0.75rem; }
+  .plot-sub { font-size: 0.62rem; }
+  .info-bar {
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 0.6rem;
+    padding: 6px 10px;
+  }
+  input[type="number"],
+  select {
+    font-size: 16px;
+  }
+  input[type="number"] {
+    padding: 7px 6px;
+  }
+  .btn-compute, .btn-calc {
+    padding: 12px;
+    font-size: 0.9rem;
+    min-height: 44px;
+  }
+  .result-box {
+    font-size: 0.7rem;
+    overflow: hidden;
+  }
+  .res-row {
+    gap: 2px 4px;
+  }
+  .res-key {
+    flex-shrink: 0;
+  }
+  .res-val {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.66rem;
+    overflow-wrap: anywhere;
+  }
+  .badge {
+    font-size: 0.68rem;
+  }
+  .pole-row {
+    gap: 4px;
+  }
+}
+
+.info-bar {
+  background: #ffffff;
+  border-top: 1px solid #d4dde6;
+  padding: 5px 16px;
+  font-size: 0.7rem;
+  color: #5b7184;
+  flex-shrink: 0;
+  display: flex;
+  gap: 20px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>モデルマッチング制御シミュレータ（除振台）</h1>
+  <span class="eq">m*y'' + d*y' + k*y + u = f, &nbsp; u = cp*y + cd*y'</span>
+</header>
+
+<div class="body">
+  <div class="sidebar">
+    <div class="sidebar-inner">
+
+      <div class="section">
+        <div class="sec-title">プリセット</div>
+        <select id="preset" onchange="applyPreset()">
+          <option value="custom">-- カスタム --</option>
+          <option value="no_ctrl" selected>制御なし（受動系）</option>
+          <option value="pd_a1">PD制御（a=1, 臨界減衰）</option>
+          <option value="pd_a3">PD制御（a=3, 高速応答）</option>
+          <option value="pd_a5">PD制御（a=5, 超高速応答）</option>
+          <option value="pd_a05">PD制御（a=0.5, 緩慢応答）</option>
+        </select>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">物理パラメータ</div>
+        <div class="pole-row three-col">
+          <div class="pole-field">
+            <label>質量 m [kg]</label>
+            <input type="number" id="param_m" value="1" step="0.1" min="0.1" onchange="markCustom()">
+          </div>
+          <div class="pole-field">
+            <label>減衰 d [Ns/m]</label>
+            <input type="number" id="param_d" value="0.5" step="0.1" min="0" onchange="markCustom()">
+          </div>
+          <div class="pole-field">
+            <label>ばね k [N/m]</label>
+            <input type="number" id="param_k" value="4" step="0.1" min="0" onchange="markCustom()">
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">目標極</div>
+        <div class="pole-row">
+          <div class="pole-field">
+            <label>a</label>
+            <input type="number" id="param_a" value="1" step="0.1" min="0.01" onchange="markCustom()">
+          </div>
+          <div class="pole-field" style="display:flex;align-items:flex-end;">
+            <button class="btn-calc" onclick="computeGains()" style="margin-bottom:0;">PD ゲイン算出</button>
+          </div>
+        </div>
+        <div class="note-text">閉ループ極: s = -a (2重根)</div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">PD ゲイン</div>
+        <div class="pole-row">
+          <div class="pole-field">
+            <label>cp (比例)</label>
+            <input type="number" id="gain_cp" value="0" step="0.1" onchange="markCustom()">
+          </div>
+          <div class="pole-field">
+            <label>cd (微分)</label>
+            <input type="number" id="gain_cd" value="0" step="0.1" onchange="markCustom()">
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">外乱</div>
+        <select id="dist_type" onchange="markCustom()">
+          <option value="impulse" selected>インパルス (delta(t))</option>
+          <option value="step">ステップ (1(t))</option>
+        </select>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">シミュレーション</div>
+        <div class="pole-row">
+          <div class="pole-field">
+            <label>終了時刻 T [s]</label>
+            <input type="number" id="tEnd" value="10" step="1" min="0.5">
+          </div>
+          <div class="pole-field">
+            <label>刻み幅 dt</label>
+            <input type="number" id="dt" value="0.01" step="0.001" min="0.001" max="0.1">
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-compute" onclick="runSimulation()">&#x25B6; 計算・シミュレーション</button>
+
+      <div class="section">
+        <div class="sec-title">解析結果</div>
+        <div id="result-box" class="result-box">
+          <div style="color:#5b7184;">「計算・シミュレーション」を押してください</div>
+        </div>
+        <div id="error-msg" class="error-msg"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="plots-row">
+      <div class="plot-card anim-panel">
+        <div class="plot-header">
+          <span class="plot-title">除振台アニメーション</span>
+          <span class="plot-sub" id="anim-sub"></span>
+        </div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> PD制御あり</div>
+          <div class="leg-item"><div class="leg-line" style="background:#94a3b8;"></div> 制御なし</div>
+        </div>
+        <canvas id="animCanvas"></canvas>
+        <div class="anim-controls">
+          <button class="btn-play" id="btn-play" onclick="togglePlay()">&#x25B6;</button>
+          <span class="speed-label">速度:</span>
+          <input type="range" class="speed-slider" id="speed" min="0" max="2" step="1" value="1">
+          <span class="speed-label" id="speed-label">1x</span>
+          <span class="anim-info" id="anim-info">t=0.00</span>
+        </div>
+      </div>
+
+      <div class="plot-card response-panel">
+        <div class="plot-header">
+          <span class="plot-title">時間応答 y(t)</span>
+          <span class="plot-sub" id="resp-sub">外乱 f(t) から変位 y(t)</span>
+        </div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> PD制御あり</div>
+          <div class="leg-item"><div class="leg-line" style="background:#94a3b8; border-style:dashed;height:0;border-top:2px dashed #94a3b8;"></div> 制御なし</div>
+          <div class="leg-item"><div class="leg-line" style="background:#dc2626; border-style:dotted;height:0;border-top:2px dotted #dc2626;"></div> 解析解</div>
+        </div>
+        <canvas id="responseCanvas"></canvas>
+      </div>
+    </div>
+
+    <div class="plot-card pole-panel">
+      <div class="plot-header">
+        <span class="plot-title">極・零点マップ（s平面）</span>
+        <span class="plot-sub">左半面 = 安定領域</span>
+      </div>
+      <div class="legend">
+        <div class="leg-item"><span class="leg-icon" style="color:#94a3b8;">&#x2716;</span> 開ループ極</div>
+        <div class="leg-item"><span class="leg-icon" style="color:#2e7dd1;">&#x25CF;</span> 閉ループ極</div>
+        <div class="leg-item"><span class="leg-icon" style="color:#dc2626;">&#x25CE;</span> 目標極 s=-a</div>
+      </div>
+      <canvas id="poleCanvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="info-bar">
+  <span>アクティブ除振台のモデルマッチング制御 &nbsp;|&nbsp; RK4 数値積分</span>
+  <span id="ctrl-info"></span>
+</div>
+
+<script>
+// =========================================================
+// グローバル状態
+// =========================================================
+let simData = null;
+let animFrame = 0;
+let animPlaying = false;
+let animRAF = null;
+let lastAnimTime = 0;
+
+// =========================================================
+// ユーティリティ
+// =========================================================
+function fN(v) {
+  if (!isFinite(v)) return 'Inf';
+  if (Number.isInteger(v) || Math.abs(v - Math.round(v)) < 1e-10) return String(Math.round(v));
+  return v.toFixed(4);
+}
+
+function fN2(v) {
+  if (!isFinite(v)) return 'Inf';
+  if (Number.isInteger(v) || Math.abs(v - Math.round(v)) < 1e-10) return String(Math.round(v));
+  return v.toFixed(2);
+}
+
+// =========================================================
+// 2x2 行列演算
+// =========================================================
+function det2(M) { return M[0][0]*M[1][1] - M[0][1]*M[1][0]; }
+
+function eig2(M) {
+  const tr = M[0][0]+M[1][1], dt = det2(M), disc = tr*tr - 4*dt;
+  if (disc >= -1e-14) {
+    const d = Math.sqrt(Math.max(0, disc));
+    return [{re:(tr+d)/2, im:0}, {re:(tr-d)/2, im:0}];
+  }
+  return [{re:tr/2, im:Math.sqrt(-disc)/2}, {re:tr/2, im:-Math.sqrt(-disc)/2}];
+}
+
+function fmtEig(c) {
+  if (Math.abs(c.im) < 1e-6) return fN(c.re);
+  return fN(c.re) + (c.im >= 0 ? '+' : '') + fN(c.im) + 'j';
+}
+
+// =========================================================
+// パラメータ読み取り
+// =========================================================
+function getParams() {
+  const m = Math.max(+document.getElementById('param_m').value, 0.01);
+  const d = Math.max(+document.getElementById('param_d').value, 0);
+  const k = Math.max(+document.getElementById('param_k').value, 0);
+  const a = Math.max(+document.getElementById('param_a').value, 0.001);
+  const cp = +document.getElementById('gain_cp').value;
+  const cd = +document.getElementById('gain_cd').value;
+  const distType = document.getElementById('dist_type').value;
+  const tEnd = Math.max(+document.getElementById('tEnd').value, 0.1);
+  const dt = Math.min(Math.max(+document.getElementById('dt').value, 0.0001), 0.5);
+  return { m, d, k, a, cp, cd, distType, tEnd, dt };
+}
+
+// =========================================================
+// PD ゲイン自動算出
+// =========================================================
+function computeGains() {
+  const m = Math.max(+document.getElementById('param_m').value, 0.01);
+  const d = Math.max(+document.getElementById('param_d').value, 0);
+  const k = Math.max(+document.getElementById('param_k').value, 0);
+  const a = Math.max(+document.getElementById('param_a').value, 0.001);
+  // 閉ループ特性方程式: s^2 + (d+cd)/m * s + (k+cp)/m = (s+a)^2 = s^2 + 2a*s + a^2
+  // (d+cd)/m = 2a => cd = 2am - d
+  // (k+cp)/m = a^2 => cp = a^2*m - k
+  const cd = 2 * a * m - d;
+  const cp = a * a * m - k;
+  document.getElementById('gain_cd').value = cd.toFixed(4);
+  document.getElementById('gain_cp').value = cp.toFixed(4);
+}
+
+function markCustom() {
+  document.getElementById('preset').value = 'custom';
+}
+
+// =========================================================
+// プリセット
+// =========================================================
+const PRESETS = {
+  no_ctrl:  { m: 1, d: 0.5, k: 4, a: 1,   cp: 0,  cd: 0,  tEnd: 10 },
+  pd_a1:   { m: 1, d: 0.5, k: 4, a: 1,   cp: null, cd: null, tEnd: 10 },
+  pd_a3:   { m: 1, d: 0.5, k: 4, a: 3,   cp: null, cd: null, tEnd: 10 },
+  pd_a5:   { m: 1, d: 0.5, k: 4, a: 5,   cp: null, cd: null, tEnd: 10 },
+  pd_a05:  { m: 1, d: 0.5, k: 4, a: 0.5, cp: null, cd: null, tEnd: 10 },
+};
+
+function applyPreset() {
+  const key = document.getElementById('preset').value;
+  if (key === 'custom') return;
+  const p = PRESETS[key];
+  document.getElementById('param_m').value = p.m;
+  document.getElementById('param_d').value = p.d;
+  document.getElementById('param_k').value = p.k;
+  document.getElementById('param_a').value = p.a;
+  document.getElementById('tEnd').value = p.tEnd;
+  if (p.cp !== null && p.cd !== null) {
+    document.getElementById('gain_cp').value = p.cp;
+    document.getElementById('gain_cd').value = p.cd;
+  } else {
+    computeGains();
+  }
+  document.getElementById('dist_type').value = 'impulse';
+  runSimulation();
+}
+
+// =========================================================
+// 状態方程式
+// =========================================================
+// x = [y, y'], state equation:
+// x' = A*x + Bu*u + Bf*f
+// A = [[0, 1], [-k/m, -d/m]]
+// Bu = [[0], [-1/m]]    (control input)
+// Bf = [[0], [1/m]]     (disturbance)
+// y = [1, 0]*x
+
+function buildSystem(m, d, k) {
+  const A = [[0, 1], [-k/m, -d/m]];
+  const Bu = [0, -1/m];
+  const Bf = [0, 1/m];
+  return { A, Bu, Bf };
+}
+
+// =========================================================
+// 外乱関数
+// =========================================================
+function disturbance(t, dt, distType) {
+  if (distType === 'impulse') {
+    return (t >= 0 && t < dt) ? 1/dt : 0;
+  } else {
+    return t >= 0 ? 1 : 0;
+  }
+}
+
+// =========================================================
+// RK4 シミュレーション
+// =========================================================
+function simulate(m, d, k, cp, cd, distType, tEnd, dt, useControl) {
+  const sys = buildSystem(m, d, k);
+  const steps = Math.ceil(tEnd / dt);
+  const n = steps + 1;
+  const tArr = new Float64Array(n);
+  const yArr = new Float64Array(n);
+  const ydArr = new Float64Array(n);
+  const uArr = new Float64Array(n);
+
+  let x = [0, 0]; // initial state: zero (at rest)
+  const CLIP = 1e6;
+
+  for (let i = 0; i < n; i++) {
+    const t = i * dt;
+    tArr[i] = t;
+    yArr[i] = x[0];
+    ydArr[i] = x[1];
+
+    // control
+    let u = 0;
+    if (useControl) {
+      u = cp * x[0] + cd * x[1];
+    }
+    uArr[i] = u;
+
+    if (i === n - 1) break;
+
+    // RK4
+    const f = (xx, tt) => {
+      let uu = 0;
+      if (useControl) {
+        uu = cp * xx[0] + cd * xx[1];
+      }
+      const ff = disturbance(tt, dt, distType);
+      return [
+        xx[1],
+        (-k/m)*xx[0] + (-d/m)*xx[1] + (-1/m)*uu + (1/m)*ff
+      ];
+    };
+
+    const k1 = f(x, t);
+    const x2 = [x[0]+0.5*dt*k1[0], x[1]+0.5*dt*k1[1]];
+    const k2 = f(x2, t+0.5*dt);
+    const x3 = [x[0]+0.5*dt*k2[0], x[1]+0.5*dt*k2[1]];
+    const k3 = f(x3, t+0.5*dt);
+    const x4 = [x[0]+dt*k3[0], x[1]+dt*k3[1]];
+    const k4 = f(x4, t+dt);
+
+    x[0] += (dt/6)*(k1[0]+2*k2[0]+2*k3[0]+k4[0]);
+    x[1] += (dt/6)*(k1[1]+2*k2[1]+2*k3[1]+k4[1]);
+
+    if (!isFinite(x[0]) || Math.abs(x[0]) > CLIP) x[0] = CLIP * (x[0] > 0 ? 1 : -1);
+    if (!isFinite(x[1]) || Math.abs(x[1]) > CLIP) x[1] = CLIP * (x[1] > 0 ? 1 : -1);
+  }
+
+  return { t: tArr, y: yArr, yd: ydArr, u: uArr };
+}
+
+// =========================================================
+// 解析解（インパルス応答, 2重根 s=-a の場合）
+// =========================================================
+function analyticalImpulse(m, a, tEnd, dt) {
+  // G(s) = (1/m)/(s+a)^2
+  // impulse response: y(t) = (1/m)*t*e^(-at)
+  const steps = Math.ceil(tEnd / dt);
+  const n = steps + 1;
+  const tArr = new Float64Array(n);
+  const yArr = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const t = i * dt;
+    tArr[i] = t;
+    yArr[i] = (1/m) * t * Math.exp(-a * t);
+  }
+  return { t: tArr, y: yArr };
+}
+
+// =========================================================
+// メインシミュレーション
+// =========================================================
+function runSimulation() {
+  stopAnimation();
+  const params = getParams();
+  const { m, d, k, a, cp, cd, distType, tEnd, dt } = params;
+
+  // Open-loop system matrices
+  const sys = buildSystem(m, d, k);
+  const A_ol = sys.A;
+
+  // Closed-loop: A + Bu*K where K = [cp, cd], Bu = [0, -1/m]
+  // A_cl = [[0, 1], [-k/m + (-1/m)*cp, -d/m + (-1/m)*cd]]
+  //       = [[0, 1], [-(k+cp)/m, -(d+cd)/m]]
+  const A_cl = [
+    [0, 1],
+    [-(k+cp)/m, -(d+cd)/m]
+  ];
+
+  // Eigenvalues
+  const olEigs = eig2(A_ol);
+  const clEigs = eig2(A_cl);
+
+  // Simulate: with control
+  const ctrlSim = simulate(m, d, k, cp, cd, distType, tEnd, dt, true);
+  // Simulate: without control
+  const noCtrlSim = simulate(m, d, k, 0, 0, distType, tEnd, dt, false);
+
+  // Analytical solution (only for impulse when closed-loop has double root at -a)
+  let analyticSim = null;
+  // Check if closed-loop poles are approximately -a (double root)
+  const isDoubleRoot = Math.abs(clEigs[0].re - (-a)) < 0.01 &&
+                       Math.abs(clEigs[1].re - (-a)) < 0.01 &&
+                       Math.abs(clEigs[0].im) < 0.01 &&
+                       Math.abs(clEigs[1].im) < 0.01;
+  if (distType === 'impulse' && isDoubleRoot) {
+    analyticSim = analyticalImpulse(m, a, tEnd, dt);
+  }
+
+  simData = {
+    params, A_ol, A_cl, olEigs, clEigs,
+    ctrlSim, noCtrlSim, analyticSim,
+    isDoubleRoot
+  };
+
+  updateResults();
+  drawAnimation();
+  drawResponse();
+  drawPoleMap();
+
+  // Info bar
+  const olStab = olEigs.every(e => e.re < -1e-9) ? '安定' : '不安定';
+  const clStab = clEigs.every(e => e.re < -1e-9) ? '安定' : '不安定';
+  const hasCtrl = Math.abs(cp) > 1e-10 || Math.abs(cd) > 1e-10;
+  document.getElementById('ctrl-info').textContent =
+    hasCtrl ? `開ループ: ${olStab} / 閉ループ: ${clStab}` : `受動系: ${olStab}`;
+
+  animFrame = 0;
+  updateAnimInfo();
+}
+
+// =========================================================
+// 結果パネル更新
+// =========================================================
+function updateResults() {
+  if (!simData) return;
+  const { A_ol, A_cl, olEigs, clEigs, params } = simData;
+  const { m, d, k, cp, cd, a } = params;
+
+  let html = '';
+
+  // Open-loop
+  html += '<div style="font-size:0.66rem;color:#2e7dd1;margin-bottom:4px;">開ループ系</div>';
+  html += '<div class="res-row"><span class="res-key">A</span><span class="res-val">[' +
+    fN(A_ol[0][0]) + ', ' + fN(A_ol[0][1]) + '; ' + fN(A_ol[1][0]) + ', ' + fN(A_ol[1][1]) + ']</span></div>';
+  olEigs.forEach(function(e, i) {
+    var st = e.re < -1e-9;
+    html += '<div class="res-row"><span class="res-key">lambda' + (i+1) + '</span><span class="res-val ' + (st?'stable':'unstable') + '">' + fmtEig(e) + '</span></div>';
+  });
+
+  // Open-loop transfer function
+  html += '<div class="res-row"><span class="res-key">G_OL(s)</span><span class="res-val">' +
+    '(1/' + fN2(m) + ')/(s^2+' + fN2(d/m) + 's+' + fN2(k/m) + ')</span></div>';
+
+  // Open-loop stability badge
+  var olStable = olEigs.every(function(e) { return e.re < -1e-9; });
+  html += '<div style="text-align:center;margin-top:4px;"><span class="badge ' +
+    (olStable ? 'ctrl' : 'unstab') + '">' + (olStable ? '開ループ安定' : '開ループ振動的') + '</span></div>';
+
+  html += '<hr class="res-sep">';
+
+  // Closed-loop
+  var hasCtrl = Math.abs(cp) > 1e-10 || Math.abs(cd) > 1e-10;
+  if (hasCtrl) {
+    html += '<div style="font-size:0.66rem;color:#2e7dd1;margin-bottom:4px;">閉ループ系（PD制御）</div>';
+    html += '<div class="res-row"><span class="res-key">K</span><span class="res-val">[' + fN(cp) + ', ' + fN(cd) + ']</span></div>';
+    html += '<div class="res-row"><span class="res-key">A+BK</span><span class="res-val">[' +
+      fN(A_cl[0][0]) + ', ' + fN(A_cl[0][1]) + '; ' + fN(A_cl[1][0]) + ', ' + fN(A_cl[1][1]) + ']</span></div>';
+    clEigs.forEach(function(e, i) {
+      var st = e.re < -1e-9;
+      html += '<div class="res-row"><span class="res-key">lambda' + (i+1) + '</span><span class="res-val ' + (st?'stable':'unstable') + '">' + fmtEig(e) + '</span></div>';
+    });
+
+    // Closed-loop transfer function
+    html += '<div class="res-row"><span class="res-key">G_CL(s)</span><span class="res-val">' +
+      '(1/' + fN2(m) + ')/(s^2+' + fN2((d+cd)/m) + 's+' + fN2((k+cp)/m) + ')</span></div>';
+
+    var clStable = clEigs.every(function(e) { return e.re < -1e-9; });
+    html += '<div style="text-align:center;margin-top:4px;"><span class="badge ' +
+      (clStable ? 'ctrl' : 'unstab') + '">' + (clStable ? '閉ループ安定' : '閉ループ不安定') + '</span></div>';
+
+    if (simData.isDoubleRoot) {
+      html += '<hr class="res-sep">';
+      html += '<div style="font-size:0.66rem;color:#16a34a;margin-bottom:4px;">モデルマッチング達成</div>';
+      html += '<div class="res-row"><span class="res-key">G(s)</span><span class="res-val stable">(1/' + fN2(m) + ')/(s+' + fN2(a) + ')^2</span></div>';
+      html += '<div class="res-row"><span class="res-key">y(t)</span><span class="res-val stable">(1/' + fN2(m) + ')*t*e^(-' + fN2(a) + 't)</span></div>';
+    }
+  } else {
+    html += '<div style="font-size:0.66rem;color:#5b7184;margin-bottom:4px;">制御なし（cp=0, cd=0）</div>';
+  }
+
+  document.getElementById('result-box').innerHTML = html;
+}
+
+// =========================================================
+// 除振台アニメーション描画
+// =========================================================
+function drawAnimation(frameIdx) {
+  var canvas = document.getElementById('animCanvas');
+  var par = canvas.parentElement;
+  var legendH = par.querySelector('.legend') ? par.querySelector('.legend').offsetHeight : 0;
+  var headerH = par.querySelector('.plot-header') ? par.querySelector('.plot-header').offsetHeight : 0;
+  var controlsH = par.querySelector('.anim-controls') ? par.querySelector('.anim-controls').offsetHeight : 0;
+  var W = par.clientWidth;
+  var H = par.clientHeight - legendH - headerH - controlsH - 4;
+  canvas.width = W;
+  canvas.height = Math.max(H, 100);
+  var ctx = canvas.getContext('2d');
+
+  if (!simData) { ctx.clearRect(0, 0, W, canvas.height); return; }
+
+  var idx = frameIdx !== undefined ? frameIdx : animFrame;
+  var ctrlSim = simData.ctrlSim;
+  var noCtrlSim = simData.noCtrlSim;
+  var mob = W < 400;
+
+  var safeIdx = Math.min(idx, ctrlSim.y.length - 1);
+  var yCtrl = ctrlSim.y[safeIdx];
+  var yNoCtrl = noCtrlSim.y[safeIdx];
+  var tNow = ctrlSim.t[safeIdx];
+
+  ctx.clearRect(0, 0, W, canvas.height);
+
+  // Determine visual scale: multiply displacement by scale to get pixel offset
+  var allMax = 0;
+  for (var i = 0; i < ctrlSim.y.length; i++) {
+    if (Math.abs(ctrlSim.y[i]) > allMax) allMax = Math.abs(ctrlSim.y[i]);
+    if (Math.abs(noCtrlSim.y[i]) > allMax) allMax = Math.abs(noCtrlSim.y[i]);
+  }
+  if (allMax < 0.001) allMax = 0.1;
+  var maxPixels = Math.min(H * 0.25, 80);
+  var vscale = maxPixels / allMax;
+
+  // Layout: two side-by-side systems
+  var sysW = W * 0.42;
+  var gap = W * 0.06;
+  var cx1 = W * 0.28; // center of left system (PD control)
+  var cx2 = W * 0.72; // center of right system (no control)
+
+  // Draw both systems
+  drawVibSystem(ctx, cx1, sysW, H, yCtrl, vscale, '#2e7dd1', 'PD制御', tNow, mob, true, simData.params);
+  drawVibSystem(ctx, cx2, sysW, H, yNoCtrl, vscale, '#94a3b8', '制御なし', tNow, mob, false, simData.params);
+
+  // Show disturbance arrow at t near 0
+  var distType = simData.params.distType;
+  if (distType === 'impulse' && tNow < simData.params.dt * 5) {
+    drawDistArrow(ctx, cx1, H, mob);
+    drawDistArrow(ctx, cx2, H, mob);
+  } else if (distType === 'step') {
+    drawDistArrow(ctx, cx1, H, mob);
+    drawDistArrow(ctx, cx2, H, mob);
+  }
+
+  // Current values
+  var fs = mob ? 9 : 11;
+  ctx.font = fs + "px 'Courier New', monospace";
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#2e7dd1';
+  ctx.fillText('PD: y=' + fN2(yCtrl), 6, canvas.height - 24);
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText('No: y=' + fN2(yNoCtrl), 6, canvas.height - 10);
+}
+
+function drawVibSystem(ctx, cx, sysW, H, yVal, vscale, color, label, tNow, mob, showActuator, params) {
+  var ceilY = H * 0.1;
+  var restMassY = H * 0.65;
+  var massH = mob ? 18 : 24;
+  var massW = sysW * 0.55;
+  var halfW = massW / 2;
+
+  // Displacement: positive y = downward displacement
+  var dy = yVal * vscale;
+  var massY = restMassY + dy;
+
+  // Draw ceiling (fixed structure)
+  ctx.strokeStyle = '#5b7184';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx - halfW - 10, ceilY);
+  ctx.lineTo(cx + halfW + 10, ceilY);
+  ctx.stroke();
+  // Hatch marks on ceiling
+  ctx.lineWidth = 1;
+  var hatchCount = 7;
+  for (var i = 0; i < hatchCount; i++) {
+    var hx = cx - halfW - 10 + i * (massW + 20) / (hatchCount - 1);
+    ctx.beginPath();
+    ctx.moveTo(hx, ceilY);
+    ctx.lineTo(hx - 5, ceilY - 8);
+    ctx.stroke();
+  }
+
+  // Spring (left side): zigzag from ceiling to mass
+  var springX = cx - halfW * 0.6;
+  var springTop = ceilY + 4;
+  var springBot = massY - massH / 2 - 2;
+  drawSpring(ctx, springX, springTop, springBot, color, 8, mob ? 5 : 7);
+
+  // Damper (middle): rectangle + piston
+  var damperX = cx;
+  var damperTop = ceilY + 4;
+  var damperBot = springBot;
+  drawDamper(ctx, damperX, damperTop, damperBot, color, mob);
+
+  // Actuator (right side): circle with arrow
+  if (showActuator) {
+    var actX = cx + halfW * 0.6;
+    var actTop = ceilY + 4;
+    var actBot = springBot;
+    drawActuator(ctx, actX, actTop, actBot, color, mob, params, yVal);
+  }
+
+  // Mass block
+  ctx.fillStyle = color;
+  ctx.globalAlpha = 0.15;
+  ctx.fillRect(cx - halfW, massY - massH / 2, massW, massH);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cx - halfW, massY - massH / 2, massW, massH);
+
+  // Mass label
+  var fs = mob ? 8 : 10;
+  ctx.font = fs + 'px sans-serif';
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.fillText('m', cx, massY + 4);
+
+  // Label below
+  ctx.font = (mob ? 9 : 11) + 'px sans-serif';
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.fillText(label, cx, H * 0.87);
+
+  // Rest position line (dashed)
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = 0.3;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.moveTo(cx - halfW - 6, restMassY);
+  ctx.lineTo(cx + halfW + 6, restMassY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+}
+
+function drawSpring(ctx, x, top, bot, color, amplitude, zigzags) {
+  var len = bot - top;
+  if (len < 10) len = 10;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x, top);
+  // lead-in
+  var leadIn = len * 0.08;
+  ctx.lineTo(x, top + leadIn);
+  // zigzags
+  var zigLen = (len - 2 * leadIn) / zigzags;
+  for (var i = 0; i < zigzags; i++) {
+    var zy = top + leadIn + i * zigLen;
+    var dir = (i % 2 === 0) ? 1 : -1;
+    ctx.lineTo(x + dir * amplitude, zy + zigLen / 2);
+    if (i === zigzags - 1) {
+      ctx.lineTo(x, zy + zigLen);
+    }
+  }
+  // lead-out
+  ctx.lineTo(x, bot);
+  ctx.stroke();
+}
+
+function drawDamper(ctx, x, top, bot, color, mob) {
+  var len = bot - top;
+  if (len < 20) len = 20;
+  var cylW = mob ? 10 : 14;
+  var cylH = len * 0.3;
+  var cylTop = top + len * 0.35;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+
+  // Rod from ceiling to cylinder top
+  ctx.beginPath();
+  ctx.moveTo(x, top);
+  ctx.lineTo(x, cylTop);
+  ctx.stroke();
+
+  // Cylinder body
+  ctx.strokeRect(x - cylW / 2, cylTop, cylW, cylH);
+
+  // Piston rod from cylinder bottom to mass
+  var pistonY = cylTop + cylH;
+  ctx.beginPath();
+  ctx.moveTo(x, pistonY);
+  ctx.lineTo(x, bot);
+  ctx.stroke();
+
+  // Piston head inside cylinder
+  var headY = cylTop + cylH * 0.35;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - cylW / 2 + 2, headY);
+  ctx.lineTo(x + cylW / 2 - 2, headY);
+  ctx.stroke();
+  ctx.lineWidth = 1.5;
+}
+
+function drawActuator(ctx, x, top, bot, color, mob, params, yVal) {
+  var len = bot - top;
+  if (len < 20) len = 20;
+  var midY = (top + bot) / 2;
+  var r = mob ? 6 : 9;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+
+  // Rod from ceiling
+  ctx.beginPath();
+  ctx.moveTo(x, top);
+  ctx.lineTo(x, midY - r);
+  ctx.stroke();
+
+  // Circle (actuator body)
+  ctx.beginPath();
+  ctx.arc(x, midY, r, 0, 2 * Math.PI);
+  ctx.stroke();
+
+  // Rod to mass
+  ctx.beginPath();
+  ctx.moveTo(x, midY + r);
+  ctx.lineTo(x, bot);
+  ctx.stroke();
+
+  // Bidirectional arrow inside circle
+  var arrowLen = r * 0.65;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x, midY - arrowLen);
+  ctx.lineTo(x, midY + arrowLen);
+  ctx.stroke();
+  // arrowhead up
+  ctx.beginPath();
+  ctx.moveTo(x, midY - arrowLen);
+  ctx.lineTo(x - 2.5, midY - arrowLen + 4);
+  ctx.lineTo(x + 2.5, midY - arrowLen + 4);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  // arrowhead down
+  ctx.beginPath();
+  ctx.moveTo(x, midY + arrowLen);
+  ctx.lineTo(x - 2.5, midY + arrowLen - 4);
+  ctx.lineTo(x + 2.5, midY + arrowLen - 4);
+  ctx.closePath();
+  ctx.fill();
+
+  // "u" label
+  var fs = mob ? 7 : 9;
+  ctx.font = fs + 'px sans-serif';
+  ctx.fillStyle = color;
+  ctx.textAlign = 'left';
+  ctx.fillText('u', x + r + 3, midY + 3);
+}
+
+function drawDistArrow(ctx, cx, H, mob) {
+  // Arrow pointing downward from above the mass to represent f(t)
+  var arrowX = cx;
+  var arrowTop = H * 0.88;
+  var arrowBot = H * 0.95;
+  ctx.strokeStyle = '#dc2626';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(arrowX, arrowTop);
+  ctx.lineTo(arrowX, arrowBot);
+  ctx.stroke();
+  // arrowhead
+  ctx.beginPath();
+  ctx.moveTo(arrowX, arrowBot);
+  ctx.lineTo(arrowX - 4, arrowBot - 6);
+  ctx.lineTo(arrowX + 4, arrowBot - 6);
+  ctx.closePath();
+  ctx.fillStyle = '#dc2626';
+  ctx.fill();
+  var fs = mob ? 8 : 10;
+  ctx.font = fs + 'px sans-serif';
+  ctx.fillStyle = '#dc2626';
+  ctx.textAlign = 'center';
+  ctx.fillText('f(t)', arrowX, arrowTop - 4);
+}
+
+// =========================================================
+// 時間応答プロット描画
+// =========================================================
+function drawResponse(frameIdx) {
+  var canvas = document.getElementById('responseCanvas');
+  var par = canvas.parentElement;
+  var legendH = par.querySelector('.legend') ? par.querySelector('.legend').offsetHeight : 0;
+  var headerH = par.querySelector('.plot-header') ? par.querySelector('.plot-header').offsetHeight : 0;
+  var W = par.clientWidth;
+  var H = par.clientHeight - legendH - headerH - 4;
+  canvas.width = W;
+  canvas.height = Math.max(H, 100);
+  var ctx = canvas.getContext('2d');
+
+  if (!simData) { ctx.clearRect(0, 0, W, canvas.height); return; }
+
+  var ctrlSim = simData.ctrlSim;
+  var noCtrlSim = simData.noCtrlSim;
+  var analyticSim = simData.analyticSim;
+  var tEnd = simData.params.tEnd;
+  var mob = W < 500;
+  var pad = mob ? { l: 36, r: 8, t: 10, b: 26 } : { l: 50, r: 14, t: 12, b: 32 };
+  var pw = W - pad.l - pad.r;
+  var ph = canvas.height - pad.t - pad.b;
+  var fs = mob ? 8 : 10;
+
+  // Determine y range
+  var rawMax = -Infinity, rawMin = Infinity;
+  for (var i = 0; i < ctrlSim.y.length; i++) {
+    if (ctrlSim.y[i] > rawMax) rawMax = ctrlSim.y[i];
+    if (ctrlSim.y[i] < rawMin) rawMin = ctrlSim.y[i];
+    if (noCtrlSim.y[i] > rawMax) rawMax = noCtrlSim.y[i];
+    if (noCtrlSim.y[i] < rawMin) rawMin = noCtrlSim.y[i];
+  }
+  if (analyticSim) {
+    for (var i = 0; i < analyticSim.y.length; i++) {
+      if (analyticSim.y[i] > rawMax) rawMax = analyticSim.y[i];
+      if (analyticSim.y[i] < rawMin) rawMin = analyticSim.y[i];
+    }
+  }
+  var margin = Math.max((rawMax - rawMin) * 0.15, 0.01);
+  var yMax = rawMax + margin;
+  var yMin = rawMin - margin;
+  // Include zero line
+  if (yMin > -margin) yMin = -margin;
+  if (yMax < margin) yMax = margin;
+
+  var toX = function(t) { return pad.l + (t / tEnd) * pw; };
+  var toY = function(v) { return pad.t + (1 - (v - yMin) / (yMax - yMin)) * ph; };
+
+  ctx.clearRect(0, 0, W, canvas.height);
+
+  // Grid
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1;
+  for (var i = 0; i <= 4; i++) {
+    var gy = pad.t + i * ph / 4;
+    ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(W - pad.r, gy); ctx.stroke();
+  }
+  for (var i = 0; i <= 5; i++) {
+    var gx = pad.l + i * pw / 5;
+    ctx.beginPath(); ctx.moveTo(gx, pad.t); ctx.lineTo(gx, pad.t + ph); ctx.stroke();
+  }
+
+  // Zero line
+  if (toY(0) >= pad.t && toY(0) <= pad.t + ph) {
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(pad.l, toY(0));
+    ctx.lineTo(W - pad.r, toY(0));
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Border
+  ctx.strokeStyle = '#d4dde6';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(pad.l, pad.t, pw, ph);
+
+  // Axis labels
+  ctx.fillStyle = '#5b7184';
+  ctx.font = fs + 'px monospace';
+  ctx.textAlign = 'center';
+  var tSteps = mob ? 4 : 5;
+  for (var i = 0; i <= tSteps; i++) {
+    ctx.fillText((i * tEnd / tSteps).toFixed(1), pad.l + i * pw / tSteps, canvas.height - pad.b + 14);
+  }
+  ctx.textAlign = 'right';
+  for (var i = 0; i <= 4; i++) {
+    var v = yMax - i * (yMax - yMin) / 4;
+    ctx.fillText(fN2(v), pad.l - 3, pad.t + i * ph / 4 + 4);
+  }
+  ctx.textAlign = 'center';
+  ctx.fillText('t [s]', W - pad.r, canvas.height - pad.b + 14);
+
+  // No-control response (gray dashed)
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 3]);
+  ctx.beginPath();
+  for (var i = 0; i < noCtrlSim.t.length; i++) {
+    var px = toX(noCtrlSim.t[i]), py = toY(noCtrlSim.y[i]);
+    if (py < pad.t - 5 || py > pad.t + ph + 5) { if (i > 0) ctx.moveTo(px, Math.max(pad.t, Math.min(pad.t+ph, py))); continue; }
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Analytical solution (red dotted)
+  if (analyticSim) {
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath();
+    for (var i = 0; i < analyticSim.t.length; i++) {
+      var px = toX(analyticSim.t[i]), py = toY(analyticSim.y[i]);
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Controlled response (blue solid)
+  ctx.strokeStyle = '#2e7dd1';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (var i = 0; i < ctrlSim.t.length; i++) {
+    var px = toX(ctrlSim.t[i]), py = toY(ctrlSim.y[i]);
+    if (py < pad.t - 5 || py > pad.t + ph + 5) { if (i > 0) ctx.moveTo(px, Math.max(pad.t, Math.min(pad.t+ph, py))); continue; }
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+
+  // Time marker during animation
+  if (frameIdx !== undefined && frameIdx < ctrlSim.t.length) {
+    var tx = toX(ctrlSim.t[frameIdx]);
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 2]);
+    ctx.beginPath();
+    ctx.moveTo(tx, pad.t);
+    ctx.lineTo(tx, pad.t + ph);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+// =========================================================
+// 極・零点マップ描画
+// =========================================================
+function drawPoleMap() {
+  var canvas = document.getElementById('poleCanvas');
+  var par = canvas.parentElement;
+  var legendH = par.querySelector('.legend') ? par.querySelector('.legend').offsetHeight : 0;
+  var headerH = par.querySelector('.plot-header') ? par.querySelector('.plot-header').offsetHeight : 0;
+  var W = par.clientWidth;
+  var H = par.clientHeight - legendH - headerH - 4;
+  canvas.width = W;
+  canvas.height = Math.max(H, 80);
+  var ctx = canvas.getContext('2d');
+
+  if (!simData) { ctx.clearRect(0, 0, W, canvas.height); return; }
+
+  var olEigs = simData.olEigs;
+  var clEigs = simData.clEigs;
+  var a = simData.params.a;
+  var mob = W < 500;
+  var pad = mob ? { l: 36, r: 12, t: 10, b: 24 } : { l: 50, r: 16, t: 12, b: 30 };
+  var pw = W - pad.l - pad.r;
+  var ph = canvas.height - pad.t - pad.b;
+  var fs = mob ? 8 : 10;
+
+  // Determine axis range from all poles and target
+  var allRe = [], allIm = [];
+  olEigs.forEach(function(e) { allRe.push(e.re); allIm.push(e.im); });
+  clEigs.forEach(function(e) { allRe.push(e.re); allIm.push(e.im); });
+  allRe.push(-a); allIm.push(0);
+  allRe.push(0); allIm.push(0);
+
+  var reMin = Math.min.apply(null, allRe);
+  var reMax = Math.max.apply(null, allRe);
+  var imMax = Math.max.apply(null, allIm.map(Math.abs));
+
+  var reRange = Math.max(reMax - reMin, 1) * 1.4;
+  var reMid = (reMax + reMin) / 2;
+  var imRange = Math.max(imMax * 2, 1) * 1.4;
+
+  // Aspect ratio correction
+  var aspectData = reRange / imRange;
+  var aspectPlot = pw / ph;
+  if (aspectData > aspectPlot) {
+    imRange = reRange / aspectPlot;
+  } else {
+    reRange = imRange * aspectPlot;
+  }
+
+  var rLo = reMid - reRange / 2;
+  var rHi = reMid + reRange / 2;
+  var iHi = imRange / 2;
+  var iLo = -iHi;
+
+  var toX = function(re) { return pad.l + (re - rLo) / (rHi - rLo) * pw; };
+  var toY = function(im) { return pad.t + (1 - (im - iLo) / (iHi - iLo)) * ph; };
+
+  ctx.clearRect(0, 0, W, canvas.height);
+
+  // Stable region (left half plane) - green shade
+  var zeroX = toX(0);
+  if (zeroX > pad.l) {
+    ctx.fillStyle = 'rgba(22,163,74,0.06)';
+    ctx.fillRect(pad.l, pad.t, Math.min(zeroX - pad.l, pw), ph);
+  }
+
+  // Grid
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1;
+  for (var i = 0; i <= 4; i++) {
+    var gy = pad.t + i * ph / 4;
+    ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(W - pad.r, gy); ctx.stroke();
+  }
+  for (var i = 0; i <= 6; i++) {
+    var gx = pad.l + i * pw / 6;
+    ctx.beginPath(); ctx.moveTo(gx, pad.t); ctx.lineTo(gx, pad.t + ph); ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1.5;
+  // Real axis
+  if (toY(0) >= pad.t && toY(0) <= pad.t + ph) {
+    ctx.beginPath(); ctx.moveTo(pad.l, toY(0)); ctx.lineTo(W - pad.r, toY(0)); ctx.stroke();
+  }
+  // Imaginary axis
+  if (zeroX >= pad.l && zeroX <= W - pad.r) {
+    ctx.beginPath(); ctx.moveTo(zeroX, pad.t); ctx.lineTo(zeroX, pad.t + ph); ctx.stroke();
+  }
+
+  // Border
+  ctx.strokeStyle = '#d4dde6';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(pad.l, pad.t, pw, ph);
+
+  // Axis labels
+  ctx.fillStyle = '#5b7184';
+  ctx.font = fs + 'px monospace';
+  ctx.textAlign = 'center';
+  for (var i = 0; i <= 4; i++) {
+    var re = rLo + i * (rHi - rLo) / 4;
+    ctx.fillText(fN2(re), pad.l + i * pw / 4, canvas.height - pad.b + 14);
+  }
+  ctx.textAlign = 'center';
+  ctx.fillText('Re', W - pad.r - 10, toY(0) - 4);
+  ctx.fillText('Im', toX(0) + (mob ? 10 : 14), pad.t + 10);
+
+  // Open-loop poles (gray X)
+  olEigs.forEach(function(e) {
+    var px = toX(e.re), py = toY(e.im);
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 2;
+    var sz = 6;
+    ctx.beginPath(); ctx.moveTo(px - sz, py - sz); ctx.lineTo(px + sz, py + sz); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px + sz, py - sz); ctx.lineTo(px - sz, py + sz); ctx.stroke();
+  });
+
+  // Closed-loop poles (blue filled circle)
+  clEigs.forEach(function(e) {
+    var px = toX(e.re), py = toY(e.im);
+    ctx.fillStyle = '#2e7dd1';
+    ctx.beginPath();
+    ctx.arc(px, py, 5, 0, 2 * Math.PI);
+    ctx.fill();
+  });
+
+  // Target pole (red double circle) at s = -a
+  var tpx = toX(-a), tpy = toY(0);
+  ctx.strokeStyle = '#dc2626';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(tpx, tpy, 8, 0, 2 * Math.PI);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(tpx, tpy, 4, 0, 2 * Math.PI);
+  ctx.stroke();
+
+  // Label target
+  ctx.fillStyle = '#dc2626';
+  ctx.font = (mob ? 8 : 10) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('s=-' + fN2(a), tpx, tpy - 12);
+}
+
+// =========================================================
+// アニメーション制御
+// =========================================================
+var SPEEDS = [0.5, 1, 2];
+
+function getSpeed() {
+  return SPEEDS[+document.getElementById('speed').value];
+}
+
+document.getElementById('speed').addEventListener('input', function() {
+  document.getElementById('speed-label').textContent = getSpeed() + 'x';
+});
+
+function togglePlay() {
+  if (!simData) return;
+  if (animPlaying) {
+    stopAnimation();
+  } else {
+    if (animFrame >= simData.ctrlSim.y.length - 1) {
+      animFrame = 0;
+    }
+    animPlaying = true;
+    document.getElementById('btn-play').innerHTML = '&#x23F8;';
+    lastAnimTime = performance.now();
+    animRAF = requestAnimationFrame(animStep);
+  }
+}
+
+function stopAnimation() {
+  animPlaying = false;
+  document.getElementById('btn-play').innerHTML = '&#x25B6;';
+  if (animRAF) {
+    cancelAnimationFrame(animRAF);
+    animRAF = null;
+  }
+}
+
+function animStep(now) {
+  if (!animPlaying || !simData) return;
+
+  var dt = simData.params.dt;
+  var speed = getSpeed();
+  var elapsed = (now - lastAnimTime) / 1000;
+  lastAnimTime = now;
+
+  var framesToAdvance = Math.max(1, Math.round(elapsed / dt * speed));
+  animFrame = Math.min(animFrame + framesToAdvance, simData.ctrlSim.y.length - 1);
+
+  drawAnimation(animFrame);
+  drawResponse(animFrame);
+  updateAnimInfo();
+
+  if (animFrame >= simData.ctrlSim.y.length - 1) {
+    stopAnimation();
+    return;
+  }
+
+  animRAF = requestAnimationFrame(animStep);
+}
+
+function updateAnimInfo() {
+  if (!simData) return;
+  var safeIdx = Math.min(animFrame, simData.ctrlSim.t.length - 1);
+  var t = simData.ctrlSim.t[safeIdx];
+  document.getElementById('anim-info').textContent = 't=' + fN2(t);
+  document.getElementById('anim-sub').textContent = 't = ' + fN2(t) + ' s';
+}
+
+// =========================================================
+// リサイズ対応
+// =========================================================
+var resizeTimer;
+window.addEventListener('resize', function() {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(function() {
+    if (simData) {
+      drawAnimation(animFrame);
+      drawResponse(animPlaying ? animFrame : undefined);
+      drawPoleMap();
+    }
+  }, 80);
+});
+
+// =========================================================
+// 初期実行
+// =========================================================
+runSimulation();
+</script>
+</body>
+</html>

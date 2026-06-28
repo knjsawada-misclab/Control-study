@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>等価変換・実現問題シミュレータ</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+  background: #eef2f6;
+  color: #1f2d3a;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+header {
+  background: #ffffff;
+  border-bottom: 1px solid #d4dde6;
+  padding: 10px 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-shrink: 0;
+}
+header h1 { font-size: 1rem; font-weight: 600; color: #2e7dd1; }
+header .eq { font-size: 0.78rem; color: #5b7184; font-family: 'Courier New', monospace; }
+
+.body { display: flex; flex: 1; overflow: hidden; }
+
+.sidebar {
+  width: 320px;
+  background: #ffffff;
+  border-right: 1px solid #d4dde6;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.sidebar-inner { padding: 12px; flex: 1; }
+
+.section { margin-bottom: 14px; }
+.sec-title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #2e7dd1;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+select {
+  width: 100%;
+  background: #f1f5f9;
+  border: 1px solid #d4dde6;
+  color: #1f2d3a;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+select:focus { outline: none; border-color: #2e7dd1; }
+
+.matrix-label { font-size: 0.75rem; color: #5b7184; margin-bottom: 5px; }
+.mat-grid { display: grid; gap: 5px; margin-bottom: 8px; }
+.mat-2x2 { grid-template-columns: 1fr 1fr; }
+.mat-2x1 { grid-template-columns: 1fr; }
+.mat-1x2 { grid-template-columns: 1fr 1fr; }
+
+input[type="number"] {
+  background: #f1f5f9;
+  border: 1px solid #d4dde6;
+  color: #1f2d3a;
+  padding: 5px 6px;
+  border-radius: 5px;
+  width: 100%;
+  font-size: 0.82rem;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  transition: border-color 0.15s;
+}
+input[type="number"]:focus { outline: none; border-color: #2e7dd1; }
+
+.input-label { font-size: 0.7rem; color: #5b7184; margin-bottom: 2px; }
+
+.pole-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 6px; }
+.pole-field label { display: block; font-size: 0.7rem; color: #5b7184; margin-bottom: 3px; }
+
+.btn-compute {
+  width: 100%;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  padding: 9px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 6px;
+}
+.btn-compute:hover { background: #15803d; }
+.btn-compute:active { background: #166534; }
+
+.btn-canonical {
+  width: 100%;
+  background: #2e7dd1;
+  color: #fff;
+  border: none;
+  padding: 9px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 12px;
+}
+.btn-canonical:hover { background: #2563b0; }
+.btn-canonical:active { background: #1d4e8f; }
+
+.result-box {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.res-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+.res-key { color: #5b7184; }
+.res-val { color: #2e7dd1; }
+.res-val.stable { color: #16a34a; }
+.res-val.unstable { color: #dc2626; }
+.res-sep { border: none; border-top: 1px solid #e2e8f0; margin: 6px 0; }
+.error-msg { color: #dc2626; font-size: 0.78rem; margin-top: 6px; min-height: 16px; }
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.badge.ctrl { background: rgba(22,163,74,0.12); color: #16a34a; border: 1px solid #16a34a; }
+.badge.stab { background: rgba(245,158,11,0.12); color: #d97706; border: 1px solid #d97706; }
+.badge.unstab { background: rgba(220,38,38,0.12); color: #dc2626; border: 1px solid #dc2626; }
+.badge.info { background: rgba(46,125,209,0.12); color: #2e7dd1; border: 1px solid #2e7dd1; }
+
+.poly-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin: 4px 0;
+  font-size: 0.73rem;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.tf-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 8px;
+  margin: 4px 0;
+  text-align: center;
+  font-size: 0.78rem;
+  line-height: 1.8;
+  font-family: 'Courier New', monospace;
+}
+.tf-num { border-bottom: 1px solid #1f2d3a; padding-bottom: 2px; display: inline-block; }
+.tf-den { padding-top: 2px; display: inline-block; }
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 10px;
+  overflow: hidden;
+}
+.plots-row {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  overflow: hidden;
+}
+.plot-card {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #d4dde6;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.plot-card.splane { flex: 0 0 auto; width: 45%; }
+.plot-card.timeplot { flex: 1; }
+
+.plot-header {
+  padding: 8px 12px 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.plot-title { font-size: 0.8rem; font-weight: 600; color: #1f2d3a; }
+.plot-sub { font-size: 0.7rem; color: #5b7184; }
+
+.legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 12px 6px;
+  flex-shrink: 0;
+}
+.leg-item { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: #5b7184; }
+.leg-icon { width: 14px; text-align: center; font-size: 0.8rem; }
+.leg-line { width: 14px; height: 2px; }
+
+canvas {
+  flex: 1;
+  width: 100%;
+  display: block;
+}
+
+/* Narrow desktop / landscape tablet */
+@media (max-width: 1024px) {
+  .sidebar { width: 260px; }
+  .plot-card.splane { width: 38%; }
+}
+
+/* Tablet / Mobile */
+@media (max-width: 820px) {
+  body {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-y: auto;
+  }
+  header {
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    gap: 4px;
+  }
+  header h1 { font-size: 0.9rem; }
+  header .eq { font-size: 0.65rem; line-height: 1.5; display: block; }
+  .body {
+    flex-direction: column;
+    overflow: visible;
+    flex: none;
+  }
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #d4dde6;
+    overflow-y: visible;
+    max-height: none;
+  }
+  .sidebar-inner { padding: 10px; }
+  .section { margin-bottom: 10px; }
+  .mat-grid { gap: 3px; }
+  .main {
+    overflow: visible;
+    flex: none;
+    padding: 8px;
+  }
+  .plots-row {
+    flex-direction: column;
+    overflow: visible;
+    flex-shrink: 0;
+    gap: 8px;
+  }
+  .plot-card.splane {
+    width: 100% !important;
+    height: min(70vw, 320px);
+    flex: none;
+  }
+  .plot-card.timeplot {
+    width: 100% !important;
+    height: min(90vw, 400px);
+    flex: none;
+  }
+  canvas {
+    flex: none !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+  .legend {
+    gap: 4px 8px;
+    padding: 4px 8px;
+    flex-wrap: wrap;
+  }
+  .leg-item { font-size: 0.6rem; }
+  .plot-header {
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 6px 8px 2px;
+  }
+  .plot-title { font-size: 0.75rem; }
+  .plot-sub { font-size: 0.62rem; }
+  .info-bar {
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 0.6rem;
+    padding: 6px 10px;
+  }
+  /* iOS auto-zoom prevention */
+  input[type="number"],
+  select {
+    font-size: 16px;
+  }
+  input[type="number"] {
+    padding: 7px 6px;
+  }
+  .btn-compute,
+  .btn-canonical {
+    padding: 12px;
+    font-size: 0.9rem;
+    min-height: 44px;
+  }
+  .result-box {
+    font-size: 0.7rem;
+    overflow: hidden;
+  }
+  .res-row {
+    gap: 2px 4px;
+  }
+  .res-key {
+    flex-shrink: 0;
+  }
+  .res-val {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.66rem;
+    overflow-wrap: anywhere;
+  }
+  .poly-box {
+    font-size: 0.68rem;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .tf-box {
+    font-size: 0.7rem;
+  }
+  .badge {
+    font-size: 0.68rem;
+  }
+  .pole-row {
+    gap: 4px;
+  }
+}
+
+.info-bar {
+  background: #ffffff;
+  border-top: 1px solid #d4dde6;
+  padding: 5px 16px;
+  font-size: 0.7rem;
+  color: #5b7184;
+  flex-shrink: 0;
+  display: flex;
+  gap: 20px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>等価変換・実現問題シミュレータ</h1>
+  <span class="eq">&#x03BE; = Tx, &nbsp; &#x0100; = TAT&#x207B;&#x00B9;, &nbsp; B&#x0304; = TB, &nbsp; C&#x0304; = CT&#x207B;&#x00B9;</span>
+</header>
+
+<div class="body">
+  <div class="sidebar">
+    <div class="sidebar-inner">
+
+      <div class="section">
+        <div class="sec-title">プリセット</div>
+        <select id="preset" onchange="applyPreset()">
+          <option value="custom">-- カスタム --</option>
+          <option value="prob1" selected>問題1: 不可制御・可安定化系</option>
+          <option value="prob2">問題2: 等価変換の例</option>
+          <option value="prob3">問題3: 任意の T による変換</option>
+          <option value="prob4">問題4: 可制御正準形への変換</option>
+          <option value="prob5">問題5: 伝達関数の実現</option>
+          <option value="prob6">問題6: 最小実現</option>
+          <option value="prob7">問題7: 非自明な不可制御極</option>
+        </select>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">システム行列</div>
+        <div class="matrix-label">A (2x2)</div>
+        <div class="mat-grid mat-2x2">
+          <input type="number" id="a11" value="-3" step="0.1" onchange="markCustom()">
+          <input type="number" id="a12" value="0"  step="0.1" onchange="markCustom()">
+          <input type="number" id="a21" value="-6" step="0.1" onchange="markCustom()">
+          <input type="number" id="a22" value="5"  step="0.1" onchange="markCustom()">
+        </div>
+        <div class="matrix-label">B (2x1)</div>
+        <div class="mat-grid mat-2x1">
+          <input type="number" id="b1" value="0" step="0.1" onchange="markCustom()">
+          <input type="number" id="b2" value="1" step="0.1" onchange="markCustom()">
+        </div>
+        <div class="matrix-label">C (1x2)</div>
+        <div class="mat-grid mat-1x2">
+          <input type="number" id="c1" value="1" step="0.1" onchange="markCustom()">
+          <input type="number" id="c2" value="0" step="0.1" onchange="markCustom()">
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">変換行列 T (2x2)</div>
+        <div class="mat-grid mat-2x2">
+          <input type="number" id="t11" value="1" step="0.1" onchange="markCustom()">
+          <input type="number" id="t12" value="0" step="0.1" onchange="markCustom()">
+          <input type="number" id="t21" value="0" step="0.1" onchange="markCustom()">
+          <input type="number" id="t22" value="1" step="0.1" onchange="markCustom()">
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">シミュレーション</div>
+        <div class="pole-row">
+          <div class="pole-field">
+            <label>終了時刻 T [s]</label>
+            <input type="number" id="tEnd" value="5" step="0.5" min="0.5">
+          </div>
+          <div class="pole-field">
+            <label>刻み幅 dt</label>
+            <input type="number" id="dt" value="0.01" step="0.001" min="0.001" max="0.1">
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-compute" onclick="compute()">&#9654; 計算・更新</button>
+      <button class="btn-canonical" onclick="toCanonical()">可制御正準形へ変換</button>
+
+      <div class="section">
+        <div class="sec-title">解析結果</div>
+        <div id="result-box" class="result-box">
+          <div style="color:#5b7184;">「計算・更新」を押してください</div>
+        </div>
+        <div id="error-msg" class="error-msg"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="plots-row">
+      <div class="plot-card splane">
+        <div class="plot-header">
+          <span class="plot-title">s 平面 (極・零点)</span>
+          <span class="plot-sub">左半平面 = 安定</span>
+        </div>
+        <div class="legend">
+          <div class="leg-item"><span class="leg-icon" style="color:#2e7dd1;">x</span> 極</div>
+          <div class="leg-item"><span class="leg-icon" style="color:#16a34a;">o</span> 零点</div>
+        </div>
+        <canvas id="splane"></canvas>
+      </div>
+
+      <div class="plot-card timeplot">
+        <div class="plot-header">
+          <span class="plot-title">ステップ応答 y(t)</span>
+          <span class="plot-sub" id="time-sub"></span>
+        </div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> y(t)</div>
+        </div>
+        <canvas id="timeplot"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="info-bar">
+  <span>等価変換・実現問題 &nbsp;|&nbsp; G(s) = C(sI-A)&#8315;&#185;B &nbsp;|&nbsp; RK4 数値積分</span>
+  <span id="ctrl-info"></span>
+</div>
+
+<script>
+// =========================================================
+// 行列演算ユーティリティ
+// =========================================================
+const zeros = (r, c) => Array.from({length:r}, () => Array(c).fill(0));
+const eye = n => Array.from({length:n}, (_,i) => Array.from({length:n}, (_,j) => i===j?1:0));
+
+function matMul(A, B) {
+  const rA=A.length, cB=B[0].length, cA=B.length;
+  const C = zeros(rA, cB);
+  for(let i=0;i<rA;i++) for(let j=0;j<cB;j++) for(let k=0;k<cA;k++) C[i][j]+=A[i][k]*B[k][j];
+  return C;
+}
+function matVecMul(A, x) { return A.map(r => r.reduce((s,v,j)=>s+v*x[j],0)); }
+
+function det2(M) { return M[0][0]*M[1][1] - M[0][1]*M[1][0]; }
+function inv2(M) {
+  const d = det2(M);
+  if(Math.abs(d) < 1e-12) return null;
+  return [[M[1][1]/d, -M[0][1]/d], [-M[1][0]/d, M[0][0]/d]];
+}
+function tr2(M) { return M[0][0] + M[1][1]; }
+
+function eig2(M) {
+  const tr = tr2(M), dt = det2(M), disc = tr*tr - 4*dt;
+  if(disc >= -1e-14) {
+    const d = Math.sqrt(Math.max(0, disc));
+    return [{re:(tr+d)/2, im:0}, {re:(tr-d)/2, im:0}];
+  }
+  return [{re:tr/2, im:Math.sqrt(-disc)/2}, {re:tr/2, im:-Math.sqrt(-disc)/2}];
+}
+
+// =========================================================
+// 伝達関数計算 G(s) = C(sI-A)^{-1}B for 2x2
+// =========================================================
+// det(sI-A) = s^2 - tr(A)s + det(A) = s^2 + a1*s + a0
+// adj(sI-A) = [[s-a22, a12],[a21, s-a11]]
+// numerator = C * adj(sI-A) * B (polynomial in s of degree <= 1)
+// Returns {num: [coeff_s1, coeff_s0], den: [1, a1, a0]}
+function transferFunction(A, B, C) {
+  const a11=A[0][0], a12=A[0][1], a21=A[1][0], a22=A[1][1];
+  const b1=B[0][0], b2=B[1][0];
+  const c1=C[0][0], c2=C[0][1];
+
+  // den: s^2 - tr(A)*s + det(A)
+  const trA = a11 + a22;
+  const detA = det2(A);
+  const den = [1, -trA, detA]; // coefficients of s^2, s^1, s^0
+
+  // adj(sI-A) = [[s - a22, a12], [a21, s - a11]]
+  // C * adj = [c1*(s-a22)+c2*a21, c1*a12+c2*(s-a11)]
+  //         = [(c1+c2)*... let's be explicit]
+  // row: [c1*(s-a22) + c2*a21,  c1*a12 + c2*(s-a11)]
+  // = [c1*s - c1*a22 + c2*a21,  c1*a12 + c2*s - c2*a11]
+  // times B:
+  // = (c1*s - c1*a22 + c2*a21)*b1 + (c1*a12 + c2*s - c2*a11)*b2
+  // = s*(c1*b1 + c2*b2) + (-c1*a22*b1 + c2*a21*b1 + c1*a12*b2 - c2*a11*b2)
+
+  const numS1 = c1*b1 + c2*b2;
+  const numS0 = -c1*a22*b1 + c2*a21*b1 + c1*a12*b2 - c2*a11*b2;
+
+  return {num: [numS1, numS0], den: den};
+}
+
+// Compute zeros of transfer function (roots of numerator)
+// For 2x2 SISO, numerator is at most degree 1: numS1*s + numS0
+function tfZeros(tf) {
+  const [numS1, numS0] = tf.num;
+  if (Math.abs(numS1) < 1e-12) {
+    // constant numerator, no finite zeros
+    if (Math.abs(numS0) < 1e-12) return []; // zero transfer function
+    return [];
+  }
+  return [{re: -numS0/numS1, im: 0}];
+}
+
+// =========================================================
+// 可制御性解析
+// =========================================================
+function analyzeControllability(A, B) {
+  const b1=B[0][0], b2=B[1][0];
+  const ab1 = A[0][0]*b1 + A[0][1]*b2;
+  const ab2 = A[1][0]*b1 + A[1][1]*b2;
+  const Vc = [[b1, ab1], [b2, ab2]];
+  const detVc = det2(Vc);
+  const controllable = Math.abs(detVc) > 1e-10;
+  return {Vc, detVc, controllable};
+}
+
+// =========================================================
+// 可制御正準形への変換行列を計算
+// =========================================================
+// phi_A(s) = s^2 + a1*s + a0
+// Vc = [B, AB]
+// To = [[a1, 1],[1, 0]]
+// T = (Vc * To)^{-1}
+function computeCanonicalT(A, B) {
+  const ca = analyzeControllability(A, B);
+  if (!ca.controllable) return {success: false, msg: '不可制御系のため正準形変換不可'};
+
+  const trA = tr2(A);
+  const detA = det2(A);
+  // phi_A(s) = s^2 - tr(A)*s + det(A) = s^2 + a1*s + a0
+  const a1 = -trA;
+  const a0 = detA;
+
+  const To = [[a1, 1], [1, 0]];
+  const VcTo = matMul(ca.Vc, To);
+  const T = inv2(VcTo);
+  if (!T) return {success: false, msg: '変換行列が特異です'};
+  return {success: true, T, a1, a0};
+}
+
+// =========================================================
+// 等価変換の実行
+// =========================================================
+function transformSystem(A, B, C, T) {
+  const Tinv = inv2(T);
+  if (!Tinv) return null;
+  // Abar = T * A * T^{-1}
+  const TA = matMul(T, A);
+  const Abar = matMul(TA, Tinv);
+  // Bbar = T * B
+  const Bbar = matMul(T, B);
+  // Cbar = C * T^{-1}
+  const Cbar = matMul(C, Tinv);
+  return {Abar, Bbar, Cbar, Tinv};
+}
+
+// =========================================================
+// 可制御正準形の判定
+// =========================================================
+function isControllableCanonical(A, B) {
+  // Check A = [[0, 1],[-a0, -a1]], B = [[0],[1]]
+  const eps = 1e-6;
+  if (Math.abs(A[0][0]) > eps) return false;
+  if (Math.abs(A[0][1] - 1) > eps) return false;
+  if (Math.abs(B[0][0]) > eps) return false;
+  if (Math.abs(B[1][0] - 1) > eps) return false;
+  return true;
+}
+
+// =========================================================
+// RK4 ステップ応答: dx/dt = Ax + B*u(t), y = Cx, u(t) = 1
+// =========================================================
+function simulateStep(A, B, C, tEnd, dt) {
+  const steps = Math.ceil(tEnd / dt), n = steps + 1;
+  const t = new Float64Array(n), y = new Float64Array(n);
+  let xi = [0, 0]; // zero initial state for step response
+  const b = [B[0][0], B[1][0]];
+  const c = [C[0][0], C[0][1]];
+  const CLIP = 1e6;
+
+  function f(x) {
+    return [
+      A[0][0]*x[0] + A[0][1]*x[1] + b[0],
+      A[1][0]*x[0] + A[1][1]*x[1] + b[1]
+    ];
+  }
+
+  for (let i = 0; i < n; i++) {
+    t[i] = i * dt;
+    y[i] = c[0]*xi[0] + c[1]*xi[1];
+    if (i === n - 1) break;
+    const k1 = f(xi);
+    const k2 = f([xi[0]+.5*dt*k1[0], xi[1]+.5*dt*k1[1]]);
+    const k3 = f([xi[0]+.5*dt*k2[0], xi[1]+.5*dt*k2[1]]);
+    const k4 = f([xi[0]+dt*k3[0],    xi[1]+dt*k3[1]]);
+    xi[0] += (dt/6)*(k1[0]+2*k2[0]+2*k3[0]+k4[0]);
+    xi[1] += (dt/6)*(k1[1]+2*k2[1]+2*k3[1]+k4[1]);
+    if (!isFinite(xi[0])||Math.abs(xi[0])>CLIP) xi[0]=CLIP*(xi[0]>0?1:-1);
+    if (!isFinite(xi[1])||Math.abs(xi[1])>CLIP) xi[1]=CLIP*(xi[1]>0?1:-1);
+  }
+  return {t, y};
+}
+
+// =========================================================
+// 数値フォーマット
+// =========================================================
+function fN(v) {
+  if (!isFinite(v)) return String(v);
+  if (Math.abs(v - Math.round(v)) < 1e-10) return String(Math.round(v));
+  return v.toFixed(4);
+}
+function fN2(v) {
+  if (!isFinite(v)) return String(v);
+  if (Math.abs(v - Math.round(v)) < 1e-10) return String(Math.round(v));
+  return v.toFixed(2);
+}
+function fmtC(c) {
+  if (Math.abs(c.im) < 1e-6) return fN(c.re);
+  return fN(c.re) + (c.im >= 0 ? '+' : '') + fN(c.im) + 'j';
+}
+
+// =========================================================
+// 伝達関数の文字列表示
+// =========================================================
+function polyToStr(coeffs) {
+  // coeffs = [coeff_highest, ..., coeff_0]
+  const deg = coeffs.length - 1;
+  let parts = [];
+  for (let i = 0; i <= deg; i++) {
+    const c = coeffs[i];
+    const power = deg - i;
+    if (Math.abs(c) < 1e-10) continue;
+
+    let term = '';
+    const absC = Math.abs(c);
+    const sign = c >= 0 ? '+' : '-';
+
+    if (power === 0) {
+      term = fN2(absC);
+    } else if (power === 1) {
+      if (Math.abs(absC - 1) < 1e-10) term = 's';
+      else term = fN2(absC) + 's';
+    } else {
+      if (Math.abs(absC - 1) < 1e-10) term = 's²';
+      else term = fN2(absC) + 's²';
+    }
+
+    if (parts.length === 0) {
+      parts.push(c < 0 ? '-' + term : term);
+    } else {
+      parts.push(sign + term);
+    }
+  }
+  if (parts.length === 0) return '0';
+  return parts.join('');
+}
+
+function tfToStr(tf) {
+  const numStr = polyToStr(tf.num);
+  const denStr = polyToStr(tf.den);
+  return {num: numStr, den: denStr};
+}
+
+// =========================================================
+// メイン計算
+// =========================================================
+let state = null;
+
+function readInputs() {
+  const A = [
+    [+document.getElementById('a11').value, +document.getElementById('a12').value],
+    [+document.getElementById('a21').value, +document.getElementById('a22').value]
+  ];
+  const B = [[+document.getElementById('b1').value], [+document.getElementById('b2').value]];
+  const C = [[+document.getElementById('c1').value, +document.getElementById('c2').value]];
+  const T = [
+    [+document.getElementById('t11').value, +document.getElementById('t12').value],
+    [+document.getElementById('t21').value, +document.getElementById('t22').value]
+  ];
+  const tEnd = Math.max(+document.getElementById('tEnd').value, 0.1);
+  const dt = Math.min(Math.max(+document.getElementById('dt').value, 0.0001), 0.5);
+  return {A, B, C, T, tEnd, dt};
+}
+
+function compute() {
+  const {A, B, C, T, tEnd, dt} = readInputs();
+  const errEl = document.getElementById('error-msg');
+  errEl.textContent = '';
+
+  // Eigenvalues of original system
+  const eigenvalues = eig2(A);
+
+  // Controllability
+  const ca = analyzeControllability(A, B);
+
+  // Transfer function of original system
+  const tfOrig = transferFunction(A, B, C);
+  const tfOrigStr = tfToStr(tfOrig);
+  const zerosOrig = tfZeros(tfOrig);
+
+  // Check det(T)
+  const detT = det2(T);
+  let transformed = null;
+  let tfTrans = null, tfTransStr = null;
+  let eigenTrans = null;
+  let isCanonical = false;
+  let tfMatch = false;
+
+  if (Math.abs(detT) < 1e-12) {
+    errEl.textContent = 'det(T) = 0: 変換行列が特異です。正則な T を入力してください。';
+  } else {
+    transformed = transformSystem(A, B, C, T);
+    if (transformed) {
+      tfTrans = transferFunction(transformed.Abar, transformed.Bbar, transformed.Cbar);
+      tfTransStr = tfToStr(tfTrans);
+      eigenTrans = eig2(transformed.Abar);
+      isCanonical = isControllableCanonical(transformed.Abar, transformed.Bbar);
+
+      // Verify transfer functions match
+      const numMatch = Math.abs(tfOrig.num[0] - tfTrans.num[0]) < 1e-8 &&
+                        Math.abs(tfOrig.num[1] - tfTrans.num[1]) < 1e-8;
+      const denMatch = Math.abs(tfOrig.den[1] - tfTrans.den[1]) < 1e-8 &&
+                        Math.abs(tfOrig.den[2] - tfTrans.den[2]) < 1e-8;
+      tfMatch = numMatch && denMatch;
+    }
+  }
+
+  // Step response simulation (using original system)
+  const sim = simulateStep(A, B, C, tEnd, dt);
+
+  state = {
+    A, B, C, T, tEnd, dt,
+    eigenvalues, ca, tfOrig, tfOrigStr, zerosOrig,
+    detT, transformed, tfTrans, tfTransStr, eigenTrans,
+    isCanonical, tfMatch, sim
+  };
+
+  updateResults();
+  drawSplane();
+  drawTimePlot();
+
+  const ctrlText = ca.controllable ? '可制御' : '不可制御';
+  document.getElementById('ctrl-info').textContent =
+    'det(Vc) = ' + fN(ca.detVc) + '  →  ' + ctrlText +
+    '  |  det(T) = ' + fN(detT);
+}
+
+// =========================================================
+// 可制御正準形への自動変換
+// =========================================================
+function toCanonical() {
+  const {A, B, C} = readInputs();
+  const errEl = document.getElementById('error-msg');
+  errEl.textContent = '';
+
+  const result = computeCanonicalT(A, B);
+  if (!result.success) {
+    errEl.textContent = result.msg;
+    return;
+  }
+
+  // Set T inputs
+  document.getElementById('t11').value = result.T[0][0];
+  document.getElementById('t12').value = result.T[0][1];
+  document.getElementById('t21').value = result.T[1][0];
+  document.getElementById('t22').value = result.T[1][1];
+
+  compute();
+}
+
+// =========================================================
+// 結果パネル更新
+// =========================================================
+function updateResults() {
+  const {
+    A, B, C, T, eigenvalues, ca, tfOrig, tfOrigStr, zerosOrig,
+    detT, transformed, tfTrans, tfTransStr, eigenTrans,
+    isCanonical, tfMatch, sim
+  } = state;
+
+  let html = '';
+
+  // Controllability badge
+  let badge, bclass;
+  if (ca.controllable) { badge = '可制御'; bclass = 'ctrl'; }
+  else { badge = '不可制御'; bclass = 'unstab'; }
+  html += '<div style="text-align:center;margin-bottom:8px;"><span class="badge ' + bclass + '">' + badge + '</span></div>';
+
+  // Eigenvalues
+  html += '<hr class="res-sep">';
+  html += '<div style="font-size:0.66rem;color:#2e7dd1;margin-bottom:4px;">固有値</div>';
+  eigenvalues.forEach(function(p, i) {
+    const st = p.re < -1e-9;
+    html += '<div class="res-row"><span class="res-key">λ' + (i+1) + '</span><span class="res-val ' + (st?'stable':'unstable') + '">' + fmtC(p) + '</span></div>';
+  });
+
+  // Controllability matrix
+  html += '<hr class="res-sep">';
+  html += '<div style="font-size:0.66rem;color:#2e7dd1;margin-bottom:4px;">可制御性行列 Vc = [B, AB]</div>';
+  html += '<div class="res-row"><span class="res-key">Vc</span><span class="res-val">[' + fN(ca.Vc[0][0]) + ', ' + fN(ca.Vc[0][1]) + '; ' + fN(ca.Vc[1][0]) + ', ' + fN(ca.Vc[1][1]) + ']</span></div>';
+  html += '<div class="res-row"><span class="res-key">det(Vc)</span><span class="res-val ' + (Math.abs(ca.detVc)>1e-10?'stable':'unstable') + '">' + fN(ca.detVc) + '</span></div>';
+
+  // Transfer function
+  html += '<hr class="res-sep">';
+  html += '<div style="font-size:0.66rem;color:#2e7dd1;margin-bottom:4px;">伝達関数 G(s) = C(sI-A)⁻¹B</div>';
+  html += '<div class="tf-box"><div class="tf-num">' + escH(tfOrigStr.num) + '</div><br><div class="tf-den">' + escH(tfOrigStr.den) + '</div></div>';
+
+  if (zerosOrig.length > 0) {
+    html += '<div class="res-row"><span class="res-key">零点</span><span class="res-val">' + zerosOrig.map(fmtC).join(', ') + '</span></div>';
+  }
+
+  // Transformed system
+  html += '<hr class="res-sep">';
+  if (Math.abs(detT) < 1e-12) {
+    html += '<div style="color:#dc2626;font-size:0.76rem;font-weight:600;">det(T) = 0: 変換不可</div>';
+  } else if (transformed) {
+    html += '<div style="font-size:0.66rem;color:#2e7dd1;margin-bottom:4px;">変換後の系 (det(T) = ' + fN(detT) + ')</div>';
+
+    // Abar
+    html += '<div class="res-row"><span class="res-key">Ā</span><span class="res-val">[' +
+      fN(transformed.Abar[0][0]) + ', ' + fN(transformed.Abar[0][1]) + '; ' +
+      fN(transformed.Abar[1][0]) + ', ' + fN(transformed.Abar[1][1]) + ']</span></div>';
+
+    // Bbar
+    html += '<div class="res-row"><span class="res-key">B̄</span><span class="res-val">[' +
+      fN(transformed.Bbar[0][0]) + '; ' + fN(transformed.Bbar[1][0]) + ']</span></div>';
+
+    // Cbar
+    html += '<div class="res-row"><span class="res-key">C̄</span><span class="res-val">[' +
+      fN(transformed.Cbar[0][0]) + ', ' + fN(transformed.Cbar[0][1]) + ']</span></div>';
+
+    // Transformed transfer function
+    html += '<hr class="res-sep">';
+    html += '<div style="font-size:0.66rem;color:#2e7dd1;margin-bottom:4px;">変換後の伝達関数</div>';
+    html += '<div class="tf-box"><div class="tf-num">' + escH(tfTransStr.num) + '</div><br><div class="tf-den">' + escH(tfTransStr.den) + '</div></div>';
+
+    // Verification
+    if (tfMatch) {
+      html += '<div style="text-align:center;margin-top:4px;"><span class="badge ctrl">G(s) 一致 (等価変換確認)</span></div>';
+    } else {
+      html += '<div style="text-align:center;margin-top:4px;"><span class="badge unstab">G(s) 不一致 (計算誤差)</span></div>';
+    }
+
+    // Canonical form check
+    html += '<hr class="res-sep">';
+    if (isCanonical) {
+      html += '<div style="text-align:center;"><span class="badge info">可制御正準形</span></div>';
+    } else {
+      html += '<div style="font-size:0.68rem;color:#5b7184;">変換後は可制御正準形ではありません</div>';
+    }
+  }
+
+  document.getElementById('result-box').innerHTML = html;
+
+  // Time sub
+  const allStable = eigenvalues.every(function(p) { return p.re < -1e-9; });
+  if (allStable) {
+    const maxRe = Math.max.apply(null, eigenvalues.map(function(p) { return p.re; }));
+    document.getElementById('time-sub').textContent = '時定数 ≈ ' + (-1/maxRe).toFixed(2) + 's';
+  } else {
+    document.getElementById('time-sub').textContent = '';
+  }
+}
+
+function escH(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// =========================================================
+// s 平面プロット
+// =========================================================
+function drawSplane() {
+  const canvas = document.getElementById('splane');
+  const par = canvas.parentElement;
+  const legendH = par.querySelector('.legend').offsetHeight;
+  const headerH = par.querySelector('.plot-header').offsetHeight;
+  const W = par.clientWidth;
+  const H = par.clientHeight - legendH - headerH - 4;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!state) return;
+
+  const {eigenvalues, zerosOrig} = state;
+  const allPoints = [...eigenvalues, ...zerosOrig];
+
+  const allRe = allPoints.map(function(p) { return Math.abs(p.re); });
+  const allIm = allPoints.map(function(p) { return Math.abs(p.im); });
+  const range = Math.max(Math.max.apply(null, allRe.length ? allRe : [1]),
+                         Math.max.apply(null, allIm.length ? allIm : [0]), 0.5) * 1.6;
+
+  const mob = W < 500;
+  const cx = W / 2, cy = H / 2;
+  const scl = Math.min(W, H) / 2 / range * 0.88;
+  const toS = function(re, im) { return {x: cx + re * scl, y: cy - im * scl}; };
+  const fs = mob ? 7 : 9;
+  const fsL = mob ? 8 : 10;
+  const mkr = mob ? 7 : 10;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Left half-plane shade (stable region)
+  ctx.fillStyle = 'rgba(22,163,74,0.06)';
+  ctx.fillRect(0, 0, cx, H);
+
+  // Right half-plane shade (unstable region)
+  ctx.fillStyle = 'rgba(220,38,38,0.04)';
+  ctx.fillRect(cx, 0, W - cx, H);
+
+  // Grid
+  const step = Math.pow(10, Math.floor(Math.log10(range)));
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+  ctx.font = fs + 'px monospace'; ctx.fillStyle = '#8899a8'; ctx.textAlign = 'center';
+  for (let g = -Math.ceil(range/step)*step; g <= Math.ceil(range/step)*step; g += step) {
+    if (Math.abs(g) < step * 0.01) continue;
+    const gf = parseFloat(g.toFixed(6));
+    ctx.beginPath(); ctx.moveTo(0, cy-gf*scl); ctx.lineTo(W, cy-gf*scl); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+gf*scl, 0); ctx.lineTo(cx+gf*scl, H); ctx.stroke();
+    if (cx+gf*scl > 16 && cx+gf*scl < W-5)
+      ctx.fillText(gf%1===0?gf:gf.toFixed(1), cx+gf*scl, H-3);
+    if (cy-gf*scl > 10 && cy-gf*scl < H-4) {
+      ctx.textAlign = 'right';
+      ctx.fillText(gf%1===0?gf:gf.toFixed(1), cx-2, cy-gf*scl+4);
+      ctx.textAlign = 'center';
+    }
+  }
+
+  // Axes
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+
+  ctx.fillStyle = '#5b7184'; ctx.font = fsL + 'px sans-serif';
+  ctx.textAlign = 'right'; ctx.fillText('Re', W-3, cy-3);
+  ctx.textAlign = 'center'; ctx.fillText('Im', cx + (mob?14:20), 10);
+
+  // Stability labels
+  ctx.fillStyle = 'rgba(22,163,74,0.5)'; ctx.font = fs + 'px sans-serif';
+  ctx.textAlign = 'left'; ctx.fillText('← 安定', 4, cy-3);
+  ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(220,38,38,0.4)';
+  ctx.fillText('不安定 →', W-4, cy-3);
+
+  // Poles (eigenvalues) -- blue crosses
+  eigenvalues.forEach(function(p) {
+    drawCross(ctx, toS(p.re, p.im), '#2e7dd1', mkr);
+  });
+
+  // Zeros -- green circles
+  zerosOrig.forEach(function(z) {
+    drawRing(ctx, toS(z.re, z.im), '#16a34a', mob?6:9);
+  });
+}
+
+function drawCross(ctx, s, color, r) {
+  ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(s.x-r, s.y-r); ctx.lineTo(s.x+r, s.y+r);
+  ctx.moveTo(s.x+r, s.y-r); ctx.lineTo(s.x-r, s.y+r);
+  ctx.stroke();
+}
+function drawRing(ctx, s, color, r) {
+  ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, 2*Math.PI); ctx.stroke();
+}
+function drawDot(ctx, s, color, r) {
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, 2*Math.PI); ctx.fill();
+}
+
+// =========================================================
+// 時間応答プロット (ステップ応答)
+// =========================================================
+function drawTimePlot() {
+  const canvas = document.getElementById('timeplot');
+  const par = canvas.parentElement;
+  const legendH = par.querySelector('.legend').offsetHeight;
+  const headerH = par.querySelector('.plot-header').offsetHeight;
+  const W = par.clientWidth;
+  const H = par.clientHeight - legendH - headerH - 4;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!state) return;
+
+  const {sim, tEnd} = state;
+  const mob = W < 500;
+  const pad = mob ? {l:36, r:8, t:10, b:26} : {l:46, r:14, t:12, b:32};
+  const pw = W-pad.l-pad.r, ph = H-pad.t-pad.b;
+  const fs = mob ? 8 : 10;
+
+  const vals = Array.from(sim.y);
+  const rawMax = Math.max(Math.abs(Math.max.apply(null, vals)), Math.abs(Math.min.apply(null, vals)), 0.1);
+  const yMax = rawMax * 1.25, yMin = -yMax * 0.25;
+  const yRange = yMax - yMin;
+
+  const toX = function(t) { return pad.l + (t/tEnd)*pw; };
+  const toY = function(v) { return pad.t + (1 - (v-yMin)/yRange)*ph; };
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+  for (let i=0;i<=4;i++) {
+    const y=pad.t+i*ph/4;
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+  }
+  for (let i=0;i<=5;i++) {
+    const x=pad.l+i*pw/5;
+    ctx.beginPath(); ctx.moveTo(x,pad.t); ctx.lineTo(x,H-pad.b); ctx.stroke();
+  }
+
+  // Zero line
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(pad.l, toY(0)); ctx.lineTo(W-pad.r, toY(0)); ctx.stroke();
+  ctx.strokeRect(pad.l, pad.t, pw, ph);
+
+  // Axis labels
+  ctx.fillStyle = '#5b7184'; ctx.font = fs + 'px monospace'; ctx.textAlign = 'center';
+  const tSteps = mob ? 4 : 5;
+  for (let i=0;i<=tSteps;i++) ctx.fillText((i*tEnd/tSteps).toFixed(1), pad.l+i*pw/tSteps, H-pad.b+12);
+  ctx.textAlign = 'right';
+  for (let i=0;i<=4;i++) {
+    const v = yMax-i*yRange/4;
+    ctx.fillText(v.toFixed(mob?1:2), pad.l-3, pad.t+i*ph/4+4);
+  }
+  ctx.textAlign = 'center';
+  ctx.fillText('t [s]', W-pad.r, H-pad.b+12);
+
+  // y(t) curve
+  drawLine(ctx, sim.t, sim.y, toX, toY, '#2e7dd1', 2);
+}
+
+function drawLine(ctx, t, x, toX, toY, color, lw, dash) {
+  ctx.strokeStyle = color; ctx.lineWidth = lw;
+  if (dash) ctx.setLineDash(dash); else ctx.setLineDash([]);
+  ctx.beginPath();
+  for (let i=0;i<t.length;i++) {
+    const px=toX(t[i]), py=toY(x[i]);
+    i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// =========================================================
+// プリセット
+// =========================================================
+const PRESETS = {
+  prob1: {
+    a11:-3, a12:0, a21:-6, a22:5, b1:0, b2:1, c1:1, c2:0,
+    t11:1, t12:0, t21:0, t22:1, tEnd:5
+  },
+  prob2: {
+    a11:-1, a12:0, a21:-1, a22:-1, b1:1, b2:1, c1:-1, c2:1,
+    t11:1, t12:0, t21:0, t22:1, tEnd:5
+  },
+  prob3: {
+    a11:1, a12:2, a21:3, a22:4, b1:0, b2:1, c1:1, c2:0,
+    t11:1, t12:1, t21:0, t22:1, tEnd:2
+  },
+  prob4: {
+    a11:1, a12:2, a21:3, a22:4, b1:0, b2:1, c1:1, c2:0,
+    t11:1, t12:0, t21:0, t22:1, tEnd:2
+  },
+  prob5: {
+    a11:0, a12:1, a21:-4, a22:-3, b1:0, b2:1, c1:1, c2:1,
+    t11:1, t12:0, t21:0, t22:1, tEnd:5
+  },
+  prob6: {
+    a11:-1, a12:0, a21:1, a22:-1, b1:1, b2:0, c1:0, c2:1,
+    t11:1, t12:0, t21:0, t22:1, tEnd:5
+  },
+  prob7: {
+    a11:0, a12:-2, a21:1, a22:-3, b1:2, b2:1, c1:1, c2:0,
+    t11:1, t12:0, t21:0, t22:1, tEnd:5
+  }
+};
+
+function applyPreset() {
+  const key = document.getElementById('preset').value;
+  if (key === 'custom') return;
+  const p = PRESETS[key];
+  for (const [id, val] of Object.entries(p)) {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  }
+  compute();
+}
+
+function markCustom() {
+  document.getElementById('preset').value = 'custom';
+}
+
+// =========================================================
+// リサイズ対応
+// =========================================================
+let resizeTimer;
+window.addEventListener('resize', function() {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(function() { if(state) { drawSplane(); drawTimePlot(); } }, 80);
+});
+
+// 初期計算
+compute();
+</script>
+</body>
+</html>

@@ -22,7 +22,7 @@ start linearization_simulator.html     # Windows
 
 - **プリセット** で代表的なシナリオ (下死点・上死点・制御あり/なし) を一括設定．
 - **物理パラメータ** (質量 $m$ , 長さ $l$ , 減衰 $k$ ) を編集．
-- **平衡点** を下死点 ( $\theta^* = 0$ ) または上死点 ( $\theta^* = \pi$ ) から選択．
+- **平衡点** を下死点 ($\theta^\ast = 0$) または上死点 ($\theta^\ast = \pi$) から選択．
 - **初期偏差** $\Delta\theta$ , $\Delta\dot{\theta}$ を設定して平衡点からのずれを指定．
 - **状態フィードバック** を有効にすると，線形近似に基づく極配置で制御入力を生成．
 - **▶ 計算・シミュレーション** ボタンでシミュレーションを実行し，アニメーションを再生．
@@ -47,10 +47,10 @@ f(x, u) = \begin{bmatrix} x_2 \\ -\frac{g}{l}\sin x_1 - \frac{k}{m}x_2 + \frac{1
 
 ### 平衡点
 
-$f(x^*, u^*) = 0$ を満たす点が平衡点です．振り子では
+$f(x^\ast, u^\ast) = 0$ を満たす点が平衡点です．振り子では
 
 ```math
-x^* = \begin{bmatrix} n\pi \\ 0 \end{bmatrix}, \quad u^* = 0, \quad n = 0, 1, 2, \dots
+x^\ast = \begin{bmatrix} n\pi \\ 0 \end{bmatrix}, \quad u^\ast = 0, \quad n = 0, 1, 2, \dots
 ```
 
 - $n$ が偶数：**下死点** (自然に安定)
@@ -58,21 +58,21 @@ x^* = \begin{bmatrix} n\pi \\ 0 \end{bmatrix}, \quad u^* = 0, \quad n = 0, 1, 2,
 
 ### ヤコビ線形化
 
-平衡点 $(x^*, u^*)$ まわりで偏差変数 $\bar{x} = x - x^*$ , $\bar{u} = u - u^*$ を導入し，Taylor 展開の1次の項を取ると，
+平衡点まわりで偏差変数を導入し，Taylor 展開の1次の項を取ると，線形近似システムが得られます．
 
 ```math
-\dot{\bar{x}} = A\bar{x} + B\bar{u}
+\dot{\bar{x}} = A\bar{x} + B\bar{u}, \quad \bar{x} = x - x^\ast, \quad \bar{u} = u - u^\ast
 ```
 
 ここで $A$ , $B$ は $f$ のヤコビ行列です．
 
 ```math
-A = \left.\frac{\partial f}{\partial x}\right|_{x=x^*, u=u^*}, \quad B = \left.\frac{\partial f}{\partial u}\right|_{x=x^*, u=u^*}
+A = \frac{\partial f}{\partial x}\bigg|_{x=x^\ast,\, u=u^\ast}, \quad B = \frac{\partial f}{\partial u}\bigg|_{x=x^\ast,\, u=u^\ast}
 ```
 
 ### 下死点と上死点の線形近似
 
-**下死点** ( $\theta^* = 0$ )：$\sin\theta \approx \theta$ より
+**下死点** ($\theta^\ast = 0$)： $\sin\theta \approx \theta$ より
 
 ```math
 A = \begin{bmatrix} 0 & 1 \\ -g/l & -k/m \end{bmatrix}, \quad B = \begin{bmatrix} 0 \\ 1/(ml) \end{bmatrix}
@@ -80,7 +80,7 @@ A = \begin{bmatrix} 0 & 1 \\ -g/l & -k/m \end{bmatrix}, \quad B = \begin{bmatrix
 
 $A$ の固有値は負の実部をもち，平衡点は**安定**です．
 
-**上死点** ( $\theta^* = \pi$ )：$\sin\theta \approx -(\theta - \pi)$ より
+**上死点** ($\theta^\ast = \pi$)： $\sin\theta \approx -(\theta - \pi)$ より
 
 ```math
 A = \begin{bmatrix} 0 & 1 \\ g/l & -k/m \end{bmatrix}, \quad B = \begin{bmatrix} 0 \\ 1/(ml) \end{bmatrix}
@@ -95,8 +95,8 @@ $A$ の固有値に正の実部が含まれ，平衡点は**不安定**です．
 線形近似は平衡点の**近傍でのみ有効**です．初期偏差が大きいと非線形項 ( $\sin\theta$ と $\theta$ の差) が無視できなくなり，線形近似の精度が低下します．
 
 本シミュレータでは：
-- **小偏差** ( $\Delta\theta = 0.3$ rad) → 非線形と線形近似がほぼ一致
-- **大偏差** ( $\Delta\theta = 1.5$ rad) → 応答に大きな乖離が生じる
+- **小偏差** ($\Delta\theta = 0.3$ rad) → 非線形と線形近似がほぼ一致
+- **大偏差** ($\Delta\theta = 1.5$ rad) → 応答に大きな乖離が生じる
 
 この違いをアニメーションと位相平面で直感的に確認できます．
 
@@ -104,7 +104,7 @@ $A$ の固有値に正の実部が含まれ，平衡点は**不安定**です．
 
 ## リアプノフの線形化法
 
-非線形システム (N) $\dot{x} = f(x, u)$ と線形近似システム (L) $\dot{\bar{x}} = A\bar{x} + B\bar{u}$ の安定性の関係：
+非線形システム (N) $\dot{x} = f(x, u)$ と線形近似システム (L) の安定性の関係：
 
 1. (L) が**漸近安定** ( $A$ の全固有値の実部が負) ならば，(N) は平衡点で**局所漸近安定**
 2. (L) が**不安定** (正の実部をもつ固有値が存在) ならば，(N) は平衡点で**不安定**
@@ -117,19 +117,19 @@ $A$ の固有値に正の実部が含まれ，平衡点は**不安定**です．
 
 ### 下死点 (安定平衡点)
 
-$\theta^* = 0$ , $\Delta\theta = 0.3$ rad．小偏差のため非線形と線形近似がほぼ一致し，減衰振動で平衡点に収束します．
+$\theta^\ast = 0$ , $\Delta\theta = 0.3$ rad．小偏差のため非線形と線形近似がほぼ一致し，減衰振動で平衡点に収束します．
 
 ### 下死点 (大偏差)
 
-$\theta^* = 0$ , $\Delta\theta = 1.5$ rad．偏差が大きいため線形近似の精度が低下し，非線形応答と線形近似応答の間に乖離が生じます．
+$\theta^\ast = 0$ , $\Delta\theta = 1.5$ rad．偏差が大きいため線形近似の精度が低下し，非線形応答と線形近似応答の間に乖離が生じます．
 
 ### 上死点 (不安定平衡点)
 
-$\theta^* = \pi$ , $\Delta\theta = 0.1$ rad．制御なしでは小さな偏差でも発散し，線形近似も不安定を示します．
+$\theta^\ast = \pi$ , $\Delta\theta = 0.1$ rad．制御なしでは小さな偏差でも発散し，線形近似も不安定を示します．
 
 ### 上死点＋状態FB安定化
 
-$\theta^* = \pi$ , $\Delta\theta = 0.3$ rad，目標極 $P_1 = P_2 = -3$ ．状態フィードバックにより上死点 (倒立状態) を安定化します．線形近似に基づく制御器が非線形システムにも有効であることを確認できます．
+$\theta^\ast = \pi$ , $\Delta\theta = 0.3$ rad，目標極 $P_1 = P_2 = -3$ ．状態フィードバックにより上死点 (倒立状態) を安定化します．線形近似に基づく制御器が非線形システムにも有効であることを確認できます．
 
 ---
 

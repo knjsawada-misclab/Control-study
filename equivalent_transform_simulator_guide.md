@@ -89,11 +89,11 @@ G(s) = C(sI - A)^{-1}B = \bar{C}(sI - \bar{A})^{-1}\bar{B}
 2次系の伝達関数 $G(s) = C(sI - A)^{-1}B$ は，以下のように計算されます．
 
 ```math
-(sI - A)^{-1} = \frac{1}{\det(sI - A)} \operatorname{adj}(sI - A)
+(sI - A)^{-1} = \frac{1}{\det(sI - A)} \mathrm{adj}(sI - A)
 ```
 
 ```math
-\det(sI - A) = s^2 - \operatorname{tr}(A) s + \det(A)
+\det(sI - A) = s^2 - \mathrm{tr}(A) \, s + \det(A)
 ```
 
 分子は $s$ の高々1次式となり，厳密にプロパーな伝達関数が得られます．

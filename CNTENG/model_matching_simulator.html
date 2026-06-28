@@ -665,9 +665,9 @@ function buildSystem(m, d, k) {
 // =========================================================
 function disturbance(t, dt, distType) {
   if (distType === 'impulse') {
-    return (t >= 0 && t < dt) ? 1/dt : 0;
+    return (t >= 0 && t < dt) ? -1/dt : 0;
   } else {
-    return t >= 0 ? 1 : 0;
+    return t >= 0 ? -1 : 0;
   }
 }
 
@@ -745,7 +745,7 @@ function analyticalImpulse(m, a, tEnd, dt) {
   for (let i = 0; i < n; i++) {
     const t = i * dt;
     tArr[i] = t;
-    yArr[i] = (1/m) * t * Math.exp(-a * t);
+    yArr[i] = -(1/m) * t * Math.exp(-a * t);
   }
   return { t: tArr, y: yArr };
 }

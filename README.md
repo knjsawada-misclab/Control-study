@@ -2,7 +2,7 @@
 
 > **大阪大学 大学院工学研究科 機械工学専攻　澤田賢治**
 >
-> 制御工学の勉強に役立つ代表的なトピックを，ブラウザ上で触って理解するインタラクティブ教材として公開しています．
+> 制御工学の勉強に役立つ代表的なトピックを，ブラウザ上で触って理解するインタラクティブ教材として公開しています．AIコーディングを活用しています．
 > すべて HTML 単体で動作し，インストール不要・オフライン対応です．
 
 ---
@@ -18,11 +18,11 @@
 
 | シミュレータ | 解説資料 | 概要 |
 |:--|:--:|:--|
-| [極の位置と相平面上の応答](https://knjsawada-misclab.github.io/Control-study/state_equation_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/state_equation_simulator_guide.md) | 2次系の固有値・位相面・時間応答の可視化 |
-| [極配置と初期状態応答](https://knjsawada-misclab.github.io/Control-study/pole_placement.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/pole_placement_guide.md) | 状態フィードバックによる極配置法の体験 |
-| [可制御性と極配置](https://knjsawada-misclab.github.io/Control-study/controllability_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/controllability_simulator_guide.md) | 可制御・不可制御・可安定の判定と極配置の可否の体験 |
-| [等価変換と実現問題](https://knjsawada-misclab.github.io/Control-study/equivalent_transform_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/equivalent_transform_simulator_guide.md) | 座標変換・伝達関数の不変性・可制御正準系の体験 |
-| [オブザーバによる状態推定](https://knjsawada-misclab.github.io/Control-study/observer_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/observer_simulator_guide.md) | 同一次元オブザーバの動作と可観測性の体験 |
+| [極の位置と相平面上の応答](https://knjsawada-misclab.github.io/Control-study/CNTENG/state_equation_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/state_equation_simulator_guide.md) | 2次系の固有値・位相面・時間応答の可視化 |
+| [極配置と初期状態応答](https://knjsawada-misclab.github.io/Control-study/CNTENG/pole_placement.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/pole_placement_guide.md) | 状態フィードバックによる極配置法の体験 |
+| [可制御性と極配置](https://knjsawada-misclab.github.io/Control-study/CNTENG/controllability_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/controllability_simulator_guide.md) | 可制御・不可制御・可安定の判定と極配置の可否の体験 |
+| [等価変換と実現問題](https://knjsawada-misclab.github.io/Control-study/CNTENG/equivalent_transform_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/equivalent_transform_simulator_guide.md) | 座標変換・伝達関数の不変性・可制御正準系の体験 |
+| [オブザーバによる状態推定](https://knjsawada-misclab.github.io/Control-study/CNTENG/observer_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/observer_simulator_guide.md) | 同一次元オブザーバの動作と可観測性の体験 |
 
 ## その他
 

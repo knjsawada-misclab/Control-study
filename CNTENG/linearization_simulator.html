@@ -312,7 +312,7 @@ canvas {
   }
   .plot-card.anim-panel {
     width: 100% !important;
-    height: min(80vw, 350px);
+    height: min(85vw, 380px);
     flex: none;
   }
   .plot-card.phase-panel {
@@ -326,9 +326,18 @@ canvas {
     flex: none;
   }
   canvas {
-    flex: none !important;
+    flex: 1 1 0 !important;
     width: 100% !important;
-    height: 100% !important;
+    min-height: 0 !important;
+  }
+  .anim-controls {
+    gap: 4px;
+    padding: 4px 8px;
+    flex-wrap: wrap;
+  }
+  .btn-play {
+    padding: 6px 16px;
+    min-height: 36px;
   }
   .legend {
     gap: 4px 8px;

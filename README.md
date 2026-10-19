@@ -44,6 +44,10 @@
 | [マスバネダンパ系の PID 制御](https://knjsawada-misclab.github.io/Control-study/CSD/pid_control_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CSD/pid_control_simulator_guide.md) | P→PD→PID と PI-D／I-PD の構造比較，閉ループゲイン線図・極零点・外乱抑制 |
 | [部分的モデルマッチング法 (北森法)](https://knjsawada-misclab.github.io/Control-study/CSD/kitamori_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CSD/kitamori_simulator_guide.md) | 分母系列展開と係数比較による PID ゲイン設計，打ち切り次数の影響 |
 | [FRIT によるデータ駆動型 PID ゲイン調整](https://knjsawada-misclab.github.io/Control-study/CSD/frit_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CSD/frit_simulator_guide.md) | 1組の実験データから疑似参照信号で PID ゲインを調整する FRIT の体験 |
+| [開ループ系の制御仕様](https://knjsawada-misclab.github.io/Control-study/CSD/open_loop_spec_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CSD/open_loop_spec_simulator_guide.md) | ナイキスト軌跡・ゲイン余裕/位相余裕と閉ループ系のピークゲイン・バンド幅の対応 |
+| [ループ整形法 (PID 制御)](https://knjsawada-misclab.github.io/Control-study/CSD/loop_shaping_pid_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CSD/loop_shaping_pid_simulator_guide.md) | P/PI/PD/PID と直列補償表現による一巡伝達関数のボード線図整形 |
+| [位相進み遅れ補償](https://knjsawada-misclab.github.io/Control-study/CSD/lead_lag_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CSD/lead_lag_simulator_guide.md) | 位相遅れ補償で定常偏差，位相進み補償で位相余裕を改善する設計手順の体験 |
+| [VRFT によるデータ駆動型 PID ゲイン調整](https://knjsawada-misclab.github.io/Control-study/CSD/vrft_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CSD/vrft_simulator_guide.md) | 仮想参照信号と最小二乗で開ループ系を規範モデルに近づける VRFT の体験 |
 
 ## その他
 

@@ -42,6 +42,7 @@
 | シミュレータ                                                                                                   |                                                解説資料                                                | 概要                                                                      |
 | :------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------ |
 | [マスバネダンパ系の PID 制御](https://knjsawada-misclab.github.io/Control-study/CSD/pid_control_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CSD/pid_control_simulator_guide.md) | P→PD→PID と PI-D／I-PD の構造比較，閉ループゲイン線図・極零点・外乱抑制 |
+| [PID ゲインのチューニング：北森法と FRIT](https://knjsawada-misclab.github.io/Control-study/CSD/pid_tuning_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CSD/pid_tuning_simulator_guide.md) | 分母系列展開による部分的モデルマッチング (北森法) と，1組の実験データから PID ゲインを決める FRIT の体験 |
 
 ## その他
 

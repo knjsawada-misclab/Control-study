@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PIDゲインのチューニング：北森法とFRIT</title>
+<title>FRIT によるデータ駆動型 PID ゲイン調整シミュレータ</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -210,116 +210,16 @@ table.coef td.free { color: #94a3b8; }
 <body>
 
 <header>
-  <h1>PIDゲインのチューニング：北森法とFRIT</h1>
-  <span class="eq">部分的モデルマッチング法 (北森法) / データ駆動設計 (FRIT)</span>
+  <h1>FRIT によるデータ駆動型 PID ゲイン調整シミュレータ</h1>
+  <span class="eq">r̃(ρ) = K(ρ)⁻¹u0 + y0, &nbsp; J(ρ) = Σ(y0 − M r̃(ρ))²</span>
 </header>
 
 <div class="body">
   <div class="sidebar">
     <div class="sidebar-inner">
 
-      <div class="tabs">
-        <div class="tab active" id="tab-kit" onclick="switchMode('kit')">北森法 (モデルベース)</div>
-        <div class="tab" id="tab-frit" onclick="switchMode('frit')">FRIT (データ駆動)</div>
-      </div>
-
-      <!-- ================= 北森法 ================= -->
-      <div id="side-kit">
-        <div class="section">
-          <div class="sec-title">講義のプリセット</div>
-          <select id="kit_preset" onchange="applyKitPreset()">
-            <option value="custom">-- カスタム --</option>
-            <option value="p3_s1" selected>問題3: I-PD, 北森の規範モデル σ=1</option>
-            <option value="p3_s01">問題3: I-PD, 北森の規範モデル σ=0.1</option>
-            <option value="p3_bin">I-PD, 2項係数標準形 (ωn=1.5)</option>
-            <option value="p3_bw">I-PD, Butterworth標準形 (ωn=1.5)</option>
-            <option value="p2_pd">問題2: PD制御, P=b/(s(s+a)), 2次規範モデル</option>
-            <option value="ip_2nd">I-P制御, 2次規範モデル (打ち切り2次)</option>
-          </select>
-        </div>
-
-        <div class="section">
-          <div class="sec-title">制御対象 P(s) = b(s)/a(s)</div>
-          <div class="field" style="margin-bottom:5px;">
-            <label>分子係数 b(s) (高次 → 低次, 空白区切り)</label>
-            <input type="text" id="kit_num" value="1 2" onchange="markKitCustom()">
-          </div>
-          <div class="field">
-            <label>分母係数 a(s) (高次 → 低次)</label>
-            <input type="text" id="kit_den" value="1 1 1" onchange="markKitCustom()">
-          </div>
-          <div class="tf-preview" id="kit_tf_preview"></div>
-        </div>
-
-        <div class="section">
-          <div class="sec-title">制御器の構造</div>
-          <div class="radio-group">
-            <label class="radio-item"><input type="radio" name="kit_ctype" value="ipd" checked onchange="markKitCustom()"><span class="radio-label">I-PD<span class="eq">u = kI/s·e − (kP + kD s) y</span></span></label>
-            <label class="radio-item"><input type="radio" name="kit_ctype" value="ip" onchange="markKitCustom()"><span class="radio-label">I-P<span class="eq">u = kI/s·e − kP y</span></span></label>
-            <label class="radio-item"><input type="radio" name="kit_ctype" value="pd" onchange="markKitCustom()"><span class="radio-label">PD (微分先行)<span class="eq">u = kP e − kD s y</span></span></label>
-          </div>
-          <div class="note-text">I-PD は 3 次，I-P / PD は 2 次の規範モデルと低次項から係数を一致させます．PD は制御対象に積分器 (γ0 = 0) が必要です．</div>
-        </div>
-
-        <div class="section">
-          <div class="sec-title">規範モデル M(s)</div>
-          <select id="kit_model" onchange="markKitCustom(); updateModelFields();">
-            <option value="kitamori" selected>北森の規範モデル W(s): 1/(1+σs+0.5σ²s²+0.15σ³s³)</option>
-            <option value="binomial">2項係数標準形: 極 s = −ωn (重根)</option>
-            <option value="butter">Butterworth 標準形</option>
-            <option value="custom">カスタム (ωn, ζ / α1, α2)</option>
-          </select>
-          <div class="row three-col" style="margin-top:6px;">
-            <div class="field">
-              <label id="kit_wn_label">σ</label>
-              <input type="number" id="kit_wn" value="1" step="0.1" min="0.01" onchange="markKitCustom()">
-            </div>
-            <div class="field">
-              <label>ζ / α1</label>
-              <input type="number" id="kit_a1" value="2" step="0.1" min="0.01" onchange="markKitCustom()">
-            </div>
-            <div class="field">
-              <label>α2 (3次のみ)</label>
-              <input type="number" id="kit_a2" value="2" step="0.1" min="0.01" onchange="markKitCustom()">
-            </div>
-          </div>
-          <div class="tf-preview" id="kit_model_preview"></div>
-        </div>
-
-        <div class="section">
-          <div class="sec-title">分母系列の打ち切り / シミュレーション</div>
-          <div class="row three-col">
-            <div class="field">
-              <label>打ち切り次数 N</label>
-              <select id="kit_trunc" onchange="drawKitTrunc()">
-                <option value="1">1</option>
-                <option value="2" selected>2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>終了時刻 T [s]</label>
-              <input type="number" id="kit_tEnd" value="20" step="1" min="1" onchange="markKitCustom()">
-            </div>
-            <div class="field">
-              <label>刻み幅 ts [s]</label>
-              <input type="number" id="kit_ts" value="0.01" step="0.005" min="0.001" max="0.1" onchange="markKitCustom()">
-            </div>
-          </div>
-        </div>
-
-        <button class="btn-compute" onclick="runKitamori()">&#x25B6; 北森法でゲイン設計</button>
-
-        <div class="section">
-          <div class="sec-title">設計結果</div>
-          <div id="kit_result" class="result-box"><div style="color:#5b7184;">「北森法でゲイン設計」を押してください</div></div>
-          <div id="kit_error" class="error-msg"></div>
-        </div>
-      </div>
-
       <!-- ================= FRIT ================= -->
-      <div id="side-frit" style="display:none;">
+      <div id="side-frit">
         <div class="section">
           <div class="sec-title">講義のプリセット</div>
           <select id="frit_preset" onchange="applyFritPreset()">
@@ -399,57 +299,8 @@ table.coef td.free { color: #94a3b8; }
   </div>
 
   <div class="main">
-    <!-- ================= 北森法 表示 ================= -->
-    <div class="mode-view active" id="view-kit">
-      <div class="plots-row">
-        <div class="plot-card">
-          <div class="plot-header">
-            <span class="plot-title">閉ループ系と規範モデルのステップ応答</span>
-            <select id="kit_resp_mode" onchange="drawKitResponse()">
-              <option value="y" selected>出力 y(t) と yM(t)</option>
-              <option value="u">操作量 u(t)</option>
-            </select>
-          </div>
-          <div class="legend" id="kit_resp_legend"></div>
-          <canvas id="kitRespCanvas"></canvas>
-        </div>
-        <div class="plot-card">
-          <div class="plot-header">
-            <span class="plot-title">分母系列表現の有限打ち切り</span>
-            <span class="plot-sub" id="kit_trunc_sub">P(s) と 1/γN(s) のステップ応答</span>
-          </div>
-          <div class="legend">
-            <div class="leg-item"><div class="leg-line" style="background:#dc2626;"></div> P(s)</div>
-            <div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> 1/(γ0 + γ1 s + … + γN s^N)</div>
-          </div>
-          <canvas id="kitTruncCanvas"></canvas>
-        </div>
-      </div>
-      <div class="plots-row">
-        <div class="plot-card table-card">
-          <div class="plot-header">
-            <span class="plot-title">マクローリン展開の係数比較</span>
-            <span class="plot-sub">1/Gyr(s) と 1/M(s) を低次から一致させる</span>
-          </div>
-          <div class="table-wrap" id="kit_table"></div>
-        </div>
-        <div class="plot-card">
-          <div class="plot-header">
-            <span class="plot-title">ゲイン線図</span>
-            <span class="plot-sub">|Gyr(jω)| と |M(jω)|</span>
-          </div>
-          <div class="legend">
-            <div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> Gyr(s)</div>
-            <div class="leg-item"><div class="leg-line dashed" style="border-color:#dc2626;"></div> M(s)</div>
-            <div class="leg-item"><div class="leg-line dotted" style="border-color:#94a3b8;"></div> P(s)</div>
-          </div>
-          <canvas id="kitBodeCanvas"></canvas>
-        </div>
-      </div>
-    </div>
-
     <!-- ================= FRIT 表示 ================= -->
-    <div class="mode-view" id="view-frit">
+    <div class="mode-view active" id="view-frit">
       <div class="plots-row">
         <div class="plot-card">
           <div class="plot-header">
@@ -505,7 +356,7 @@ table.coef td.free { color: #94a3b8; }
 </div>
 
 <div class="info-bar">
-  <span>制御系設計論 ④ PIDゲインのチューニング &nbsp;|&nbsp; 時間応答は双一次変換による離散化で計算</span>
+  <span>制御系設計論 ④ PIDゲインのチューニング (FRIT) &nbsp;|&nbsp; 時間応答は双一次変換による離散化で計算</span>
   <span id="ctrl-info"></span>
 </div>
 
@@ -577,6 +428,11 @@ function polyStr(p, v) {
   return terms.length ? terms.join(' ') : '0';
 }
 function tfStr(t) { return '(' + polyStr(t.num) + ') / (' + polyStr(t.den) + ')'; }
+function parsePlant(prefix) {
+  var num = parseCoefs($(prefix + '_num').value), den = parseCoefs($(prefix + '_den').value);
+  if (!num || !den || den.length < 2 || num.length > den.length) return null;
+  return { num: num, den: den };
+}
 
 // マクローリン展開 (分母系列): 1/P = den/num = γ0 + γ1 s + ...  (num[0] ≠ 0 が必要)
 function seriesDiv(num, den, nTerms) {   // den/num の級数
@@ -729,191 +585,7 @@ function bodePlot(id, series) {
   });
 }
 
-// =========================================================
-// モード切替
-// =========================================================
-var mode = 'kit';
-function switchMode(m) {
-  mode = m;
-  $('tab-kit').classList.toggle('active', m === 'kit');
-  $('tab-frit').classList.toggle('active', m === 'frit');
-  $('side-kit').style.display = m === 'kit' ? '' : 'none';
-  $('side-frit').style.display = m === 'frit' ? '' : 'none';
-  $('view-kit').classList.toggle('active', m === 'kit');
-  $('view-frit').classList.toggle('active', m === 'frit');
-  setTimeout(redrawAll, 30);
-}
-function redrawAll() {
-  if (mode === 'kit') { drawKitResponse(); drawKitTrunc(); drawKitBode(); }
-  else { drawFritAll(); }
-}
-
-// =========================================================
-// 北森法 (部分的モデルマッチング)
-// =========================================================
-var kit = null;   // 設計結果
-
-var KIT_PRESETS = {
-  p3_s1:  { num: '1 2', den: '1 1 1', ctype: 'ipd', model: 'kitamori', wn: 1, a1: 2, a2: 2, tEnd: 20 },
-  p3_s01: { num: '1 2', den: '1 1 1', ctype: 'ipd', model: 'kitamori', wn: 0.1, a1: 2, a2: 2, tEnd: 20 },
-  p3_bin: { num: '1 2', den: '1 1 1', ctype: 'ipd', model: 'binomial', wn: 1.5, a1: 3, a2: 3, tEnd: 20 },
-  p3_bw:  { num: '1 2', den: '1 1 1', ctype: 'ipd', model: 'butter', wn: 1.5, a1: 2, a2: 2, tEnd: 20 },
-  p2_pd:  { num: '1', den: '1 1 0', ctype: 'pd', model: 'butter', wn: 2, a1: 0.707, a2: 2, tEnd: 10 },
-  ip_2nd: { num: '1 2', den: '1 1 1', ctype: 'ip', model: 'kitamori', wn: 1, a1: 2, a2: 2, tEnd: 20 }
-};
-function applyKitPreset() {
-  var key = $('kit_preset').value, p = KIT_PRESETS[key];
-  if (!p) return;
-  $('kit_num').value = p.num; $('kit_den').value = p.den;
-  document.querySelector('input[name="kit_ctype"][value="' + p.ctype + '"]').checked = true;
-  $('kit_model').value = p.model; $('kit_wn').value = p.wn; $('kit_a1').value = p.a1; $('kit_a2').value = p.a2; $('kit_tEnd').value = p.tEnd;
-  updateModelFields();
-  runKitamori();
-}
-function markKitCustom() { $('kit_preset').value = 'custom'; updateModelFields(); }
-function kitCtype() { return document.querySelector('input[name="kit_ctype"]:checked').value; }
-function updateModelFields() {
-  var m = $('kit_model').value, ord = kitCtype() === 'ipd' ? 3 : 2;
-  $('kit_wn_label').textContent = m === 'kitamori' ? 'σ' : 'ωn [rad/s]';
-  $('kit_a1').disabled = (m !== 'custom'); $('kit_a2').disabled = (m !== 'custom' || ord !== 3);
-  if (m === 'binomial') { $('kit_a1').value = ord === 3 ? 3 : 1; $('kit_a2').value = 3; }
-  if (m === 'butter') { $('kit_a1').value = ord === 3 ? 2 : 0.707; $('kit_a2').value = 2; }
-  // プレビュー
-  var P = parsePlant('kit');
-  $('kit_tf_preview').textContent = P ? 'P(s) = ' + tfStr(P) : 'P(s): 係数が不正です';
-  var mc = refModelCoefs(ord);
-  $('kit_model_preview').textContent = mc ? '1/M(s) = ' + polyStr(mc) : '';
-}
-function parsePlant(prefix) {
-  var num = parseCoefs($(prefix + '_num').value), den = parseCoefs($(prefix + '_den').value);
-  if (!num || !den || den.length < 2 || num.length > den.length) return null;
-  return { num: num, den: den };
-}
-// 規範モデルの分母係数 [1, m1, m2, (m3)]
-function refModelCoefs(ord) {
-  var m = $('kit_model').value, w = +$('kit_wn').value;
-  if (!(w > 0)) return null;
-  if (m === 'kitamori') {
-    return ord === 3 ? [1, w, 0.5 * w * w, 0.15 * w * w * w] : [1, w, 0.5 * w * w];
-  }
-  var a1 = +$('kit_a1').value, a2 = +$('kit_a2').value;
-  if (m === 'binomial') { a1 = ord === 3 ? 3 : 1; a2 = 3; }
-  if (m === 'butter') { a1 = ord === 3 ? 2 : Math.SQRT1_2; a2 = 2; }
-  if (ord === 3) return [1, a1 / w, a2 / (w * w), 1 / (w * w * w)];
-  return [1, 2 * a1 / w, 1 / (w * w)];   // a1 = ζ
-}
-
-function runKitamori() {
-  var err = $('kit_error'); err.textContent = '';
-  var P = parsePlant('kit');
-  if (!P) { err.textContent = '制御対象の係数が不正です (分子次数 ≤ 分母次数，分母は 1 次以上)'; return; }
-  var ctype = kitCtype(), ord = ctype === 'ipd' ? 3 : 2;
-  var mc = refModelCoefs(ord);
-  if (!mc) { err.textContent = '規範モデルのパラメータが不正です'; return; }
-  var gamma = seriesDiv(P.num, P.den, 6);
-  if (!gamma) { err.textContent = 'P(0) が 0 (原点に零点) のため分母系列表現ができません'; return; }
-  var kp = 0, ki = 0, kd = 0, note = '';
-  if (ctype === 'ipd') {
-    ki = gamma[2] / mc[3]; kp = ki * mc[1] - gamma[0]; kd = ki * mc[2] - gamma[1];
-  } else if (ctype === 'ip') {
-    ki = gamma[1] / mc[2]; kp = ki * mc[1] - gamma[0]; kd = 0;
-  } else {
-    if (Math.abs(gamma[0]) > 1e-9) note = 'γ0 ≠ 0 (積分器なし) のため PD では定常偏差が残り，0 次の項が一致しません．';
-    kp = gamma[2] / mc[2]; kd = kp * mc[1] - gamma[1]; ki = 0;
-  }
-  // 閉ループ伝達関数  u = Kr r − Ky y
-  var Kr, Ky;
-  if (ctype === 'pd') { Kr = { num: [kp], den: [1] }; Ky = { num: [kp, kd], den: [1] }; }
-  else { Kr = { num: [ki], den: [0, 1] }; Ky = { num: [ki, kp, kd], den: [0, 1] }; }
-  // Gyr = P Kr / (1 + P Ky) ;  共通分母 Dc = Ky.den (= Kr.den)
-  var Dc = Ky.den;
-  var charPoly = pAdd(pMul(P.den, Dc), pMul(P.num, Ky.num));
-  var Gyr = tfNormalize({ num: pMul(P.num, Kr.num), den: charPoly });
-  var Gur = tfNormalize({ num: pMul(P.den, Kr.num), den: charPoly });   // r → u
-  var M = { num: [1], den: mc };
-  var invG = seriesDiv(Gyr.num, Gyr.den, 6);   // 1/Gyr の係数
-  var tEnd = +$('kit_tEnd').value, ts = +$('kit_ts').value;
-  var t = timeAxis(tEnd, ts), r = stepInput(t.length, 1);
-  var y = lsim(Gyr, r, ts), yM = lsim(M, r, ts), u = lsim(Gur, r, ts);
-  var stable = isStable(Gyr.den);
-  kit = { P: P, ctype: ctype, ord: ord, mc: mc, gamma: gamma, kp: kp, ki: ki, kd: kd, Gyr: Gyr, Gur: Gur, M: M, invG: invG, t: t, y: y, yM: yM, u: u, stable: stable, note: note, ts: ts };
-  updateKitResults();
-  updateKitTable();
-  drawKitResponse(); drawKitTrunc(); drawKitBode();
-  $('ctrl-info').textContent = '北森法: ' + ctype.toUpperCase() + ' kP=' + fN(kp, 4) + ' kI=' + fN(ki, 4) + ' kD=' + fN(kd, 4);
-}
-function updateKitResults() {
-  var k = kit, h = '';
-  var cname = k.ctype === 'ipd' ? 'I-PD' : (k.ctype === 'ip' ? 'I-P' : 'PD');
-  h += '<div class="res-row"><span class="res-key">構造</span><span class="res-val">' + cname + ' 制御 (' + k.ord + '次規範モデル)</span></div>';
-  h += '<div class="res-row"><span class="res-key">安定性</span><span class="res-val"><span class="badge ' + (k.stable ? 'stab' : 'unstab') + '">' + (k.stable ? '内部安定' : '不安定') + '</span></span></div>';
-  h += '<hr class="res-sep"><div class="res-head">1/P(s) の分母系列 γ</div>';
-  for (var i = 0; i < 4; i++) h += '<div class="res-row"><span class="res-key">γ' + i + '</span><span class="res-val">' + fG(k.gamma[i]) + '</span></div>';
-  h += '<hr class="res-sep"><div class="res-head">設計したゲイン</div>';
-  h += '<div class="res-row"><span class="res-key">kP</span><span class="res-val ' + (k.kp < 0 ? 'warn' : '') + '">' + fG(k.kp) + '</span></div>';
-  if (k.ctype !== 'pd') h += '<div class="res-row"><span class="res-key">kI</span><span class="res-val ' + (k.ki < 0 ? 'warn' : '') + '">' + fG(k.ki) + '</span></div>';
-  if (k.ctype !== 'ip') h += '<div class="res-row"><span class="res-key">kD</span><span class="res-val ' + (k.kd < 0 ? 'warn' : '') + '">' + fG(k.kd) + '</span></div>';
-  if (k.ctype === 'ipd') h += '<div class="note-text" style="margin-top:4px;">kI = γ2/m3, kP = kI·m1 − γ0, kD = kI·m2 − γ1</div>';
-  if (k.ctype === 'ip') h += '<div class="note-text" style="margin-top:4px;">kI = γ1/m2, kP = kI·m1 − γ0</div>';
-  if (k.ctype === 'pd') h += '<div class="note-text" style="margin-top:4px;">kP = γ2/m2, kD = kP·m1 − γ1</div>';
-  if (k.kp < 0 || k.ki < 0 || k.kd < 0) h += '<div class="res-row"><span class="res-val warn">負のゲインが出ました．規範モデルが制御対象に対して速すぎる/遅すぎる可能性があります．</span></div>';
-  if (k.note) h += '<div class="res-row"><span class="res-val warn">' + k.note + '</span></div>';
-  h += '<hr class="res-sep"><div class="res-head">ステップ応答の比較</div>';
-  var yss = tfDC(k.Gyr), yMss = tfDC(k.M);
-  h += '<div class="res-row"><span class="res-key">定常値 y∞ / yM∞</span><span class="res-val">' + fN(yss, 3) + ' / ' + fN(yMss, 3) + '</span></div>';
-  h += '<div class="res-row"><span class="res-key">オーバーシュート y / yM</span><span class="res-val">' + fN(overshoot(k.y, yss), 1) + ' % / ' + fN(overshoot(k.yM, yMss), 1) + ' %</span></div>';
-  h += '<div class="res-row"><span class="res-key">整定時間 (±2%) y / yM</span><span class="res-val">' + fN(settleTime(k.t, k.y, yss), 2) + ' / ' + fN(settleTime(k.t, k.yM, yMss), 2) + ' s</span></div>';
-  h += '<hr class="res-sep"><div class="res-head">Gyr(s) の極</div>';
-  pRoots(k.Gyr.den).forEach(function(r) { h += '<div class="res-row"><span class="res-key"></span><span class="res-val ' + (r[0] < 0 ? 'stable' : 'unstable') + '">' + fN(r[0], 3) + (r[1] !== 0 ? (r[1] > 0 ? ' + ' : ' − ') + fN(Math.abs(r[1]), 3) + 'j' : '') + '</span></div>'; });
-  $('kit_result').innerHTML = h;
-}
-function updateKitTable() {
-  var k = kit, nMatch = k.ord;   // 一致させる最高次
-  var h = '<table class="coef"><tr><th>次数</th><th>1/P(s): γ</th><th>1/Gyr(s)</th><th>1/M(s)</th><th>判定</th></tr>';
-  for (var i = 0; i < 6; i++) {
-    var g = k.invG ? k.invG[i] : NaN, m = i < k.mc.length ? k.mc[i] : 0;
-    var cls, txt;
-    if (i <= nMatch) { var ok = Math.abs(g - m) < 1e-6 * Math.max(1, Math.abs(m)); cls = ok ? 'match' : 'miss'; txt = ok ? '一致' : '不一致'; }
-    else { cls = 'free'; txt = i < k.mc.length ? '(未使用)' : '(M は 0)'; }
-    h += '<tr><td>s^' + i + '</td><td>' + fG(k.gamma[i]) + '</td><td>' + fG(g) + '</td><td>' + fG(m) + '</td><td class="' + cls + '">' + txt + '</td></tr>';
-  }
-  h += '</table>';
-  var cname = k.ctype === 'ipd' ? 'I-PD' : (k.ctype === 'ip' ? 'I-P' : 'PD');
-  h += '<div class="table-note">' + cname + ' 制御では <code>1/Gyr(s)</code> の s^0 〜 s^' + nMatch + ' の係数を規範モデル <code>1/M(s)</code> に一致させます．s^' + (nMatch + 1) + ' 以上の項は一致せず，これが応答の差 (主に減衰特性) として現れます．' +
-       (k.ctype === 'ipd' ? ' <br>1/Gyr = 1 + (kP + γ0)/kI · s + (kD + γ1)/kI · s² + γ2/kI · s³ + γ3/kI · s⁴ + …' : '') + '</div>';
-  $('kit_table').innerHTML = h;
-}
-function drawKitResponse() {
-  var m = $('kit_resp_mode').value, leg = $('kit_resp_legend');
-  if (m === 'y') leg.innerHTML = '<div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> y(t): 閉ループ系 Gyr</div><div class="leg-item"><div class="leg-line dashed" style="border-color:#dc2626;"></div> yM(t): 規範モデル M</div>';
-  else leg.innerHTML = '<div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> u(t)</div>';
-  if (!kit) { linePlot('kitRespCanvas', [], { empty: '設計を実行してください' }); return; }
-  if (m === 'y') linePlot('kitRespCanvas', [{ x: kit.t, y: kit.yM, color: '#dc2626', width: 2, dash: [6, 4] }, { x: kit.t, y: kit.y, color: '#2e7dd1', width: 2.2 }], { yLabel: 'y(t)', yClamp: [-2, 4] });
-  else linePlot('kitRespCanvas', [{ x: kit.t, y: kit.u, color: '#2e7dd1', width: 2.2 }], { yLabel: 'u(t)' });
-}
-function drawKitTrunc() {
-  var N = +$('kit_trunc').value;
-  var P = parsePlant('kit');
-  if (!P) { linePlot('kitTruncCanvas', [], { empty: '制御対象が不正です' }); return; }
-  var g = seriesDiv(P.num, P.den, N + 1);
-  var tEnd = +$('kit_tEnd').value, ts = +$('kit_ts').value, t = timeAxis(tEnd, ts), r = stepInput(t.length, 1);
-  var yP = lsim(P, r, ts);
-  var series = [{ x: t, y: yP, color: '#dc2626', width: 2 }];
-  var sub = 'N = ' + N;
-  if (g) {
-    var gN = pTrim(g.slice(0, N + 1));
-    var approx = { num: [1], den: gN };
-    var yA = lsim(approx, r, ts);
-    series.push({ x: t, y: yA, color: '#2e7dd1', width: 2.2 });
-    sub += ':  1/(' + polyStr(gN) + ')' + (isStable(gN) ? '' : '  [不安定]');
-  } else sub += ': P(0)=0 のため展開不可';
-  $('kit_trunc_sub').textContent = sub;
-  linePlot('kitTruncCanvas', series, { yLabel: 'y(t)', yClamp: [-3, 6] });
-}
-function drawKitBode() {
-  if (!kit) { setupCanvas('kitBodeCanvas'); return; }
-  bodePlot('kitBodeCanvas', [{ tf: kit.P, color: '#94a3b8', width: 1.5, dash: [2, 3] }, { tf: kit.M, color: '#dc2626', width: 2, dash: [6, 4] }, { tf: kit.Gyr, color: '#2e7dd1', width: 2.2 }]);
-}
+function redrawAll() { drawFritAll(); }
 
 // =========================================================
 // FRIT (Fictitious Reference Iterative Tuning)
@@ -1120,9 +792,7 @@ function drawFritAll() {
 // =========================================================
 var resizeTimer;
 window.addEventListener('resize', function() { clearTimeout(resizeTimer); resizeTimer = setTimeout(redrawAll, 80); });
-updateModelFields();
 markFritCustom(); $('frit_preset').value = 'lec';
-applyKitPreset();
 fritExperiment();
 </script>
 </body>

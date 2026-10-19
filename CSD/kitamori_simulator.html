@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>部分的モデルマッチング法（北森法）シミュレータ</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+  background: #eef2f6;
+  color: #1f2d3a;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+header {
+  background: #ffffff;
+  border-bottom: 1px solid #d4dde6;
+  padding: 10px 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-shrink: 0;
+}
+header h1 { font-size: 1rem; font-weight: 600; color: #2e7dd1; }
+header .eq { font-size: 0.78rem; color: #5b7184; font-family: 'Courier New', monospace; }
+
+.body { display: flex; flex: 1; overflow: hidden; }
+
+.sidebar {
+  width: 340px;
+  background: #ffffff;
+  border-right: 1px solid #d4dde6;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.sidebar-inner { padding: 12px; flex: 1; }
+
+.tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+.tab {
+  flex: 1; min-width: 0;
+  padding: 8px 6px;
+  border: 1px solid #d4dde6;
+  border-radius: 6px;
+  background: #f1f5f9;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #5b7184;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s, color 0.15s;
+}
+.tab:hover { background: #e2e8f0; }
+.tab.active { background: #2e7dd1; color: #fff; border-color: #2e7dd1; }
+
+.section { margin-bottom: 14px; }
+.sec-title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #2e7dd1;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+input[type="number"], input[type="text"], select {
+  background: #f1f5f9;
+  border: 1px solid #d4dde6;
+  color: #1f2d3a;
+  padding: 5px 6px;
+  border-radius: 5px;
+  width: 100%;
+  min-width: 0;
+  font-size: 0.82rem;
+  font-family: 'Courier New', monospace;
+  transition: border-color 0.15s;
+}
+input[type="number"] { text-align: center; }
+input:focus, select:focus { outline: none; border-color: #2e7dd1; }
+input:disabled { color: #94a3b8; background: #f8fafc; }
+
+.row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin-bottom: 6px; }
+.row.three-col { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.field { min-width: 0; }
+.field label { display: block; font-size: 0.7rem; color: #5b7184; margin-bottom: 3px; }
+
+.note-text { font-size: 0.68rem; color: #5b7184; margin-top: 2px; margin-bottom: 6px; font-style: italic; line-height: 1.4; }
+.tf-preview { font-family: 'Courier New', monospace; font-size: 0.72rem; color: #2e7dd1; margin: 2px 0 6px; line-height: 1.4; overflow-wrap: anywhere; }
+
+.radio-group { margin-bottom: 6px; }
+.radio-item {
+  display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 5px; margin-bottom: 2px; cursor: pointer;
+}
+.radio-item:hover { background: #f1f5f9; }
+.radio-item input[type="radio"] { width: 15px; height: 15px; cursor: pointer; accent-color: #2e7dd1; flex-shrink: 0; }
+.radio-label { font-size: 0.78rem; color: #1f2d3a; }
+.radio-label .eq { font-family: 'Courier New', monospace; font-size: 0.68rem; color: #5b7184; margin-left: 4px; }
+
+.btn-compute {
+  width: 100%; background: #16a34a; color: #fff; border: none; padding: 10px; border-radius: 6px;
+  font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: background 0.15s; margin-bottom: 8px;
+}
+.btn-compute:hover { background: #15803d; }
+.btn-compute:disabled { background: #94a3b8; cursor: default; }
+.btn-compute.blue { background: #2e7dd1; }
+.btn-compute.blue:hover { background: #1d6ab8; }
+.btn-compute.orange { background: #d97706; }
+.btn-compute.orange:hover { background: #b45309; }
+.btn-row { display: flex; gap: 5px; margin-bottom: 8px; }
+.btn-sub {
+  flex: 1; min-width: 0; background: #f1f5f9; border: 1px solid #d4dde6; color: #1f2d3a;
+  padding: 7px 6px; border-radius: 6px; font-size: 0.75rem; cursor: pointer;
+}
+.btn-sub:hover { background: #e2e8f0; border-color: #2e7dd1; }
+
+.step-label { font-size: 0.72rem; font-weight: 600; color: #1f2d3a; margin: 8px 0 4px; }
+.step-label .st { display: inline-block; background: #2e7dd1; color: #fff; border-radius: 10px; padding: 0 7px; font-size: 0.65rem; margin-right: 5px; }
+
+.result-box {
+  background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px;
+  font-family: 'Courier New', monospace; font-size: 0.75rem; line-height: 1.5;
+}
+.res-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; gap: 6px; }
+.res-key { color: #5b7184; flex-shrink: 0; }
+.res-val { color: #2e7dd1; min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.res-val.stable { color: #16a34a; }
+.res-val.unstable { color: #dc2626; }
+.res-val.warn { color: #d97706; }
+.res-sep { border: none; border-top: 1px solid #e2e8f0; margin: 6px 0; }
+.res-head { color: #1f2d3a; font-weight: 600; margin-bottom: 2px; }
+.error-msg { color: #dc2626; font-size: 0.78rem; margin-top: 6px; min-height: 16px; }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; }
+.badge.stab { background: rgba(22,163,74,0.12); color: #16a34a; border: 1px solid #16a34a; }
+.badge.unstab { background: rgba(220,38,38,0.12); color: #dc2626; border: 1px solid #dc2626; }
+
+.main { flex: 1; display: flex; flex-direction: column; padding: 12px; gap: 10px; overflow: hidden; }
+.mode-view { flex: 1; display: none; flex-direction: column; gap: 10px; min-height: 0; }
+.mode-view.active { display: flex; }
+.plots-row { flex: 1; display: flex; gap: 10px; overflow: hidden; min-height: 0; }
+.plot-card {
+  flex: 1; background: #ffffff; border: 1px solid #d4dde6; border-radius: 8px;
+  display: flex; flex-direction: column; overflow: hidden; min-width: 0;
+}
+.plot-header { padding: 8px 12px 4px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; gap: 8px; }
+.plot-title { font-size: 0.8rem; font-weight: 600; color: #1f2d3a; }
+.plot-sub { font-size: 0.7rem; color: #5b7184; }
+.plot-header select { width: auto; font-size: 0.72rem; padding: 2px 4px; }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 12px 6px; flex-shrink: 0; }
+.leg-item { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: #5b7184; }
+.leg-line { width: 14px; height: 2px; }
+.leg-line.dashed { height: 0; border-top: 2px dashed; }
+.leg-line.dotted { height: 0; border-top: 2px dotted; }
+canvas { flex: 1; width: 100%; display: block; min-height: 0; }
+
+.table-wrap { flex: 1; overflow: auto; padding: 0 12px 10px; }
+table.coef { border-collapse: collapse; width: 100%; font-family: 'Courier New', monospace; font-size: 0.74rem; }
+table.coef th, table.coef td { border: 1px solid #e2e8f0; padding: 4px 6px; text-align: right; white-space: nowrap; }
+table.coef th { background: #f1f5f9; color: #5b7184; font-weight: 600; text-align: center; }
+table.coef td:first-child { text-align: left; color: #5b7184; }
+table.coef td.match { background: rgba(22,163,74,0.12); color: #16a34a; font-weight: 600; }
+table.coef td.miss { background: rgba(220,38,38,0.08); color: #dc2626; }
+table.coef td.free { color: #94a3b8; }
+.table-note { font-size: 0.68rem; color: #5b7184; padding: 6px 12px 0; line-height: 1.5; }
+.table-note code { font-family: 'Courier New', monospace; color: #2e7dd1; }
+
+.info-bar {
+  background: #ffffff; border-top: 1px solid #d4dde6; padding: 5px 16px; font-size: 0.7rem; color: #5b7184;
+  flex-shrink: 0; display: flex; gap: 20px;
+}
+
+@media (max-width: 1100px) { .sidebar { width: 300px; } }
+
+@media (max-width: 820px) {
+  body { height: auto; min-height: 100vh; min-height: 100dvh; overflow-y: auto; }
+  header { flex-wrap: wrap; padding: 8px 12px; gap: 4px; }
+  header h1 { font-size: 0.9rem; }
+  header .eq { font-size: 0.65rem; line-height: 1.5; display: block; }
+  .body { flex-direction: column; overflow: visible; flex: none; }
+  .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #d4dde6; overflow-y: visible; max-height: none; }
+  .sidebar-inner { padding: 10px; }
+  .main { overflow: visible; flex: none; padding: 8px; }
+  .mode-view.active { flex: none; }
+  .plots-row { flex-direction: column; overflow: visible; flex: none; gap: 8px; }
+  .plot-card { width: 100% !important; flex: none; height: min(75vw, 320px); }
+  .plot-card.table-card { height: auto; }
+  canvas { flex: 1 1 0 !important; width: 100% !important; min-height: 0 !important; }
+  .legend { gap: 4px 8px; padding: 4px 8px; }
+  .leg-item { font-size: 0.6rem; }
+  .plot-header { flex-wrap: wrap; gap: 2px; padding: 6px 8px 2px; }
+  .plot-title { font-size: 0.75rem; }
+  .plot-sub { font-size: 0.62rem; }
+  .info-bar { flex-wrap: wrap; gap: 4px; font-size: 0.6rem; padding: 6px 10px; }
+  input[type="number"], input[type="text"], select { font-size: 16px; }
+  input[type="number"], input[type="text"] { padding: 7px 6px; }
+  .btn-compute { padding: 12px; font-size: 0.9rem; min-height: 44px; }
+  .btn-sub { padding: 10px 6px; font-size: 0.85rem; }
+  .result-box { font-size: 0.7rem; overflow: hidden; }
+  .res-val { flex: 1; min-width: 0; font-size: 0.66rem; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>部分的モデルマッチング法（北森法）シミュレータ</h1>
+  <span class="eq">1/Gyr(s) と 1/M(s) のマクローリン展開を低次から一致させる</span>
+</header>
+
+<div class="body">
+  <div class="sidebar">
+    <div class="sidebar-inner">
+
+      <!-- ================= 北森法 ================= -->
+      <div id="side-kit">
+        <div class="section">
+          <div class="sec-title">講義のプリセット</div>
+          <select id="kit_preset" onchange="applyKitPreset()">
+            <option value="custom">-- カスタム --</option>
+            <option value="p3_s1" selected>問題3: I-PD, 北森の規範モデル σ=1</option>
+            <option value="p3_s01">問題3: I-PD, 北森の規範モデル σ=0.1</option>
+            <option value="p3_bin">I-PD, 2項係数標準形 (ωn=1.5)</option>
+            <option value="p3_bw">I-PD, Butterworth標準形 (ωn=1.5)</option>
+            <option value="p2_pd">問題2: PD制御, P=b/(s(s+a)), 2次規範モデル</option>
+            <option value="ip_2nd">I-P制御, 2次規範モデル (打ち切り2次)</option>
+          </select>
+        </div>
+
+        <div class="section">
+          <div class="sec-title">制御対象 P(s) = b(s)/a(s)</div>
+          <div class="field" style="margin-bottom:5px;">
+            <label>分子係数 b(s) (高次 → 低次, 空白区切り)</label>
+            <input type="text" id="kit_num" value="1 2" onchange="markKitCustom()">
+          </div>
+          <div class="field">
+            <label>分母係数 a(s) (高次 → 低次)</label>
+            <input type="text" id="kit_den" value="1 1 1" onchange="markKitCustom()">
+          </div>
+          <div class="tf-preview" id="kit_tf_preview"></div>
+        </div>
+
+        <div class="section">
+          <div class="sec-title">制御器の構造</div>
+          <div class="radio-group">
+            <label class="radio-item"><input type="radio" name="kit_ctype" value="ipd" checked onchange="markKitCustom()"><span class="radio-label">I-PD<span class="eq">u = kI/s·e − (kP + kD s) y</span></span></label>
+            <label class="radio-item"><input type="radio" name="kit_ctype" value="ip" onchange="markKitCustom()"><span class="radio-label">I-P<span class="eq">u = kI/s·e − kP y</span></span></label>
+            <label class="radio-item"><input type="radio" name="kit_ctype" value="pd" onchange="markKitCustom()"><span class="radio-label">PD (微分先行)<span class="eq">u = kP e − kD s y</span></span></label>
+          </div>
+          <div class="note-text">I-PD は 3 次，I-P / PD は 2 次の規範モデルと低次項から係数を一致させます．PD は制御対象に積分器 (γ0 = 0) が必要です．</div>
+        </div>
+
+        <div class="section">
+          <div class="sec-title">規範モデル M(s)</div>
+          <select id="kit_model" onchange="markKitCustom(); updateModelFields();">
+            <option value="kitamori" selected>北森の規範モデル W(s): 1/(1+σs+0.5σ²s²+0.15σ³s³)</option>
+            <option value="binomial">2項係数標準形: 極 s = −ωn (重根)</option>
+            <option value="butter">Butterworth 標準形</option>
+            <option value="custom">カスタム (ωn, ζ / α1, α2)</option>
+          </select>
+          <div class="row three-col" style="margin-top:6px;">
+            <div class="field">
+              <label id="kit_wn_label">σ</label>
+              <input type="number" id="kit_wn" value="1" step="0.1" min="0.01" onchange="markKitCustom()">
+            </div>
+            <div class="field">
+              <label>ζ / α1</label>
+              <input type="number" id="kit_a1" value="2" step="0.1" min="0.01" onchange="markKitCustom()">
+            </div>
+            <div class="field">
+              <label>α2 (3次のみ)</label>
+              <input type="number" id="kit_a2" value="2" step="0.1" min="0.01" onchange="markKitCustom()">
+            </div>
+          </div>
+          <div class="tf-preview" id="kit_model_preview"></div>
+        </div>
+
+        <div class="section">
+          <div class="sec-title">分母系列の打ち切り / シミュレーション</div>
+          <div class="row three-col">
+            <div class="field">
+              <label>打ち切り次数 N</label>
+              <select id="kit_trunc" onchange="drawKitTrunc()">
+                <option value="1">1</option>
+                <option value="2" selected>2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>終了時刻 T [s]</label>
+              <input type="number" id="kit_tEnd" value="20" step="1" min="1" onchange="markKitCustom()">
+            </div>
+            <div class="field">
+              <label>刻み幅 ts [s]</label>
+              <input type="number" id="kit_ts" value="0.01" step="0.005" min="0.001" max="0.1" onchange="markKitCustom()">
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-compute" onclick="runKitamori()">&#x25B6; 北森法でゲイン設計</button>
+
+        <div class="section">
+          <div class="sec-title">設計結果</div>
+          <div id="kit_result" class="result-box"><div style="color:#5b7184;">「北森法でゲイン設計」を押してください</div></div>
+          <div id="kit_error" class="error-msg"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- ================= 北森法 表示 ================= -->
+    <div class="mode-view active" id="view-kit">
+      <div class="plots-row">
+        <div class="plot-card">
+          <div class="plot-header">
+            <span class="plot-title">閉ループ系と規範モデルのステップ応答</span>
+            <select id="kit_resp_mode" onchange="drawKitResponse()">
+              <option value="y" selected>出力 y(t) と yM(t)</option>
+              <option value="u">操作量 u(t)</option>
+            </select>
+          </div>
+          <div class="legend" id="kit_resp_legend"></div>
+          <canvas id="kitRespCanvas"></canvas>
+        </div>
+        <div class="plot-card">
+          <div class="plot-header">
+            <span class="plot-title">分母系列表現の有限打ち切り</span>
+            <span class="plot-sub" id="kit_trunc_sub">P(s) と 1/γN(s) のステップ応答</span>
+          </div>
+          <div class="legend">
+            <div class="leg-item"><div class="leg-line" style="background:#dc2626;"></div> P(s)</div>
+            <div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> 1/(γ0 + γ1 s + … + γN s^N)</div>
+          </div>
+          <canvas id="kitTruncCanvas"></canvas>
+        </div>
+      </div>
+      <div class="plots-row">
+        <div class="plot-card table-card">
+          <div class="plot-header">
+            <span class="plot-title">マクローリン展開の係数比較</span>
+            <span class="plot-sub">1/Gyr(s) と 1/M(s) を低次から一致させる</span>
+          </div>
+          <div class="table-wrap" id="kit_table"></div>
+        </div>
+        <div class="plot-card">
+          <div class="plot-header">
+            <span class="plot-title">ゲイン線図</span>
+            <span class="plot-sub">|Gyr(jω)| と |M(jω)|</span>
+          </div>
+          <div class="legend">
+            <div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> Gyr(s)</div>
+            <div class="leg-item"><div class="leg-line dashed" style="border-color:#dc2626;"></div> M(s)</div>
+            <div class="leg-item"><div class="leg-line dotted" style="border-color:#94a3b8;"></div> P(s)</div>
+          </div>
+          <canvas id="kitBodeCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="info-bar">
+  <span>制御系設計論 ④ PIDゲインのチューニング (北森法) &nbsp;|&nbsp; 時間応答は双一次変換による離散化で計算</span>
+  <span id="ctrl-info"></span>
+</div>
+
+<script>
+// =========================================================
+// 共通ユーティリティ
+// =========================================================
+function $(id) { return document.getElementById(id); }
+function fN(v, n) { if (v === undefined || v === null || !isFinite(v)) return '---'; return v.toFixed(n === undefined ? 3 : n); }
+function fG(v) { if (!isFinite(v)) return '---'; var a = Math.abs(v); if (a !== 0 && (a < 1e-3 || a >= 1e5)) return v.toExponential(3); return fN(v, 4); }
+
+// 複素数
+function cAdd(a, b) { return [a[0] + b[0], a[1] + b[1]]; }
+function cSub(a, b) { return [a[0] - b[0], a[1] - b[1]]; }
+function cMul(a, b) { return [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]]; }
+function cDiv(a, b) { var d = b[0] * b[0] + b[1] * b[1]; return [(a[0] * b[0] + a[1] * b[1]) / d, (a[1] * b[0] - a[0] * b[1]) / d]; }
+function cAbs(a) { return Math.hypot(a[0], a[1]); }
+
+// 多項式 (係数は低次から: p[i] は s^i の係数)
+function pMul(p, q) { var r = new Array(p.length + q.length - 1).fill(0); for (var i = 0; i < p.length; i++) for (var j = 0; j < q.length; j++) r[i + j] += p[i] * q[j]; return r; }
+function pAdd(p, q) { var n = Math.max(p.length, q.length), r = []; for (var i = 0; i < n; i++) r.push((p[i] || 0) + (q[i] || 0)); return r; }
+function pScale(p, c) { return p.map(function(v) { return v * c; }); }
+function pTrim(p) { var r = p.slice(); while (r.length > 1 && Math.abs(r[r.length - 1]) < 1e-12) r.pop(); return r; }
+function pPow(p, n) { var r = [1]; for (var i = 0; i < n; i++) r = pMul(r, p); return r; }
+function pEvalC(p, s) { var r = [0, 0]; for (var i = p.length - 1; i >= 0; i--) r = cAdd(cMul(r, s), [p[i], 0]); return r; }
+function pRoots(p) {
+  p = pTrim(p); var n = p.length - 1; if (n < 1) return [];
+  var a = p.map(function(c) { return c / p[n]; });
+  var roots = [], radius = 1 + Math.max.apply(null, a.slice(0, n).map(Math.abs));
+  for (var i = 0; i < n; i++) { var ang = 2 * Math.PI * i / n + 0.4; roots.push([radius * Math.cos(ang), radius * Math.sin(ang)]); }
+  for (var it = 0; it < 500; it++) {
+    var maxDelta = 0;
+    for (var i = 0; i < n; i++) {
+      var num = pEvalC(a, roots[i]), den = [1, 0];
+      for (var j = 0; j < n; j++) if (j !== i) den = cMul(den, cSub(roots[i], roots[j]));
+      if (cAbs(den) < 1e-300) den = [1e-300, 0];
+      var delta = cDiv(num, den); roots[i] = cSub(roots[i], delta);
+      if (cAbs(delta) > maxDelta) maxDelta = cAbs(delta);
+    }
+    if (maxDelta < 1e-13) break;
+  }
+  return roots.map(function(r) { return [r[0], Math.abs(r[1]) < 1e-7 ? 0 : r[1]]; });
+}
+function isStable(den) { return pRoots(den).every(function(r) { return r[0] < -1e-9; }); }
+
+// 伝達関数 {num, den} (低次から)
+function tfMul(a, b) { return { num: pMul(a.num, b.num), den: pMul(a.den, b.den) }; }
+function tfDiv(a, b) { return { num: pMul(a.num, b.den), den: pMul(a.den, b.num) }; }
+function tfAdd(a, b) { return { num: pAdd(pMul(a.num, b.den), pMul(b.num, a.den)), den: pMul(a.den, b.den) }; }
+function tfFeedback(L) { return { num: L.num, den: pAdd(L.den, L.num) }; }   // L/(1+L)
+function tfNormalize(t) { var n = pTrim(t.num), d = pTrim(t.den), c = d[d.length - 1]; return { num: pScale(n, 1 / c), den: pScale(d, 1 / c) }; }
+function tfDC(t) { return t.num[0] / t.den[0]; }
+function freqMag(t, w) { var s = [0, w]; return cAbs(cDiv(pEvalC(t.num, s), pEvalC(t.den, s))); }
+
+// 係数列テキスト "1 2 3" (高次→低次) → 低次からの配列
+function parseCoefs(str) {
+  var arr = str.trim().split(/[\s,]+/).filter(function(x) { return x.length; }).map(Number);
+  if (arr.length === 0 || arr.some(function(v) { return !isFinite(v); })) return null;
+  return pTrim(arr.reverse());
+}
+function polyStr(p, v) {
+  v = v || 's'; var terms = [];
+  for (var i = p.length - 1; i >= 0; i--) {
+    var c = p[i]; if (Math.abs(c) < 1e-12) continue;
+    var cs = (Math.abs(Math.abs(c) - 1) < 1e-12 && i > 0) ? '' : fG(Math.abs(c));
+    var pw = i === 0 ? '' : (i === 1 ? v : v + '^' + i);
+    terms.push((c < 0 ? '− ' : (terms.length ? '+ ' : '')) + cs + pw);
+  }
+  return terms.length ? terms.join(' ') : '0';
+}
+function tfStr(t) { return '(' + polyStr(t.num) + ') / (' + polyStr(t.den) + ')'; }
+
+// マクローリン展開 (分母系列): 1/P = den/num = γ0 + γ1 s + ...  (num[0] ≠ 0 が必要)
+function seriesDiv(num, den, nTerms) {   // den/num の級数
+  if (Math.abs(num[0]) < 1e-14) return null;
+  var g = [];
+  for (var k = 0; k < nTerms; k++) {
+    var v = den[k] || 0;
+    for (var j = 1; j <= k; j++) v -= (num[j] || 0) * g[k - j];
+    g.push(v / num[0]);
+  }
+  return g;
+}
+
+// 双一次変換による時間応答 (proper な伝達関数)
+function tfToDiscrete(t, ts) {
+  var num = pTrim(t.num), den = pTrim(t.den);
+  var N = Math.max(num.length, den.length) - 1;
+  var a = 2 / ts;
+  // Σ p_i a^i (z-1)^i (z+1)^(N-i)  → 多項式 in z (低次から)
+  function conv(p) {
+    var r = new Array(N + 1).fill(0);
+    for (var i = 0; i < p.length; i++) {
+      if (p[i] === 0) continue;
+      var term = pScale(pMul(pPow([-1, 1], i), pPow([1, 1], N - i)), p[i] * Math.pow(a, i));
+      r = pAdd(r, term);
+    }
+    return r;
+  }
+  var bz = conv(num), az = conv(den);
+  // z^N で割って z^-1 の多項式: b[j] は z^-j の係数
+  var b = [], ac = [];
+  for (var j = 0; j <= N; j++) { b.push(bz[N - j]); ac.push(az[N - j]); }
+  var a0 = ac[0];
+  return { b: b.map(function(v) { return v / a0; }), a: ac.map(function(v) { return v / a0; }), N: N };
+}
+function lsim(t, uArr, ts) {
+  if (pTrim(t.num).length > pTrim(t.den).length) return null;   // improper
+  var d = tfToDiscrete(t, ts), N = d.N, n = uArr.length;
+  var y = new Float64Array(n);
+  for (var k = 0; k < n; k++) {
+    var v = 0;
+    for (var j = 0; j <= N; j++) {
+      if (k - j < 0) break;
+      v += d.b[j] * uArr[k - j];
+      if (j > 0) v -= d.a[j] * y[k - j];
+    }
+    y[k] = v;
+    if (!isFinite(v) || Math.abs(v) > 1e9) { for (var q = k; q < n; q++) y[q] = NaN; break; }
+  }
+  return y;
+}
+function stepInput(n, amp) { var u = new Float64Array(n); for (var i = 0; i < n; i++) u[i] = amp; return u; }
+function timeAxis(tEnd, ts) { var n = Math.floor(tEnd / ts) + 1, t = new Float64Array(n); for (var i = 0; i < n; i++) t[i] = i * ts; return t; }
+function logspace(a, b, n) { var r = []; for (var i = 0; i < n; i++) r.push(Math.pow(10, a + (b - a) * i / (n - 1))); return r; }
+function overshoot(y, yss) { var m = -Infinity; for (var i = 0; i < y.length; i++) if (isFinite(y[i]) && y[i] > m) m = y[i]; return Math.max(0, (m - yss) / Math.abs(yss) * 100); }
+function settleTime(t, y, yss, tol) {
+  tol = tol || 0.02; var thr = Math.max(tol * Math.abs(yss), 1e-9);
+  for (var i = y.length - 1; i >= 0; i--) { if (!isFinite(y[i]) || Math.abs(y[i] - yss) > thr) return (i + 1 < y.length) ? t[i + 1] : NaN; }
+  return 0;
+}
+
+// =========================================================
+// 描画共通
+// =========================================================
+function setupCanvas(id) {
+  var canvas = $(id), par = canvas.parentElement;
+  var legendH = par.querySelector('.legend') ? par.querySelector('.legend').offsetHeight : 0;
+  var headerH = par.querySelector('.plot-header') ? par.querySelector('.plot-header').offsetHeight : 0;
+  var W = par.clientWidth, H = par.clientHeight - legendH - headerH - 4;
+  canvas.width = Math.max(W, 10); canvas.height = Math.max(H, 100);
+  return { ctx: canvas.getContext('2d'), W: canvas.width, H: canvas.height };
+}
+function linePlot(id, series, opts) {
+  // series: [{x:Float64Array, y:Float64Array, color, width, dash}] ; opts: {xLabel, yLabel, xMax, yClamp:[min,max], logY}
+  var c = setupCanvas(id), ctx = c.ctx, W = c.W, H = c.H;
+  ctx.clearRect(0, 0, W, H);
+  var valid = series.filter(function(s) { return s && s.y && s.y.length; });
+  if (!valid.length) { ctx.fillStyle = '#94a3b8'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(opts.empty || 'データなし', W / 2, H / 2); return; }
+  var xMax = opts.xMax || 0, yMax = -Infinity, yMin = Infinity;
+  valid.forEach(function(s) {
+    if (!opts.xMax) xMax = Math.max(xMax, s.x[s.x.length - 1]);
+    for (var i = 0; i < s.y.length; i++) { var v = s.y[i]; if (!isFinite(v)) continue; if (opts.logY) { if (v <= 0) continue; v = Math.log10(v); } if (v > yMax) yMax = v; if (v < yMin) yMin = v; }
+  });
+  if (!isFinite(yMax)) { yMax = 1; yMin = 0; }
+  if (opts.yClamp) { yMax = Math.min(yMax, opts.yClamp[1]); yMin = Math.max(yMin, opts.yClamp[0]); }
+  var margin = Math.max((yMax - yMin) * 0.12, opts.logY ? 0.2 : 0.05);
+  yMax += margin; yMin -= margin;
+  if (!opts.logY) { if (yMin > -margin) yMin = -margin; if (yMax < margin) yMax = margin; }
+  var mob = W < 500, pad = mob ? { l: 40, r: 10, t: 10, b: 26 } : { l: 54, r: 16, t: 12, b: 30 };
+  var pw = W - pad.l - pad.r, ph = H - pad.t - pad.b, fs = mob ? 8 : 10;
+  var xMin = opts.xMin || 0;
+  var toX = function(x) { return pad.l + (x - xMin) / (xMax - xMin) * pw; };
+  var toY = function(v) { return pad.t + (1 - (v - yMin) / (yMax - yMin)) * ph; };
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+  for (var i = 0; i <= 4; i++) { var gy = pad.t + i * ph / 4; ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(W - pad.r, gy); ctx.stroke(); }
+  for (var i = 0; i <= 5; i++) { var gx = pad.l + i * pw / 5; ctx.beginPath(); ctx.moveTo(gx, pad.t); ctx.lineTo(gx, pad.t + ph); ctx.stroke(); }
+  ctx.strokeStyle = '#d4dde6'; ctx.strokeRect(pad.l, pad.t, pw, ph);
+  if (!opts.logY && yMin < 0 && yMax > 0) { ctx.strokeStyle = '#94a3b8'; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(pad.l, toY(0)); ctx.lineTo(W - pad.r, toY(0)); ctx.stroke(); ctx.setLineDash([]); }
+  (opts.hlines || []).forEach(function(h) { ctx.strokeStyle = h.color; ctx.lineWidth = 1.2; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(pad.l, toY(h.y)); ctx.lineTo(W - pad.r, toY(h.y)); ctx.stroke(); ctx.setLineDash([]); });
+  ctx.fillStyle = '#5b7184'; ctx.font = fs + 'px monospace'; ctx.textAlign = 'center';
+  for (var i = 0; i <= 5; i++) ctx.fillText((xMin + i * (xMax - xMin) / 5).toFixed(opts.xInt ? 0 : 1), pad.l + i * pw / 5, H - pad.b + 14);
+  ctx.textAlign = 'right';
+  for (var i = 0; i <= 4; i++) { var v = yMax - i * (yMax - yMin) / 4; ctx.fillText(opts.logY ? ('1e' + v.toFixed(1)) : v.toFixed(2), pad.l - 4, pad.t + i * ph / 4 + 4); }
+  ctx.textAlign = 'right'; ctx.fillText(opts.xLabel || 't [s]', W - pad.r - 4, pad.t + ph - 6);
+  ctx.textAlign = 'left'; ctx.fillText(opts.yLabel || '', pad.l + 4, pad.t + 12);
+  valid.forEach(function(s) {
+    ctx.strokeStyle = s.color; ctx.lineWidth = s.width || 2; ctx.setLineDash(s.dash || []); ctx.beginPath();
+    var started = false;
+    for (var i = 0; i < s.y.length; i++) {
+      var v = s.y[i]; if (!isFinite(v) || (opts.logY && v <= 0)) { started = false; continue; }
+      if (opts.logY) v = Math.log10(v);
+      var px = toX(s.x[i]), py = Math.max(pad.t - 2, Math.min(pad.t + ph + 2, toY(v)));
+      if (px > W - pad.r + 1) break;
+      if (!started) { ctx.moveTo(px, py); started = true; } else ctx.lineTo(px, py);
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+  });
+}
+function bodePlot(id, series) {
+  var c = setupCanvas(id), ctx = c.ctx, W = c.W, H = c.H;
+  ctx.clearRect(0, 0, W, H);
+  var valid = series.filter(function(s) { return s && s.tf; });
+  if (!valid.length) return;
+  var wMin = -2, wMax = 2, nW = 300, wl = logspace(wMin, wMax, nW), gMax = -Infinity, gMin = Infinity, curves = [];
+  valid.forEach(function(s) {
+    var g = wl.map(function(w) { return 20 * Math.log10(Math.max(freqMag(s.tf, w), 1e-12)); });
+    g.forEach(function(v) { if (v > gMax) gMax = v; if (v < gMin) gMin = v; });
+    curves.push({ g: g, color: s.color, width: s.width || 2, dash: s.dash || [] });
+  });
+  gMax = Math.min(Math.ceil((gMax + 5) / 10) * 10, 80); gMin = Math.max(Math.floor((gMin - 5) / 10) * 10, gMax - 100); if (gMax < 10) gMax = 10;
+  var mob = W < 500, pad = mob ? { l: 40, r: 10, t: 10, b: 26 } : { l: 54, r: 16, t: 12, b: 30 };
+  var pw = W - pad.l - pad.r, ph = H - pad.t - pad.b, fs = mob ? 8 : 10;
+  var toX = function(lw) { return pad.l + (lw - wMin) / (wMax - wMin) * pw; };
+  var toY = function(db) { return pad.t + (1 - (db - gMin) / (gMax - gMin)) * ph; };
+  ctx.lineWidth = 1;
+  for (var dec = wMin; dec <= wMax; dec++) for (var k = 1; k < 10; k++) { var lw = dec + Math.log10(k); if (lw > wMax) break; ctx.strokeStyle = k === 1 ? '#cbd5e1' : '#eef2f6'; ctx.beginPath(); ctx.moveTo(toX(lw), pad.t); ctx.lineTo(toX(lw), pad.t + ph); ctx.stroke(); }
+  var dbStep = (gMax - gMin) > 60 ? 20 : 10; ctx.strokeStyle = '#e2e8f0';
+  for (var db = gMin; db <= gMax; db += dbStep) { ctx.beginPath(); ctx.moveTo(pad.l, toY(db)); ctx.lineTo(W - pad.r, toY(db)); ctx.stroke(); }
+  ctx.strokeStyle = '#d4dde6'; ctx.strokeRect(pad.l, pad.t, pw, ph);
+  if (gMin < 0 && gMax > 0) { ctx.strokeStyle = '#1f2d3a'; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(pad.l, toY(0)); ctx.lineTo(W - pad.r, toY(0)); ctx.stroke(); ctx.setLineDash([]); }
+  ctx.fillStyle = '#5b7184'; ctx.font = fs + 'px monospace'; ctx.textAlign = 'center';
+  for (var dec = wMin; dec <= wMax; dec++) ctx.fillText('10^' + dec, toX(dec), H - pad.b + 14);
+  ctx.textAlign = 'right'; for (var db = gMin; db <= gMax; db += dbStep) ctx.fillText(db, pad.l - 4, toY(db) + 4);
+  ctx.fillText('ω [rad/s]', W - pad.r - 4, pad.t + ph - 6);
+  ctx.textAlign = 'left'; ctx.fillText('[dB]', pad.l + 4, pad.t + 12);
+  curves.forEach(function(cv) {
+    ctx.strokeStyle = cv.color; ctx.lineWidth = cv.width; ctx.setLineDash(cv.dash); ctx.beginPath();
+    for (var i = 0; i < nW; i++) { var px = toX(Math.log10(wl[i])), py = Math.max(pad.t - 2, Math.min(pad.t + ph + 2, toY(cv.g[i]))); i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py); }
+    ctx.stroke(); ctx.setLineDash([]);
+  });
+}
+
+function redrawAll() { drawKitResponse(); drawKitTrunc(); drawKitBode(); }
+
+// =========================================================
+// 北森法 (部分的モデルマッチング)
+// =========================================================
+var kit = null;   // 設計結果
+
+var KIT_PRESETS = {
+  p3_s1:  { num: '1 2', den: '1 1 1', ctype: 'ipd', model: 'kitamori', wn: 1, a1: 2, a2: 2, tEnd: 20 },
+  p3_s01: { num: '1 2', den: '1 1 1', ctype: 'ipd', model: 'kitamori', wn: 0.1, a1: 2, a2: 2, tEnd: 20 },
+  p3_bin: { num: '1 2', den: '1 1 1', ctype: 'ipd', model: 'binomial', wn: 1.5, a1: 3, a2: 3, tEnd: 20 },
+  p3_bw:  { num: '1 2', den: '1 1 1', ctype: 'ipd', model: 'butter', wn: 1.5, a1: 2, a2: 2, tEnd: 20 },
+  p2_pd:  { num: '1', den: '1 1 0', ctype: 'pd', model: 'butter', wn: 2, a1: 0.707, a2: 2, tEnd: 10 },
+  ip_2nd: { num: '1 2', den: '1 1 1', ctype: 'ip', model: 'kitamori', wn: 1, a1: 2, a2: 2, tEnd: 20 }
+};
+function applyKitPreset() {
+  var key = $('kit_preset').value, p = KIT_PRESETS[key];
+  if (!p) return;
+  $('kit_num').value = p.num; $('kit_den').value = p.den;
+  document.querySelector('input[name="kit_ctype"][value="' + p.ctype + '"]').checked = true;
+  $('kit_model').value = p.model; $('kit_wn').value = p.wn; $('kit_a1').value = p.a1; $('kit_a2').value = p.a2; $('kit_tEnd').value = p.tEnd;
+  updateModelFields();
+  runKitamori();
+}
+function markKitCustom() { $('kit_preset').value = 'custom'; updateModelFields(); }
+function kitCtype() { return document.querySelector('input[name="kit_ctype"]:checked').value; }
+function updateModelFields() {
+  var m = $('kit_model').value, ord = kitCtype() === 'ipd' ? 3 : 2;
+  $('kit_wn_label').textContent = m === 'kitamori' ? 'σ' : 'ωn [rad/s]';
+  $('kit_a1').disabled = (m !== 'custom'); $('kit_a2').disabled = (m !== 'custom' || ord !== 3);
+  if (m === 'binomial') { $('kit_a1').value = ord === 3 ? 3 : 1; $('kit_a2').value = 3; }
+  if (m === 'butter') { $('kit_a1').value = ord === 3 ? 2 : 0.707; $('kit_a2').value = 2; }
+  // プレビュー
+  var P = parsePlant('kit');
+  $('kit_tf_preview').textContent = P ? 'P(s) = ' + tfStr(P) : 'P(s): 係数が不正です';
+  var mc = refModelCoefs(ord);
+  $('kit_model_preview').textContent = mc ? '1/M(s) = ' + polyStr(mc) : '';
+}
+function parsePlant(prefix) {
+  var num = parseCoefs($(prefix + '_num').value), den = parseCoefs($(prefix + '_den').value);
+  if (!num || !den || den.length < 2 || num.length > den.length) return null;
+  return { num: num, den: den };
+}
+// 規範モデルの分母係数 [1, m1, m2, (m3)]
+function refModelCoefs(ord) {
+  var m = $('kit_model').value, w = +$('kit_wn').value;
+  if (!(w > 0)) return null;
+  if (m === 'kitamori') {
+    return ord === 3 ? [1, w, 0.5 * w * w, 0.15 * w * w * w] : [1, w, 0.5 * w * w];
+  }
+  var a1 = +$('kit_a1').value, a2 = +$('kit_a2').value;
+  if (m === 'binomial') { a1 = ord === 3 ? 3 : 1; a2 = 3; }
+  if (m === 'butter') { a1 = ord === 3 ? 2 : Math.SQRT1_2; a2 = 2; }
+  if (ord === 3) return [1, a1 / w, a2 / (w * w), 1 / (w * w * w)];
+  return [1, 2 * a1 / w, 1 / (w * w)];   // a1 = ζ
+}
+
+function runKitamori() {
+  var err = $('kit_error'); err.textContent = '';
+  var P = parsePlant('kit');
+  if (!P) { err.textContent = '制御対象の係数が不正です (分子次数 ≤ 分母次数，分母は 1 次以上)'; return; }
+  var ctype = kitCtype(), ord = ctype === 'ipd' ? 3 : 2;
+  var mc = refModelCoefs(ord);
+  if (!mc) { err.textContent = '規範モデルのパラメータが不正です'; return; }
+  var gamma = seriesDiv(P.num, P.den, 6);
+  if (!gamma) { err.textContent = 'P(0) が 0 (原点に零点) のため分母系列表現ができません'; return; }
+  var kp = 0, ki = 0, kd = 0, note = '';
+  if (ctype === 'ipd') {
+    ki = gamma[2] / mc[3]; kp = ki * mc[1] - gamma[0]; kd = ki * mc[2] - gamma[1];
+  } else if (ctype === 'ip') {
+    ki = gamma[1] / mc[2]; kp = ki * mc[1] - gamma[0]; kd = 0;
+  } else {
+    if (Math.abs(gamma[0]) > 1e-9) note = 'γ0 ≠ 0 (積分器なし) のため PD では定常偏差が残り，0 次の項が一致しません．';
+    kp = gamma[2] / mc[2]; kd = kp * mc[1] - gamma[1]; ki = 0;
+  }
+  // 閉ループ伝達関数  u = Kr r − Ky y
+  var Kr, Ky;
+  if (ctype === 'pd') { Kr = { num: [kp], den: [1] }; Ky = { num: [kp, kd], den: [1] }; }
+  else { Kr = { num: [ki], den: [0, 1] }; Ky = { num: [ki, kp, kd], den: [0, 1] }; }
+  // Gyr = P Kr / (1 + P Ky) ;  共通分母 Dc = Ky.den (= Kr.den)
+  var Dc = Ky.den;
+  var charPoly = pAdd(pMul(P.den, Dc), pMul(P.num, Ky.num));
+  var Gyr = tfNormalize({ num: pMul(P.num, Kr.num), den: charPoly });
+  var Gur = tfNormalize({ num: pMul(P.den, Kr.num), den: charPoly });   // r → u
+  var M = { num: [1], den: mc };
+  var invG = seriesDiv(Gyr.num, Gyr.den, 6);   // 1/Gyr の係数
+  var tEnd = +$('kit_tEnd').value, ts = +$('kit_ts').value;
+  var t = timeAxis(tEnd, ts), r = stepInput(t.length, 1);
+  var y = lsim(Gyr, r, ts), yM = lsim(M, r, ts), u = lsim(Gur, r, ts);
+  var stable = isStable(Gyr.den);
+  kit = { P: P, ctype: ctype, ord: ord, mc: mc, gamma: gamma, kp: kp, ki: ki, kd: kd, Gyr: Gyr, Gur: Gur, M: M, invG: invG, t: t, y: y, yM: yM, u: u, stable: stable, note: note, ts: ts };
+  updateKitResults();
+  updateKitTable();
+  drawKitResponse(); drawKitTrunc(); drawKitBode();
+  $('ctrl-info').textContent = '北森法: ' + ctype.toUpperCase() + ' kP=' + fN(kp, 4) + ' kI=' + fN(ki, 4) + ' kD=' + fN(kd, 4);
+}
+function updateKitResults() {
+  var k = kit, h = '';
+  var cname = k.ctype === 'ipd' ? 'I-PD' : (k.ctype === 'ip' ? 'I-P' : 'PD');
+  h += '<div class="res-row"><span class="res-key">構造</span><span class="res-val">' + cname + ' 制御 (' + k.ord + '次規範モデル)</span></div>';
+  h += '<div class="res-row"><span class="res-key">安定性</span><span class="res-val"><span class="badge ' + (k.stable ? 'stab' : 'unstab') + '">' + (k.stable ? '内部安定' : '不安定') + '</span></span></div>';
+  h += '<hr class="res-sep"><div class="res-head">1/P(s) の分母系列 γ</div>';
+  for (var i = 0; i < 4; i++) h += '<div class="res-row"><span class="res-key">γ' + i + '</span><span class="res-val">' + fG(k.gamma[i]) + '</span></div>';
+  h += '<hr class="res-sep"><div class="res-head">設計したゲイン</div>';
+  h += '<div class="res-row"><span class="res-key">kP</span><span class="res-val ' + (k.kp < 0 ? 'warn' : '') + '">' + fG(k.kp) + '</span></div>';
+  if (k.ctype !== 'pd') h += '<div class="res-row"><span class="res-key">kI</span><span class="res-val ' + (k.ki < 0 ? 'warn' : '') + '">' + fG(k.ki) + '</span></div>';
+  if (k.ctype !== 'ip') h += '<div class="res-row"><span class="res-key">kD</span><span class="res-val ' + (k.kd < 0 ? 'warn' : '') + '">' + fG(k.kd) + '</span></div>';
+  if (k.ctype === 'ipd') h += '<div class="note-text" style="margin-top:4px;">kI = γ2/m3, kP = kI·m1 − γ0, kD = kI·m2 − γ1</div>';
+  if (k.ctype === 'ip') h += '<div class="note-text" style="margin-top:4px;">kI = γ1/m2, kP = kI·m1 − γ0</div>';
+  if (k.ctype === 'pd') h += '<div class="note-text" style="margin-top:4px;">kP = γ2/m2, kD = kP·m1 − γ1</div>';
+  if (k.kp < 0 || k.ki < 0 || k.kd < 0) h += '<div class="res-row"><span class="res-val warn">負のゲインが出ました．規範モデルが制御対象に対して速すぎる/遅すぎる可能性があります．</span></div>';
+  if (k.note) h += '<div class="res-row"><span class="res-val warn">' + k.note + '</span></div>';
+  h += '<hr class="res-sep"><div class="res-head">ステップ応答の比較</div>';
+  var yss = tfDC(k.Gyr), yMss = tfDC(k.M);
+  h += '<div class="res-row"><span class="res-key">定常値 y∞ / yM∞</span><span class="res-val">' + fN(yss, 3) + ' / ' + fN(yMss, 3) + '</span></div>';
+  h += '<div class="res-row"><span class="res-key">オーバーシュート y / yM</span><span class="res-val">' + fN(overshoot(k.y, yss), 1) + ' % / ' + fN(overshoot(k.yM, yMss), 1) + ' %</span></div>';
+  h += '<div class="res-row"><span class="res-key">整定時間 (±2%) y / yM</span><span class="res-val">' + fN(settleTime(k.t, k.y, yss), 2) + ' / ' + fN(settleTime(k.t, k.yM, yMss), 2) + ' s</span></div>';
+  h += '<hr class="res-sep"><div class="res-head">Gyr(s) の極</div>';
+  pRoots(k.Gyr.den).forEach(function(r) { h += '<div class="res-row"><span class="res-key"></span><span class="res-val ' + (r[0] < 0 ? 'stable' : 'unstable') + '">' + fN(r[0], 3) + (r[1] !== 0 ? (r[1] > 0 ? ' + ' : ' − ') + fN(Math.abs(r[1]), 3) + 'j' : '') + '</span></div>'; });
+  $('kit_result').innerHTML = h;
+}
+function updateKitTable() {
+  var k = kit, nMatch = k.ord;   // 一致させる最高次
+  var h = '<table class="coef"><tr><th>次数</th><th>1/P(s): γ</th><th>1/Gyr(s)</th><th>1/M(s)</th><th>判定</th></tr>';
+  for (var i = 0; i < 6; i++) {
+    var g = k.invG ? k.invG[i] : NaN, m = i < k.mc.length ? k.mc[i] : 0;
+    var cls, txt;
+    if (i <= nMatch) { var ok = Math.abs(g - m) < 1e-6 * Math.max(1, Math.abs(m)); cls = ok ? 'match' : 'miss'; txt = ok ? '一致' : '不一致'; }
+    else { cls = 'free'; txt = i < k.mc.length ? '(未使用)' : '(M は 0)'; }
+    h += '<tr><td>s^' + i + '</td><td>' + fG(k.gamma[i]) + '</td><td>' + fG(g) + '</td><td>' + fG(m) + '</td><td class="' + cls + '">' + txt + '</td></tr>';
+  }
+  h += '</table>';
+  var cname = k.ctype === 'ipd' ? 'I-PD' : (k.ctype === 'ip' ? 'I-P' : 'PD');
+  h += '<div class="table-note">' + cname + ' 制御では <code>1/Gyr(s)</code> の s^0 〜 s^' + nMatch + ' の係数を規範モデル <code>1/M(s)</code> に一致させます．s^' + (nMatch + 1) + ' 以上の項は一致せず，これが応答の差 (主に減衰特性) として現れます．' +
+       (k.ctype === 'ipd' ? ' <br>1/Gyr = 1 + (kP + γ0)/kI · s + (kD + γ1)/kI · s² + γ2/kI · s³ + γ3/kI · s⁴ + …' : '') + '</div>';
+  $('kit_table').innerHTML = h;
+}
+function drawKitResponse() {
+  var m = $('kit_resp_mode').value, leg = $('kit_resp_legend');
+  if (m === 'y') leg.innerHTML = '<div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> y(t): 閉ループ系 Gyr</div><div class="leg-item"><div class="leg-line dashed" style="border-color:#dc2626;"></div> yM(t): 規範モデル M</div>';
+  else leg.innerHTML = '<div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> u(t)</div>';
+  if (!kit) { linePlot('kitRespCanvas', [], { empty: '設計を実行してください' }); return; }
+  if (m === 'y') linePlot('kitRespCanvas', [{ x: kit.t, y: kit.yM, color: '#dc2626', width: 2, dash: [6, 4] }, { x: kit.t, y: kit.y, color: '#2e7dd1', width: 2.2 }], { yLabel: 'y(t)', yClamp: [-2, 4] });
+  else linePlot('kitRespCanvas', [{ x: kit.t, y: kit.u, color: '#2e7dd1', width: 2.2 }], { yLabel: 'u(t)' });
+}
+function drawKitTrunc() {
+  var N = +$('kit_trunc').value;
+  var P = parsePlant('kit');
+  if (!P) { linePlot('kitTruncCanvas', [], { empty: '制御対象が不正です' }); return; }
+  var g = seriesDiv(P.num, P.den, N + 1);
+  var tEnd = +$('kit_tEnd').value, ts = +$('kit_ts').value, t = timeAxis(tEnd, ts), r = stepInput(t.length, 1);
+  var yP = lsim(P, r, ts);
+  var series = [{ x: t, y: yP, color: '#dc2626', width: 2 }];
+  var sub = 'N = ' + N;
+  if (g) {
+    var gN = pTrim(g.slice(0, N + 1));
+    var approx = { num: [1], den: gN };
+    var yA = lsim(approx, r, ts);
+    series.push({ x: t, y: yA, color: '#2e7dd1', width: 2.2 });
+    sub += ':  1/(' + polyStr(gN) + ')' + (isStable(gN) ? '' : '  [不安定]');
+  } else sub += ': P(0)=0 のため展開不可';
+  $('kit_trunc_sub').textContent = sub;
+  linePlot('kitTruncCanvas', series, { yLabel: 'y(t)', yClamp: [-3, 6] });
+}
+function drawKitBode() {
+  if (!kit) { setupCanvas('kitBodeCanvas'); return; }
+  bodePlot('kitBodeCanvas', [{ tf: kit.P, color: '#94a3b8', width: 1.5, dash: [2, 3] }, { tf: kit.M, color: '#dc2626', width: 2, dash: [6, 4] }, { tf: kit.Gyr, color: '#2e7dd1', width: 2.2 }]);
+}
+
+// =========================================================
+// 初期化
+// =========================================================
+var resizeTimer;
+window.addEventListener('resize', function() { clearTimeout(resizeTimer); resizeTimer = setTimeout(redrawAll, 80); });
+updateModelFields();
+applyKitPreset();
+</script>
+</body>
+</html>

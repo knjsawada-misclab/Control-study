@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>マスバネダンパ系のPID制御シミュレータ</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+  background: #eef2f6;
+  color: #1f2d3a;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+header {
+  background: #ffffff;
+  border-bottom: 1px solid #d4dde6;
+  padding: 10px 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-shrink: 0;
+}
+header h1 { font-size: 1rem; font-weight: 600; color: #2e7dd1; }
+header .eq { font-size: 0.78rem; color: #5b7184; font-family: 'Courier New', monospace; }
+
+.body { display: flex; flex: 1; overflow: hidden; }
+
+.sidebar {
+  width: 330px;
+  background: #ffffff;
+  border-right: 1px solid #d4dde6;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.sidebar-inner { padding: 12px; flex: 1; }
+
+.section { margin-bottom: 14px; }
+.sec-title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #2e7dd1;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+input[type="number"], select {
+  background: #f1f5f9;
+  border: 1px solid #d4dde6;
+  color: #1f2d3a;
+  padding: 5px 6px;
+  border-radius: 5px;
+  width: 100%;
+  font-size: 0.82rem;
+  font-family: 'Courier New', monospace;
+  transition: border-color 0.15s;
+}
+input[type="number"] { text-align: center; min-width: 0; }
+select { min-width: 0; }
+input[type="number"]:focus, select:focus { outline: none; border-color: #2e7dd1; }
+input[type="number"]:disabled { color: #94a3b8; background: #f8fafc; }
+
+.row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin-bottom: 6px; }
+.row.three-col { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.field { min-width: 0; }
+.field label { display: block; font-size: 0.7rem; color: #5b7184; margin-bottom: 3px; }
+
+.note-text { font-size: 0.68rem; color: #5b7184; margin-top: 2px; margin-bottom: 6px; font-style: italic; line-height: 1.4; }
+
+.radio-group { margin-bottom: 6px; }
+.radio-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  margin-bottom: 2px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.radio-item:hover { background: #f1f5f9; }
+.radio-item input[type="radio"] {
+  width: 15px; height: 15px; cursor: pointer; accent-color: #2e7dd1; flex-shrink: 0;
+}
+.radio-label { font-size: 0.78rem; color: #1f2d3a; }
+.radio-label .eq { font-family: 'Courier New', monospace; font-size: 0.7rem; color: #5b7184; margin-left: 4px; }
+
+.btn-compute {
+  width: 100%;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 8px;
+}
+.btn-compute:hover { background: #15803d; }
+.btn-compute:active { background: #166534; }
+
+.btn-row { display: flex; gap: 5px; margin-bottom: 12px; }
+.btn-sub {
+  flex: 1;
+  min-width: 0;
+  background: #f1f5f9;
+  border: 1px solid #d4dde6;
+  color: #1f2d3a;
+  padding: 7px 6px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn-sub:hover { background: #e2e8f0; border-color: #2e7dd1; }
+
+.hold-list { font-size: 0.7rem; font-family: 'Courier New', monospace; margin-bottom: 8px; }
+.hold-item { display: flex; align-items: center; gap: 6px; padding: 2px 0; color: #5b7184; }
+.hold-item .sw { width: 14px; height: 3px; flex-shrink: 0; }
+.hold-item .lbl { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hold-item button { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 0.8rem; }
+.hold-item button:hover { color: #dc2626; }
+
+.result-box {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.res-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; gap: 6px; }
+.res-key { color: #5b7184; flex-shrink: 0; }
+.res-val { color: #2e7dd1; min-width: 0; text-align: right; }
+.res-val.stable { color: #16a34a; }
+.res-val.unstable { color: #dc2626; }
+.res-val.warn { color: #d97706; }
+.res-sep { border: none; border-top: 1px solid #e2e8f0; margin: 6px 0; }
+.res-head { color: #1f2d3a; font-weight: 600; margin-bottom: 2px; }
+.error-msg { color: #dc2626; font-size: 0.78rem; margin-top: 6px; min-height: 16px; }
+
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.badge.stab { background: rgba(22,163,74,0.12); color: #16a34a; border: 1px solid #16a34a; }
+.badge.unstab { background: rgba(220,38,38,0.12); color: #dc2626; border: 1px solid #dc2626; }
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 10px;
+  overflow: hidden;
+}
+.plots-row {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  overflow: hidden;
+  min-height: 0;
+}
+.plot-card {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #d4dde6;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+.plot-card.anim-panel { flex: 0 0 auto; width: 36%; }
+.plot-card.pole-panel { flex: 0 0 auto; width: 36%; }
+
+.plot-header {
+  padding: 8px 12px 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+}
+.plot-title { font-size: 0.8rem; font-weight: 600; color: #1f2d3a; }
+.plot-sub { font-size: 0.7rem; color: #5b7184; }
+.plot-header select { width: auto; font-size: 0.72rem; padding: 2px 4px; }
+
+.legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 12px 6px;
+  flex-shrink: 0;
+}
+.leg-item { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: #5b7184; }
+.leg-icon { width: 14px; text-align: center; font-size: 0.8rem; }
+.leg-line { width: 14px; height: 2px; }
+.leg-line.dashed { height: 0; border-top: 2px dashed; }
+
+canvas { flex: 1; width: 100%; display: block; min-height: 0; }
+
+.anim-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-top: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+.btn-play {
+  background: #2e7dd1; color: #fff; border: none; padding: 4px 14px; border-radius: 5px;
+  font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background 0.15s;
+}
+.btn-play:hover { background: #1d6ab8; }
+.speed-label { font-size: 0.7rem; color: #5b7184; }
+.speed-slider { width: 70px; cursor: pointer; }
+.anim-info { font-size: 0.7rem; color: #5b7184; font-family: 'Courier New', monospace; margin-left: auto; }
+
+.info-bar {
+  background: #ffffff;
+  border-top: 1px solid #d4dde6;
+  padding: 5px 16px;
+  font-size: 0.7rem;
+  color: #5b7184;
+  flex-shrink: 0;
+  display: flex;
+  gap: 20px;
+}
+
+@media (max-width: 1100px) {
+  .sidebar { width: 280px; }
+  .plot-card.anim-panel, .plot-card.pole-panel { width: 40%; }
+}
+
+@media (max-width: 820px) {
+  body { height: auto; min-height: 100vh; min-height: 100dvh; overflow-y: auto; }
+  header { flex-wrap: wrap; padding: 8px 12px; gap: 4px; }
+  header h1 { font-size: 0.9rem; }
+  header .eq { font-size: 0.65rem; line-height: 1.5; display: block; }
+  .body { flex-direction: column; overflow: visible; flex: none; }
+  .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #d4dde6; overflow-y: visible; max-height: none; }
+  .sidebar-inner { padding: 10px; }
+  .main { overflow: visible; flex: none; padding: 8px; }
+  .plots-row { flex-direction: column; overflow: visible; flex: none; gap: 8px; }
+  .plot-card { width: 100% !important; flex: none; }
+  .plot-card.anim-panel { height: min(70vw, 300px); }
+  .plot-card.response-panel { height: min(75vw, 320px); }
+  .plot-card.bode-panel { height: min(75vw, 320px); }
+  .plot-card.pole-panel { height: min(70vw, 280px); }
+  canvas { flex: 1 1 0 !important; width: 100% !important; min-height: 0 !important; }
+  .legend { gap: 4px 8px; padding: 4px 8px; }
+  .leg-item { font-size: 0.6rem; }
+  .plot-header { flex-wrap: wrap; gap: 2px; padding: 6px 8px 2px; }
+  .plot-title { font-size: 0.75rem; }
+  .plot-sub { font-size: 0.62rem; }
+  .info-bar { flex-wrap: wrap; gap: 4px; font-size: 0.6rem; padding: 6px 10px; }
+  input[type="number"], select { font-size: 16px; }
+  input[type="number"] { padding: 7px 6px; }
+  .btn-compute { padding: 12px; font-size: 0.9rem; min-height: 44px; }
+  .btn-sub { padding: 10px 6px; font-size: 0.85rem; }
+  .result-box { font-size: 0.7rem; overflow: hidden; }
+  .res-val { flex: 1; min-width: 0; font-size: 0.66rem; overflow-wrap: anywhere; }
+  .btn-play { padding: 6px 16px; font-size: 0.85rem; min-height: 36px; }
+  .speed-slider { width: 50px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>マスバネダンパ系のPID制御シミュレータ</h1>
+  <span class="eq">P(s) = 1/(m s^2 + d s + k), &nbsp; K(s) = kP + kI/s + kD s</span>
+</header>
+
+<div class="body">
+  <div class="sidebar">
+    <div class="sidebar-inner">
+
+      <div class="section">
+        <div class="sec-title">講義図のプリセット</div>
+        <select id="preset" onchange="applyPreset()">
+          <option value="custom">-- カスタム --</option>
+          <option value="p_sweep" selected>P制御: kP = 1, 2, 4 の比較</option>
+          <option value="pd_sweep">PD制御: kP=4, kD = 0, 1, 2 の比較</option>
+          <option value="pid_sweep">PID制御: kP=4, kD=2, kI = 0, 2, 4 の比較</option>
+          <option value="struct_cmp">PID / PI-D / I-PD の構造比較</option>
+          <option value="dist_cmp">ステップ外乱: PD と PID の比較</option>
+          <option value="zeta_sweep">2次遅れ系: ζ = 0.2, 0.5, 0.8 (ωn=2)</option>
+          <option value="wn_sweep">2次遅れ系: ωn = 1, 2, 4 (ζ=0.5)</option>
+        </select>
+        <div class="note-text">プリセットは比較トレースを自動で保持します．</div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">制御対象 (台車系)</div>
+        <div class="row three-col">
+          <div class="field">
+            <label>質量 m [kg]</label>
+            <input type="number" id="param_m" value="1" step="0.1" min="0.05" onchange="markCustom()">
+          </div>
+          <div class="field">
+            <label>減衰 d [Ns/m]</label>
+            <input type="number" id="param_d" value="0.2" step="0.1" min="0" onchange="markCustom()">
+          </div>
+          <div class="field">
+            <label>ばね k [N/m]</label>
+            <input type="number" id="param_k" value="1" step="0.1" min="0" onchange="markCustom()">
+          </div>
+        </div>
+        <div class="note-text">m y'' + d y' + k y = u + d(t)</div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">制御器の構造</div>
+        <div class="radio-group">
+          <label class="radio-item"><input type="radio" name="ctype" value="pid" checked onchange="markCustom()"><span class="radio-label">PID<span class="eq">u = kP e + kI∫e + kD ė</span></span></label>
+          <label class="radio-item"><input type="radio" name="ctype" value="pi_d" onchange="markCustom()"><span class="radio-label">PI-D (微分先行型)<span class="eq">u = kP e + kI∫e − kD ẏ</span></span></label>
+          <label class="radio-item"><input type="radio" name="ctype" value="i_pd" onchange="markCustom()"><span class="radio-label">I-PD (比例微分先行型)<span class="eq">u = kI∫e − kP y − kD ẏ</span></span></label>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">PID ゲイン</div>
+        <div class="row three-col">
+          <div class="field">
+            <label>kP (比例)</label>
+            <input type="number" id="gain_kp" value="1" step="0.5" min="0" onchange="markCustom()">
+          </div>
+          <div class="field">
+            <label>kI (積分)</label>
+            <input type="number" id="gain_ki" value="0" step="0.5" min="0" onchange="markCustom()">
+          </div>
+          <div class="field">
+            <label>kD (微分)</label>
+            <input type="number" id="gain_kd" value="0" step="0.5" min="0" onchange="markCustom()">
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>近似微分の時定数 τ [s]</label>
+            <input type="number" id="tau_f" value="0.01" step="0.01" min="0.001" onchange="markCustom()">
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <div class="note-text" style="margin:0;">D(s) = s/(1+τs)．τ→0 で純微分</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">入力信号</div>
+        <div class="row three-col">
+          <div class="field">
+            <label>目標値 r (ステップ)</label>
+            <input type="number" id="ref_amp" value="1" step="0.5" onchange="markCustom()">
+          </div>
+          <div class="field">
+            <label>外乱 d の大きさ</label>
+            <input type="number" id="dist_amp" value="0" step="0.5" onchange="markCustom()">
+          </div>
+          <div class="field">
+            <label>外乱の開始時刻 [s]</label>
+            <input type="number" id="dist_t0" value="6" step="0.5" min="0" onchange="markCustom()">
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-title">シミュレーション</div>
+        <div class="row">
+          <div class="field">
+            <label>終了時刻 T [s]</label>
+            <input type="number" id="tEnd" value="10" step="1" min="0.5" onchange="markCustom()">
+          </div>
+          <div class="field">
+            <label>刻み幅 dt [s]</label>
+            <input type="number" id="dt" value="0.005" step="0.001" min="0.0005" max="0.05" onchange="markCustom()">
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-compute" onclick="runSimulation()">&#x25B6; 計算・シミュレーション</button>
+      <div class="btn-row">
+        <button class="btn-sub" onclick="holdCurrent()">&#x1F4CC; 現在の結果を比較に保持</button>
+        <button class="btn-sub" onclick="clearHolds()">保持をクリア</button>
+      </div>
+      <div class="hold-list" id="hold-list"></div>
+
+      <div class="section">
+        <div class="sec-title">解析結果</div>
+        <div id="result-box" class="result-box">
+          <div style="color:#5b7184;">「計算・シミュレーション」を押してください</div>
+        </div>
+        <div id="error-msg" class="error-msg"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="plots-row">
+      <div class="plot-card anim-panel">
+        <div class="plot-header">
+          <span class="plot-title">台車のアニメーション</span>
+          <span class="plot-sub" id="anim-sub"></span>
+        </div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-line" style="background:#2e7dd1;"></div> 台車位置 y</div>
+          <div class="leg-item"><div class="leg-line dashed" style="border-color:#dc2626;"></div> 目標値 r</div>
+          <div class="leg-item"><span class="leg-icon" style="color:#d97706;">&#x27A1;</span> 外乱 d</div>
+        </div>
+        <canvas id="animCanvas"></canvas>
+        <div class="anim-controls">
+          <button class="btn-play" id="btn-play" onclick="togglePlay()">&#x25B6;</button>
+          <span class="speed-label">速度:</span>
+          <input type="range" class="speed-slider" id="speed" min="0" max="2" step="1" value="1">
+          <span class="speed-label" id="speed-label">1x</span>
+          <span class="anim-info" id="anim-info">t=0.00</span>
+        </div>
+      </div>
+
+      <div class="plot-card response-panel">
+        <div class="plot-header">
+          <span class="plot-title">時間応答</span>
+          <select id="resp-mode" onchange="redrawAll()">
+            <option value="y" selected>出力 y(t)</option>
+            <option value="u">操作量 u(t)</option>
+            <option value="e">偏差 e(t) = r − y</option>
+          </select>
+        </div>
+        <div class="legend" id="resp-legend"></div>
+        <canvas id="responseCanvas"></canvas>
+      </div>
+    </div>
+
+    <div class="plots-row">
+      <div class="plot-card bode-panel">
+        <div class="plot-header">
+          <span class="plot-title">閉ループ系のゲイン線図</span>
+          <select id="bode-mode" onchange="redrawAll()">
+            <option value="yr" selected>|Gyr(jω)| : r → y</option>
+            <option value="yd">|Gyd(jω)| : d → y</option>
+            <option value="both">両方表示</option>
+          </select>
+        </div>
+        <div class="legend" id="bode-legend"></div>
+        <canvas id="bodeCanvas"></canvas>
+      </div>
+
+      <div class="plot-card pole-panel">
+        <div class="plot-header">
+          <span class="plot-title">閉ループ系の極・零点 (s平面)</span>
+          <span class="plot-sub">Gyr(s) の極 &#x2716; と零点 &#x25CB;</span>
+        </div>
+        <div class="legend" id="pole-legend"></div>
+        <canvas id="poleCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="info-bar">
+  <span>制御系設計論 ③ PID制御 &nbsp;|&nbsp; RK4 数値積分 (近似微分付き)</span>
+  <span id="ctrl-info"></span>
+</div>
+
+<script>
+// =========================================================
+// グローバル状態
+// =========================================================
+var simData = null;          // 現在の結果
+var holds = [];              // 比較用に保持した結果
+var HOLD_COLORS = ['#d97706', '#16a34a', '#7c3aed', '#db2777'];
+var MAX_HOLDS = 4;
+var ACTIVE_COLOR = '#2e7dd1';
+var animFrame = 0;
+var animPlaying = false;
+var animRAF = null;
+var lastAnimTime = 0;
+var SPEEDS = [0.5, 1, 2];
+
+function fN(v, n) { if (!isFinite(v)) return '---'; return v.toFixed(n === undefined ? 3 : n); }
+function fN2(v) { return fN(v, 2); }
+function $(id) { return document.getElementById(id); }
+
+// =========================================================
+// 複素数・多項式ユーティリティ (係数は低次から)
+// =========================================================
+function cAdd(a, b) { return [a[0] + b[0], a[1] + b[1]]; }
+function cSub(a, b) { return [a[0] - b[0], a[1] - b[1]]; }
+function cMul(a, b) { return [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]]; }
+function cDiv(a, b) {
+  var den = b[0] * b[0] + b[1] * b[1];
+  return [(a[0] * b[0] + a[1] * b[1]) / den, (a[1] * b[0] - a[0] * b[1]) / den];
+}
+function cAbs(a) { return Math.hypot(a[0], a[1]); }
+
+function pMul(p, q) {
+  var r = new Array(p.length + q.length - 1).fill(0);
+  for (var i = 0; i < p.length; i++) for (var j = 0; j < q.length; j++) r[i + j] += p[i] * q[j];
+  return r;
+}
+function pAdd(p, q) {
+  var n = Math.max(p.length, q.length), r = new Array(n).fill(0);
+  for (var i = 0; i < n; i++) r[i] = (p[i] || 0) + (q[i] || 0);
+  return r;
+}
+function pTrim(p) {
+  var r = p.slice();
+  while (r.length > 1 && Math.abs(r[r.length - 1]) < 1e-12) r.pop();
+  return r;
+}
+function pEvalC(p, s) {
+  var r = [0, 0];
+  for (var i = p.length - 1; i >= 0; i--) r = cAdd(cMul(r, s), [p[i], 0]);
+  return r;
+}
+// Durand–Kerner 法による多項式の根
+function pRoots(p) {
+  p = pTrim(p);
+  var n = p.length - 1;
+  if (n < 1) return [];
+  var a = p.map(function(c) { return c / p[n]; });
+  var roots = [];
+  var radius = 1 + Math.max.apply(null, a.slice(0, n).map(Math.abs));
+  for (var i = 0; i < n; i++) {
+    var ang = 2 * Math.PI * i / n + 0.4;
+    roots.push([radius * Math.cos(ang), radius * Math.sin(ang)]);
+  }
+  for (var it = 0; it < 500; it++) {
+    var maxDelta = 0;
+    for (var i = 0; i < n; i++) {
+      var num = pEvalC(a, roots[i]);
+      var den = [1, 0];
+      for (var j = 0; j < n; j++) if (j !== i) den = cMul(den, cSub(roots[i], roots[j]));
+      if (cAbs(den) < 1e-300) den = [1e-300, 0];
+      var delta = cDiv(num, den);
+      roots[i] = cSub(roots[i], delta);
+      if (cAbs(delta) > maxDelta) maxDelta = cAbs(delta);
+    }
+    if (maxDelta < 1e-13) break;
+  }
+  // 実軸近傍は実数に丸める
+  return roots.map(function(r) { return [r[0], Math.abs(r[1]) < 1e-7 ? 0 : r[1]]; });
+}
+function fmtRoot(c) {
+  if (c[1] === 0) return fN(c[0], 3);
+  return fN(c[0], 3) + (c[1] >= 0 ? ' + ' : ' - ') + fN(Math.abs(c[1]), 3) + 'j';
+}
+
+// =========================================================
+// パラメータ取得・制御器の伝達関数
+// =========================================================
+function getParams() {
+  var ctype = document.querySelector('input[name="ctype"]:checked').value;
+  return {
+    m: +$('param_m').value, d: +$('param_d').value, k: +$('param_k').value,
+    ctype: ctype,
+    kp: +$('gain_kp').value, ki: +$('gain_ki').value, kd: +$('gain_kd').value,
+    tau: Math.max(+$('tau_f').value, 1e-4),
+    rAmp: +$('ref_amp').value, dAmp: +$('dist_amp').value, dT0: +$('dist_t0').value,
+    tEnd: +$('tEnd').value, dt: +$('dt').value
+  };
+}
+
+function ctypeLabel(ct) { return ct === 'pid' ? 'PID' : (ct === 'pi_d' ? 'PI-D' : 'I-PD'); }
+
+// u = Kr(s) r - Ky(s) y の形で制御器を表す．
+// 共通分母 Dc(s) = s^(kI!=0) * (1+τs)^(kD!=0) で有理関数化
+function controllerTF(p) {
+  var useI = p.ki !== 0, useD = p.kd !== 0;
+  var sI = useI ? [0, 1] : [1];           // s or 1
+  var sD = useD ? [1, p.tau] : [1];       // 1+τs or 1
+  var Dc = pMul(sI, sD);
+  // 各項の分子 (共通分母 Dc 上)
+  var termP = pMul([p.kp], Dc);                                  // kP * Dc
+  var termI = useI ? pMul([p.ki], sD) : [0];                     // kI/s * Dc = kI * sD
+  var termD = useD ? pMul([0, p.kd], sI) : [0];                  // kD s/(1+τs) * Dc = kD s * sI
+  var Ky = pTrim(pAdd(pAdd(termP, termI), termD));               // 全成分は常に y にかかる
+  var Kr;
+  if (p.ctype === 'pid') Kr = Ky;
+  else if (p.ctype === 'pi_d') Kr = pTrim(pAdd(termP, termI));
+  else Kr = pTrim(termI);
+  return { Dc: pTrim(Dc), Kr: Kr, Ky: Ky };
+}
+
+// 閉ループ伝達関数 Gyr = Kr / (Pden*Dc + Ky), Gyd = Dc / (Pden*Dc + Ky)
+function closedLoop(p) {
+  var c = controllerTF(p);
+  var Pden = [p.k, p.d, p.m];
+  var charPoly = pTrim(pAdd(pMul(Pden, c.Dc), c.Ky));
+  return {
+    charPoly: charPoly,
+    numYR: c.Kr, numYD: c.Dc,
+    poles: pRoots(charPoly),
+    zerosYR: pRoots(c.Kr),
+    dcYR: c.Kr[0] / charPoly[0],
+    dcYD: c.Dc[0] / charPoly[0]
+  };
+}
+
+function freqResp(num, den, w) {
+  var s = [0, w];
+  return cAbs(cDiv(pEvalC(num, s), pEvalC(den, s)));
+}
+
+// =========================================================
+// 時間シミュレーション (RK4)
+// 状態: x = [y, v, xi (∫e), yf, ef]  (yf, ef は近似微分のフィルタ状態)
+// =========================================================
+function controlLaw(p, x, r) {
+  var y = x[0], xi = x[2], yf = x[3], ef = x[4];
+  var e = r - y;
+  var de = (e - ef) / p.tau;   // D(s) e の近似
+  var dy = (y - yf) / p.tau;   // D(s) y の近似
+  var u;
+  if (p.ctype === 'pid') u = p.kp * e + p.ki * xi + p.kd * de;
+  else if (p.ctype === 'pi_d') u = p.kp * e + p.ki * xi - p.kd * dy;
+  else u = p.ki * xi - p.kp * y - p.kd * dy;
+  return u;
+}
+function deriv(p, x, t) {
+  var r = p.rAmp;
+  var dist = (t >= p.dT0) ? p.dAmp : 0;
+  var y = x[0], v = x[1], yf = x[3], ef = x[4];
+  var e = r - y;
+  var u = controlLaw(p, x, r);
+  var acc = (u + dist - p.d * v - p.k * y) / p.m;
+  return [v, acc, e, (y - yf) / p.tau, (e - ef) / p.tau];
+}
+function simulate(p) {
+  var n = Math.floor(p.tEnd / p.dt) + 1;
+  var t = new Float64Array(n), y = new Float64Array(n), u = new Float64Array(n), e = new Float64Array(n);
+  var x = [0, 0, 0, 0, 0];
+  var dt = p.dt;
+  // 内部ステップ: τ が小さい場合は刻みを細分化して安定化
+  var sub = Math.max(1, Math.ceil(dt / (p.tau * 0.5)));
+  var h = dt / sub;
+  for (var i = 0; i < n; i++) {
+    var ti = i * dt;
+    t[i] = ti; y[i] = x[0]; e[i] = p.rAmp - x[0]; u[i] = controlLaw(p, x, p.rAmp);
+    for (var s = 0; s < sub; s++) {
+      var tt = ti + s * h;
+      var k1 = deriv(p, x, tt);
+      var x2 = x.map(function(v, j) { return v + 0.5 * h * k1[j]; });
+      var k2 = deriv(p, x2, tt + 0.5 * h);
+      var x3 = x.map(function(v, j) { return v + 0.5 * h * k2[j]; });
+      var k3 = deriv(p, x3, tt + 0.5 * h);
+      var x4 = x.map(function(v, j) { return v + h * k3[j]; });
+      var k4 = deriv(p, x4, tt + h);
+      x = x.map(function(v, j) { return v + h / 6 * (k1[j] + 2 * k2[j] + 2 * k3[j] + k4[j]); });
+      if (!isFinite(x[0]) || Math.abs(x[0]) > 1e6) { x = [NaN, NaN, NaN, NaN, NaN]; }
+    }
+  }
+  return { t: t, y: y, u: u, e: e };
+}
+
+// =========================================================
+// 性能指標
+// =========================================================
+function stepMetrics(sim, p, cl) {
+  var tFin = p.dAmp !== 0 ? Math.min(p.dT0, p.tEnd) : p.tEnd;  // 外乱前の区間で評価
+  var yss = cl.dcYR * p.rAmp;
+  var n = sim.t.length, peak = -Infinity, tPeak = 0, umax = 0;
+  var tRise10 = NaN, tRise90 = NaN, tSettle = NaN;
+  var sgn = p.rAmp >= 0 ? 1 : -1;
+  for (var i = 0; i < n; i++) {
+    if (sim.t[i] > tFin) break;
+    var yy = sim.y[i] * sgn;
+    if (yy > peak) { peak = yy; tPeak = sim.t[i]; }
+    if (Math.abs(sim.u[i]) > umax) umax = Math.abs(sim.u[i]);
+    var ys = Math.abs(yss);
+    if (isNaN(tRise10) && yy >= 0.1 * ys) tRise10 = sim.t[i];
+    if (isNaN(tRise90) && yy >= 0.9 * ys) tRise90 = sim.t[i];
+  }
+  // 整定時間 (±2%)
+  var tol = Math.max(0.02 * Math.abs(yss), 1e-6);
+  for (var i = n - 1; i >= 0; i--) {
+    if (sim.t[i] > tFin) continue;
+    if (Math.abs(sim.y[i] - yss) > tol) { tSettle = (i + 1 < n) ? sim.t[i + 1] : NaN; break; }
+    if (i === 0) tSettle = 0;
+  }
+  if (!isNaN(tSettle) && tSettle >= tFin) tSettle = NaN;
+  var os = (Math.abs(yss) > 1e-9) ? Math.max(0, (peak - Math.abs(yss)) / Math.abs(yss) * 100) : NaN;
+  // 周波数領域: ピークゲイン, バンド幅 (DC ゲインから -3 dB)
+  var wList = logspace(-2, 2, 400), peakG = -Infinity, wPeak = 0, wBand = NaN;
+  var dcAbs = Math.abs(cl.dcYR);
+  for (var i = 0; i < wList.length; i++) {
+    var g = freqResp(cl.numYR, cl.charPoly, wList[i]);
+    if (g > peakG) { peakG = g; wPeak = wList[i]; }
+  }
+  for (var i = 0; i < wList.length; i++) {
+    var g = freqResp(cl.numYR, cl.charPoly, wList[i]);
+    if (g < dcAbs * Math.SQRT1_2) { wBand = wList[i]; break; }
+  }
+  return { yss: yss, ess: p.rAmp - yss, os: os, tPeak: tPeak, tRise: tRise90 - tRise10, tSettle: tSettle,
+           umax: umax, peakDb: 20 * Math.log10(peakG), wPeak: wPeak, wBand: wBand, dcDb: 20 * Math.log10(dcAbs) };
+}
+function logspace(a, b, n) {
+  var r = [];
+  for (var i = 0; i < n; i++) r.push(Math.pow(10, a + (b - a) * i / (n - 1)));
+  return r;
+}
+
+// =========================================================
+// 実行
+// =========================================================
+function runSimulation(silent) {
+  stopAnimation();
+  var p = getParams();
+  var err = $('error-msg');
+  err.textContent = '';
+  if (!(p.m > 0)) { err.textContent = '質量 m は正にしてください'; return; }
+  if (!(p.dt > 0) || !(p.tEnd > 0)) { err.textContent = 'dt, T は正にしてください'; return; }
+  if (p.tEnd / p.dt > 200000) { err.textContent = 'ステップ数が多すぎます (T/dt ≤ 200000)'; return; }
+  var cl = closedLoop(p);
+  var sim = simulate(p);
+  var met = stepMetrics(sim, p, cl);
+  simData = { params: p, cl: cl, sim: sim, met: met, label: makeLabel(p) };
+  animFrame = 0;
+  updateResults();
+  redrawAll();
+  updateAnimInfo();
+  $('ctrl-info').textContent = ctypeLabel(p.ctype) + ' 制御: kP=' + p.kp + ', kI=' + p.ki + ', kD=' + p.kd + ', τ=' + p.tau;
+}
+
+function makeLabel(p) {
+  var name = ctypeLabel(p.ctype);
+  if (p.ctype === 'pid') name = (p.kp !== 0 ? 'P' : '') + (p.ki !== 0 ? 'I' : '') + (p.kd !== 0 ? 'D' : '') || 'P';
+  var s = name + ' kP=' + p.kp;
+  if (p.ki !== 0) s += ' kI=' + p.ki;
+  if (p.kd !== 0) s += ' kD=' + p.kd;
+  return s;
+}
+
+function holdCurrent() {
+  if (!simData) return;
+  if (holds.length >= MAX_HOLDS) holds.shift();
+  var copy = { params: simData.params, cl: simData.cl, sim: simData.sim, met: simData.met, label: simData.label };
+  holds.push(copy);
+  refreshHoldList();
+  redrawAll();
+}
+function clearHolds() { holds = []; refreshHoldList(); redrawAll(); }
+function removeHold(i) { holds.splice(i, 1); refreshHoldList(); redrawAll(); }
+function refreshHoldList() {
+  var box = $('hold-list');
+  if (holds.length === 0) { box.innerHTML = '<span style="color:#94a3b8;">比較トレースなし</span>'; return; }
+  box.innerHTML = holds.map(function(h, i) {
+    return '<div class="hold-item"><div class="sw" style="background:' + HOLD_COLORS[i] + ';"></div>' +
+           '<span class="lbl">' + h.label + '</span><button onclick="removeHold(' + i + ')" title="削除">&#x2716;</button></div>';
+  }).join('');
+}
+
+// =========================================================
+// プリセット
+// =========================================================
+var PRESETS = {
+  p_sweep: { base: { m: 1, d: 0.2, k: 1, ctype: 'pid', tau: 0.01, rAmp: 1, dAmp: 0, dT0: 6, tEnd: 10, dt: 0.005 },
+             list: [{ kp: 1, ki: 0, kd: 0 }, { kp: 2, ki: 0, kd: 0 }, { kp: 4, ki: 0, kd: 0 }] },
+  pd_sweep: { base: { m: 1, d: 0.2, k: 1, ctype: 'pid', tau: 0.01, rAmp: 1, dAmp: 0, dT0: 6, tEnd: 10, dt: 0.005 },
+              list: [{ kp: 4, ki: 0, kd: 0 }, { kp: 4, ki: 0, kd: 1 }, { kp: 4, ki: 0, kd: 2 }] },
+  pid_sweep: { base: { m: 1, d: 0.2, k: 1, ctype: 'pid', tau: 0.01, rAmp: 1, dAmp: 0, dT0: 6, tEnd: 10, dt: 0.005 },
+               list: [{ kp: 4, ki: 0, kd: 2 }, { kp: 4, ki: 2, kd: 2 }, { kp: 4, ki: 4, kd: 2 }] },
+  struct_cmp: { base: { m: 1, d: 0.2, k: 1, tau: 0.01, rAmp: 1, dAmp: 0, dT0: 6, tEnd: 10, dt: 0.005, kp: 8, ki: 6, kd: 4 },
+                list: [{ ctype: 'pid', label: 'PID' }, { ctype: 'pi_d', label: 'PI-D (微分先行)' }, { ctype: 'i_pd', label: 'I-PD' }] },
+  dist_cmp: { base: { m: 1, d: 0.2, k: 1, ctype: 'pid', tau: 0.01, rAmp: 1, dAmp: 1, dT0: 8, tEnd: 16, dt: 0.005 },
+              list: [{ kp: 4, ki: 0, kd: 2, label: 'PD kP=4 kD=2' }, { kp: 4, ki: 2, kd: 2, label: 'PID kP=4 kI=2 kD=2' }] },
+  zeta_sweep: { base: { m: 1, k: 0, ctype: 'pid', tau: 0.01, rAmp: 1, dAmp: 0, dT0: 6, tEnd: 14, dt: 0.005, kp: 4, ki: 0, kd: 0 },
+                list: [{ d: 0.8, label: 'ζ=0.2 (ωn=2)' }, { d: 2.0, label: 'ζ=0.5 (ωn=2)' }, { d: 3.2, label: 'ζ=0.8 (ωn=2)' }] },
+  wn_sweep: { base: { m: 1, k: 0, ctype: 'pid', tau: 0.01, rAmp: 1, dAmp: 0, dT0: 6, tEnd: 14, dt: 0.005, ki: 0, kd: 0 },
+              list: [{ kp: 1, d: 1, label: 'ωn=1 (ζ=0.5)' }, { kp: 4, d: 2, label: 'ωn=2 (ζ=0.5)' }, { kp: 16, d: 4, label: 'ωn=4 (ζ=0.5)' }] }
+};
+function setParamsToUI(p) {
+  if (p.m !== undefined) $('param_m').value = p.m;
+  if (p.d !== undefined) $('param_d').value = p.d;
+  if (p.k !== undefined) $('param_k').value = p.k;
+  if (p.kp !== undefined) $('gain_kp').value = p.kp;
+  if (p.ki !== undefined) $('gain_ki').value = p.ki;
+  if (p.kd !== undefined) $('gain_kd').value = p.kd;
+  if (p.tau !== undefined) $('tau_f').value = p.tau;
+  if (p.rAmp !== undefined) $('ref_amp').value = p.rAmp;
+  if (p.dAmp !== undefined) $('dist_amp').value = p.dAmp;
+  if (p.dT0 !== undefined) $('dist_t0').value = p.dT0;
+  if (p.tEnd !== undefined) $('tEnd').value = p.tEnd;
+  if (p.dt !== undefined) $('dt').value = p.dt;
+  if (p.ctype !== undefined) document.querySelector('input[name="ctype"][value="' + p.ctype + '"]').checked = true;
+}
+function applyPreset() {
+  var key = $('preset').value;
+  if (key === 'custom' || !PRESETS[key]) return;
+  var pr = PRESETS[key];
+  holds = [];
+  for (var i = 0; i < pr.list.length; i++) {
+    var cfg = Object.assign({}, pr.base, pr.list[i]);
+    setParamsToUI(cfg);
+    runSimulation(true);
+    if (cfg.label) simData.label = cfg.label;
+    if (i < pr.list.length - 1) {
+      holds.push({ params: simData.params, cl: simData.cl, sim: simData.sim, met: simData.met, label: simData.label });
+    }
+  }
+  refreshHoldList();
+  redrawAll();
+}
+function markCustom() { $('preset').value = 'custom'; }
+
+// =========================================================
+// 解析結果の表示
+// =========================================================
+function updateResults() {
+  if (!simData) return;
+  var p = simData.params, cl = simData.cl, met = simData.met;
+  var h = '';
+  var stable = cl.poles.every(function(r) { return r[0] < -1e-9; });
+  h += '<div class="res-row"><span class="res-key">構造</span><span class="res-val">' + ctypeLabel(p.ctype) + ' 制御</span></div>';
+  h += '<div class="res-row"><span class="res-key">安定性</span><span class="res-val"><span class="badge ' + (stable ? 'stab' : 'unstab') + '">' + (stable ? '内部安定' : '不安定') + '</span></span></div>';
+  h += '<hr class="res-sep">';
+  h += '<div class="res-head">定常特性 (ステップ目標値 r=' + p.rAmp + ')</div>';
+  h += '<div class="res-row"><span class="res-key">Gyr(0) (直流ゲイン)</span><span class="res-val">' + fN(cl.dcYR, 4) + ' (' + fN(met.dcDb, 2) + ' dB)</span></div>';
+  h += '<div class="res-row"><span class="res-key">定常値 y∞</span><span class="res-val">' + fN(met.yss, 4) + '</span></div>';
+  h += '<div class="res-row"><span class="res-key">定常偏差 r−y∞</span><span class="res-val ' + (Math.abs(met.ess) < 1e-6 ? 'stable' : 'warn') + '">' + fN(met.ess, 4) + '</span></div>';
+  h += '<div class="res-row"><span class="res-key">Gyd(0) (外乱→y)</span><span class="res-val ' + (Math.abs(cl.dcYD) < 1e-9 ? 'stable' : 'warn') + '">' + fN(cl.dcYD, 4) + '</span></div>';
+  h += '<hr class="res-sep">';
+  h += '<div class="res-head">過渡特性</div>';
+  h += '<div class="res-row"><span class="res-key">オーバーシュート</span><span class="res-val">' + (isNaN(met.os) ? '---' : fN(met.os, 1) + ' %') + '</span></div>';
+  h += '<div class="res-row"><span class="res-key">立ち上がり時間 (10→90%)</span><span class="res-val">' + fN(met.tRise, 3) + ' s</span></div>';
+  h += '<div class="res-row"><span class="res-key">整定時間 (±2%)</span><span class="res-val">' + (isNaN(met.tSettle) ? '未整定' : fN(met.tSettle, 2) + ' s') + '</span></div>';
+  h += '<div class="res-row"><span class="res-key">max |u(t)|</span><span class="res-val">' + fN(met.umax, 3) + '</span></div>';
+  h += '<hr class="res-sep">';
+  h += '<div class="res-head">周波数特性 Gyr(jω)</div>';
+  h += '<div class="res-row"><span class="res-key">ピークゲイン</span><span class="res-val">' + fN(met.peakDb, 2) + ' dB @ ' + fN(met.wPeak, 2) + ' rad/s</span></div>';
+  h += '<div class="res-row"><span class="res-key">バンド幅 (DC−3dB)</span><span class="res-val">' + (isNaN(met.wBand) ? '> 100' : fN(met.wBand, 2)) + ' rad/s</span></div>';
+  // 2次標準形 (P, PD の場合)
+  if (p.ki === 0) {
+    var wn = Math.sqrt((p.k + p.kp) / p.m);
+    var zeta = (p.d + p.kd) / (2 * Math.sqrt(p.m * (p.k + p.kp)));
+    h += '<hr class="res-sep">';
+    h += '<div class="res-head">2次遅れ系の標準形 (τ→0 として)</div>';
+    h += '<div class="res-row"><span class="res-key">G0(0) = kP/(k+kP)</span><span class="res-val">' + fN(p.kp / (p.k + p.kp), 4) + '</span></div>';
+    h += '<div class="res-row"><span class="res-key">ωn = √((k+kP)/m)</span><span class="res-val">' + fN(wn, 3) + ' rad/s</span></div>';
+    h += '<div class="res-row"><span class="res-key">ζ = (d+kD)/(2√(m(k+kP)))</span><span class="res-val">' + fN(zeta, 3) + '</span></div>';
+  }
+  h += '<hr class="res-sep">';
+  h += '<div class="res-head">Gyr(s) の極</div>';
+  cl.poles.forEach(function(r) {
+    h += '<div class="res-row"><span class="res-key"></span><span class="res-val ' + (r[0] < 0 ? 'stable' : 'unstable') + '">' + fmtRoot(r) + '</span></div>';
+  });
+  if (cl.zerosYR.length) {
+    h += '<div class="res-head">Gyr(s) の零点</div>';
+    cl.zerosYR.forEach(function(r) {
+      h += '<div class="res-row"><span class="res-key"></span><span class="res-val">' + fmtRoot(r) + '</span></div>';
+    });
+  }
+  $('result-box').innerHTML = h;
+}
+
+// =========================================================
+// 描画共通
+// =========================================================
+function setupCanvas(id) {
+  var canvas = $(id);
+  var par = canvas.parentElement;
+  var legendH = par.querySelector('.legend') ? par.querySelector('.legend').offsetHeight : 0;
+  var headerH = par.querySelector('.plot-header') ? par.querySelector('.plot-header').offsetHeight : 0;
+  var controlsH = par.querySelector('.anim-controls') ? par.querySelector('.anim-controls').offsetHeight : 0;
+  var W = par.clientWidth;
+  var H = par.clientHeight - legendH - headerH - controlsH - 4;
+  canvas.width = W;
+  canvas.height = Math.max(H, 100);
+  return { canvas: canvas, ctx: canvas.getContext('2d'), W: W, H: canvas.height };
+}
+function allRuns() {
+  var runs = holds.map(function(h, i) { return { data: h, color: HOLD_COLORS[i], width: 1.5 }; });
+  if (simData) runs.push({ data: simData, color: ACTIVE_COLOR, width: 2.2 });
+  return runs;
+}
+function buildLegend(id, extra) {
+  var runs = allRuns();
+  var h = runs.map(function(r) {
+    return '<div class="leg-item"><div class="leg-line" style="background:' + r.color + ';"></div> ' + r.data.label + '</div>';
+  }).join('');
+  $(id).innerHTML = h + (extra || '');
+}
+function drawFrame(ctx, pad, pw, ph, W, H) {
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+  for (var i = 0; i <= 4; i++) { var gy = pad.t + i * ph / 4; ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(W - pad.r, gy); ctx.stroke(); }
+  for (var i = 0; i <= 5; i++) { var gx = pad.l + i * pw / 5; ctx.beginPath(); ctx.moveTo(gx, pad.t); ctx.lineTo(gx, pad.t + ph); ctx.stroke(); }
+  ctx.strokeStyle = '#d4dde6'; ctx.strokeRect(pad.l, pad.t, pw, ph);
+}
+function redrawAll() {
+  drawAnimation(animFrame);
+  drawResponse(animPlaying ? animFrame : undefined);
+  drawBode();
+  drawPoleMap();
+}
+
+// =========================================================
+// 時間応答
+// =========================================================
+function drawResponse(frameIdx) {
+  var mode = $('resp-mode').value;
+  var extra = mode === 'y' ? '<div class="leg-item"><div class="leg-line dashed" style="border-color:#dc2626;"></div> 目標値 r</div>' : '';
+  buildLegend('resp-legend', extra);
+  var c = setupCanvas('responseCanvas'), ctx = c.ctx, W = c.W, H = c.H;
+  ctx.clearRect(0, 0, W, H);
+  if (!simData) return;
+  var runs = allRuns();
+  var tEnd = 0, rawMax = -Infinity, rawMin = Infinity;
+  runs.forEach(function(r) {
+    var s = r.data.sim, arr = s[mode];
+    if (r.data.params.tEnd > tEnd) tEnd = r.data.params.tEnd;
+    for (var i = 0; i < arr.length; i++) { if (isFinite(arr[i])) { if (arr[i] > rawMax) rawMax = arr[i]; if (arr[i] < rawMin) rawMin = arr[i]; } }
+    if (mode === 'y') { if (r.data.params.rAmp > rawMax) rawMax = r.data.params.rAmp; if (r.data.params.rAmp < rawMin) rawMin = r.data.params.rAmp; }
+  });
+  if (!isFinite(rawMax)) { rawMax = 1; rawMin = 0; }
+  if (mode === 'y') { rawMax = Math.min(rawMax, Math.max(3 * Math.abs(simData.params.rAmp), 2)); rawMin = Math.max(rawMin, -Math.max(2 * Math.abs(simData.params.rAmp), 1)); }
+  var margin = Math.max((rawMax - rawMin) * 0.12, 0.05);
+  var yMax = rawMax + margin, yMin = rawMin - margin;
+  if (yMin > -margin) yMin = -margin;
+  if (yMax < margin) yMax = margin;
+
+  var mob = W < 500;
+  var pad = mob ? { l: 38, r: 10, t: 10, b: 26 } : { l: 52, r: 16, t: 12, b: 30 };
+  var pw = W - pad.l - pad.r, ph = H - pad.t - pad.b;
+  var fs = mob ? 8 : 10;
+  var toX = function(t) { return pad.l + (t / tEnd) * pw; };
+  var toY = function(v) { return pad.t + (1 - (v - yMin) / (yMax - yMin)) * ph; };
+
+  drawFrame(ctx, pad, pw, ph, W, H);
+  // zero line
+  ctx.strokeStyle = '#94a3b8'; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(pad.l, toY(0)); ctx.lineTo(W - pad.r, toY(0)); ctx.stroke(); ctx.setLineDash([]);
+  // reference / disturbance timing
+  if (mode === 'y') {
+    ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 1.2; ctx.setLineDash([6, 4]);
+    ctx.beginPath(); ctx.moveTo(pad.l, toY(simData.params.rAmp)); ctx.lineTo(W - pad.r, toY(simData.params.rAmp)); ctx.stroke(); ctx.setLineDash([]);
+  }
+  if (simData.params.dAmp !== 0 && simData.params.dT0 < tEnd) {
+    var dx = toX(simData.params.dT0);
+    ctx.strokeStyle = '#d97706'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(dx, pad.t); ctx.lineTo(dx, pad.t + ph); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#d97706'; ctx.font = fs + 'px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText('外乱 d=' + simData.params.dAmp, dx + 3, pad.t + 12);
+  }
+  // axes labels
+  ctx.fillStyle = '#5b7184'; ctx.font = fs + 'px monospace'; ctx.textAlign = 'center';
+  for (var i = 0; i <= 5; i++) ctx.fillText((i * tEnd / 5).toFixed(1), pad.l + i * pw / 5, H - pad.b + 14);
+  ctx.textAlign = 'right';
+  for (var i = 0; i <= 4; i++) ctx.fillText(fN2(yMax - i * (yMax - yMin) / 4), pad.l - 4, pad.t + i * ph / 4 + 4);
+  ctx.textAlign = 'right'; ctx.fillText('t [s]', W - pad.r - 4, pad.t + ph - 6);
+  ctx.textAlign = 'left'; ctx.fillText(mode === 'y' ? 'y(t)' : (mode === 'u' ? 'u(t)' : 'e(t)'), pad.l + 4, pad.t + 12);
+
+  // curves
+  runs.forEach(function(r) {
+    var s = r.data.sim, arr = s[mode];
+    ctx.strokeStyle = r.color; ctx.lineWidth = r.width; ctx.beginPath();
+    var started = false;
+    for (var i = 0; i < arr.length; i++) {
+      if (!isFinite(arr[i])) { started = false; continue; }
+      var px = toX(s.t[i]), py = toY(arr[i]);
+      var clipped = py < pad.t - 2 || py > pad.t + ph + 2;
+      py = Math.max(pad.t - 2, Math.min(pad.t + ph + 2, py));
+      if (!started) { ctx.moveTo(px, py); started = true; } else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  });
+  // time marker
+  if (frameIdx !== undefined && frameIdx < simData.sim.t.length) {
+    var tx = toX(simData.sim.t[frameIdx]);
+    ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 1; ctx.setLineDash([3, 2]);
+    ctx.beginPath(); ctx.moveTo(tx, pad.t); ctx.lineTo(tx, pad.t + ph); ctx.stroke(); ctx.setLineDash([]);
+  }
+}
+
+// =========================================================
+// ゲイン線図
+// =========================================================
+function drawBode() {
+  var mode = $('bode-mode').value;
+  var extra = '';
+  if (mode === 'both') extra = '<div class="leg-item">実線: Gyr, 破線: Gyd</div>';
+  buildLegend('bode-legend', extra);
+  var c = setupCanvas('bodeCanvas'), ctx = c.ctx, W = c.W, H = c.H;
+  ctx.clearRect(0, 0, W, H);
+  if (!simData) return;
+  var runs = allRuns();
+  var wMin = -2, wMax = 2, nW = 300, wl = logspace(wMin, wMax, nW);
+  var curves = [];
+  var gMax = -Infinity, gMin = Infinity;
+  runs.forEach(function(r) {
+    var cl = r.data.cl;
+    var list = [];
+    if (mode === 'yr' || mode === 'both') list.push({ num: cl.numYR, dash: [] });
+    if (mode === 'yd' || mode === 'both') list.push({ num: cl.numYD, dash: [5, 3] });
+    list.forEach(function(item) {
+      var g = wl.map(function(w) { var v = freqResp(item.num, cl.charPoly, w); return 20 * Math.log10(Math.max(v, 1e-12)); });
+      g.forEach(function(v) { if (v > gMax) gMax = v; if (v < gMin) gMin = v; });
+      curves.push({ g: g, color: r.color, width: r.width, dash: item.dash });
+    });
+  });
+  gMax = Math.min(Math.ceil((gMax + 5) / 10) * 10, 80);
+  gMin = Math.max(Math.floor((gMin - 5) / 10) * 10, gMax - 100);
+  if (gMax < 10) gMax = 10;
+
+  var mob = W < 500;
+  var pad = mob ? { l: 38, r: 10, t: 10, b: 26 } : { l: 52, r: 16, t: 12, b: 30 };
+  var pw = W - pad.l - pad.r, ph = H - pad.t - pad.b;
+  var fs = mob ? 8 : 10;
+  var toX = function(lw) { return pad.l + (lw - wMin) / (wMax - wMin) * pw; };
+  var toY = function(db) { return pad.t + (1 - (db - gMin) / (gMax - gMin)) * ph; };
+
+  // grid (log)
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+  for (var dec = wMin; dec <= wMax; dec++) {
+    for (var k = 1; k < 10; k++) {
+      var lw = dec + Math.log10(k); if (lw > wMax) break;
+      ctx.strokeStyle = k === 1 ? '#cbd5e1' : '#eef2f6';
+      ctx.beginPath(); ctx.moveTo(toX(lw), pad.t); ctx.lineTo(toX(lw), pad.t + ph); ctx.stroke();
+    }
+  }
+  ctx.strokeStyle = '#e2e8f0';
+  var dbStep = (gMax - gMin) > 60 ? 20 : 10;
+  for (var db = gMin; db <= gMax; db += dbStep) { ctx.beginPath(); ctx.moveTo(pad.l, toY(db)); ctx.lineTo(W - pad.r, toY(db)); ctx.stroke(); }
+  ctx.strokeStyle = '#d4dde6'; ctx.strokeRect(pad.l, pad.t, pw, ph);
+  // 0 dB line
+  if (gMin < 0 && gMax > 0) { ctx.strokeStyle = '#1f2d3a'; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(pad.l, toY(0)); ctx.lineTo(W - pad.r, toY(0)); ctx.stroke(); ctx.setLineDash([]); }
+  // labels
+  ctx.fillStyle = '#5b7184'; ctx.font = fs + 'px monospace'; ctx.textAlign = 'center';
+  for (var dec = wMin; dec <= wMax; dec++) ctx.fillText('10^' + dec, toX(dec), H - pad.b + 14);
+  ctx.textAlign = 'right'; ctx.fillText('ω [rad/s]', W - pad.r - 4, pad.t + ph - 6);
+  ctx.textAlign = 'center';
+  ctx.textAlign = 'right';
+  for (var db = gMin; db <= gMax; db += dbStep) ctx.fillText(db, pad.l - 4, toY(db) + 4);
+  ctx.textAlign = 'left'; ctx.fillText('[dB]', pad.l + 4, pad.t + 12);
+  // curves
+  curves.forEach(function(cv) {
+    ctx.strokeStyle = cv.color; ctx.lineWidth = cv.width; ctx.setLineDash(cv.dash); ctx.beginPath();
+    for (var i = 0; i < nW; i++) {
+      var px = toX(Math.log10(wl[i])), py = toY(cv.g[i]);
+      py = Math.max(pad.t - 2, Math.min(pad.t + ph + 2, py));
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+  });
+}
+
+// =========================================================
+// 極・零点マップ
+// =========================================================
+function drawPoleMap() {
+  buildLegend('pole-legend', '<div class="leg-item"><span class="leg-icon">&#x2716;</span> 極 <span class="leg-icon">&#x25CB;</span> 零点</div>');
+  var c = setupCanvas('poleCanvas'), ctx = c.ctx, W = c.W, H = c.H;
+  ctx.clearRect(0, 0, W, H);
+  if (!simData) return;
+  var runs = allRuns();
+  var maxRe = 1, maxIm = 1;
+  runs.forEach(function(r) {
+    r.data.cl.poles.concat(r.data.cl.zerosYR).forEach(function(z) {
+      if (Math.abs(z[0]) < 60) { maxRe = Math.max(maxRe, Math.abs(z[0])); maxIm = Math.max(maxIm, Math.abs(z[1])); }
+    });
+  });
+  var reMin = -maxRe * 1.2, reMax = Math.max(maxRe * 0.3, 0.5), imMax = maxIm * 1.2;
+  var mob = W < 500;
+  var pad = mob ? { l: 36, r: 10, t: 10, b: 24 } : { l: 48, r: 16, t: 12, b: 28 };
+  var pw = W - pad.l - pad.r, ph = H - pad.t - pad.b;
+  var fs = mob ? 8 : 10;
+  var toX = function(re) { return pad.l + (re - reMin) / (reMax - reMin) * pw; };
+  var toY = function(im) { return pad.t + (1 - (im + imMax) / (2 * imMax)) * ph; };
+  // stable region shading
+  ctx.fillStyle = 'rgba(22,163,74,0.06)';
+  ctx.fillRect(pad.l, pad.t, toX(0) - pad.l, ph);
+  drawFrame(ctx, pad, pw, ph, W, H);
+  ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(toX(0), pad.t); ctx.lineTo(toX(0), pad.t + ph); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pad.l, toY(0)); ctx.lineTo(W - pad.r, toY(0)); ctx.stroke();
+  ctx.fillStyle = '#5b7184'; ctx.font = fs + 'px monospace'; ctx.textAlign = 'center';
+  for (var i = 0; i <= 5; i++) ctx.fillText(fN2(reMin + i * (reMax - reMin) / 5), pad.l + i * pw / 5, H - pad.b + 14);
+  ctx.textAlign = 'right';
+  for (var i = 0; i <= 4; i++) ctx.fillText(fN2(imMax - i * 2 * imMax / 4), pad.l - 4, pad.t + i * ph / 4 + 4);
+  ctx.textAlign = 'left'; ctx.fillText('Re', W - pad.r - 18, toY(0) - 4); ctx.fillText('Im', toX(0) + 4, pad.t + 12);
+  ctx.fillStyle = '#16a34a'; ctx.font = fs + 'px sans-serif'; ctx.fillText('安定領域', pad.l + 4, pad.t + ph - 6);
+
+  runs.forEach(function(r) {
+    var sz = r.data === simData ? 6 : 4.5;
+    ctx.strokeStyle = r.color; ctx.lineWidth = r.data === simData ? 2.2 : 1.5;
+    r.data.cl.poles.forEach(function(z) {
+      var x = toX(z[0]), y = toY(z[1]);
+      if (x < pad.l || x > W - pad.r) return;
+      ctx.beginPath(); ctx.moveTo(x - sz, y - sz); ctx.lineTo(x + sz, y + sz); ctx.moveTo(x + sz, y - sz); ctx.lineTo(x - sz, y + sz); ctx.stroke();
+    });
+    r.data.cl.zerosYR.forEach(function(z) {
+      var x = toX(z[0]), y = toY(z[1]);
+      if (x < pad.l || x > W - pad.r) return;
+      ctx.beginPath(); ctx.arc(x, y, sz, 0, 2 * Math.PI); ctx.stroke();
+    });
+  });
+}
+
+// =========================================================
+// 台車アニメーション
+// =========================================================
+function drawAnimation(frameIdx) {
+  var c = setupCanvas('animCanvas'), ctx = c.ctx, W = c.W, H = c.H;
+  ctx.clearRect(0, 0, W, H);
+  if (!simData) return;
+  var sim = simData.sim, p = simData.params;
+  var idx = Math.min(frameIdx !== undefined ? frameIdx : animFrame, sim.y.length - 1);
+  var yNow = sim.y[idx], uNow = sim.u[idx], tNow = sim.t[idx];
+  var distOn = p.dAmp !== 0 && tNow >= p.dT0;
+  var mob = W < 400;
+
+  // 表示スケール: y=0 と y=r を枠内に収める
+  var rangeMax = Math.max(Math.abs(p.rAmp) * 1.6, 1);
+  var i0 = 0, yMaxAbs = 0;
+  for (var i = 0; i < sim.y.length; i += 10) if (isFinite(sim.y[i]) && Math.abs(sim.y[i]) > yMaxAbs) yMaxAbs = Math.abs(sim.y[i]);
+  rangeMax = Math.max(rangeMax, Math.min(yMaxAbs * 1.1, Math.abs(p.rAmp) * 3 + 1));
+  var wallX = mob ? 16 : 24;
+  var usable = W - wallX - (mob ? 30 : 50);
+  var scale = usable / (rangeMax + Math.abs(Math.min(0, -0.3 * rangeMax)));
+  var originX = wallX + 0.3 * rangeMax * scale + (mob ? 40 : 70);   // y=0 の台車中心位置
+  scale = (W - originX - (mob ? 30 : 50)) / rangeMax;
+  var cartW = mob ? 44 : 64, cartH = mob ? 30 : 42;
+  var floorY = H * 0.72;
+  var cartX = originX + (isFinite(yNow) ? yNow : 0) * scale;
+  cartX = Math.max(wallX + cartW / 2 + 8, Math.min(W - cartW / 2 - 4, cartX));
+
+  // 床・壁
+  ctx.strokeStyle = '#64748b'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(wallX, floorY + 2); ctx.lineTo(W - 4, floorY + 2); ctx.stroke();
+  ctx.fillStyle = '#cbd5e1'; ctx.fillRect(wallX - 8, floorY - 90, 8, 92);
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
+  for (var yy = floorY - 86; yy < floorY; yy += 8) { ctx.beginPath(); ctx.moveTo(wallX - 8, yy + 8); ctx.lineTo(wallX, yy); ctx.stroke(); }
+
+  // 目標値 r と原点
+  ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 1.2; ctx.setLineDash([5, 3]);
+  var rX = originX + p.rAmp * scale;
+  ctx.beginPath(); ctx.moveTo(rX, floorY - cartH - 30); ctx.lineTo(rX, floorY + 2); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = '#dc2626'; ctx.font = (mob ? 9 : 11) + 'px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('r = ' + p.rAmp, rX, floorY + 16);
+  ctx.strokeStyle = '#94a3b8'; ctx.setLineDash([2, 3]);
+  ctx.beginPath(); ctx.moveTo(originX, floorY - cartH - 14); ctx.lineTo(originX, floorY + 2); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = '#94a3b8'; ctx.fillText('y = 0', originX, floorY + 16);
+
+  // ばね・ダンパ
+  var springY = floorY - cartH * 0.72, damperY = floorY - cartH * 0.3;
+  var leftX = cartX - cartW / 2;
+  drawSpring(ctx, wallX, leftX, springY, '#64748b');
+  drawDamper(ctx, wallX, leftX, damperY, '#64748b');
+
+  // 台車
+  ctx.fillStyle = '#2e7dd1';
+  ctx.fillRect(cartX - cartW / 2, floorY - cartH, cartW, cartH - 8);
+  ctx.fillStyle = '#1f2d3a';
+  [cartX - cartW * 0.3, cartX + cartW * 0.3].forEach(function(wx) { ctx.beginPath(); ctx.arc(wx, floorY - 5, 5, 0, 2 * Math.PI); ctx.fill(); });
+  ctx.fillStyle = '#fff'; ctx.font = 'bold ' + (mob ? 10 : 12) + 'px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('m', cartX, floorY - cartH / 2 + 1);
+
+  // 操作量 u の矢印 (台車の上)
+  var uLen = Math.max(-80, Math.min(80, uNow * (mob ? 6 : 10)));
+  if (Math.abs(uLen) > 1) drawArrow(ctx, cartX, floorY - cartH - 8, cartX + uLen, floorY - cartH - 8, '#2e7dd1', 'u');
+  // 外乱 d の矢印
+  if (distOn) {
+    var dLen = Math.max(-80, Math.min(80, p.dAmp * (mob ? 15 : 25)));
+    drawArrow(ctx, cartX + cartW / 2 + (dLen > 0 ? 0 : 0), floorY - cartH * 0.5, cartX + cartW / 2 + dLen, floorY - cartH * 0.5, '#d97706', 'd');
+  }
+
+  // 数値表示
+  ctx.font = (mob ? 9 : 11) + "px 'Courier New', monospace"; ctx.textAlign = 'left';
+  ctx.fillStyle = '#2e7dd1'; ctx.fillText('y = ' + fN(yNow, 3), 8, H - 22);
+  ctx.fillStyle = '#5b7184'; ctx.fillText('u = ' + fN(uNow, 3), 8, H - 8);
+  ctx.fillStyle = '#dc2626'; ctx.fillText('e = ' + fN(p.rAmp - yNow, 3), (mob ? 90 : 120), H - 22);
+}
+function drawSpring(ctx, x0, x1, y, color) {
+  var n = 8, len = x1 - x0, lead = Math.min(10, len * 0.1), amp = 7;
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + lead, y);
+  var segs = len - 2 * lead;
+  for (var i = 0; i < n; i++) {
+    var xa = x0 + lead + segs * (i + 0.25) / n, xb = x0 + lead + segs * (i + 0.75) / n;
+    ctx.lineTo(xa, y - amp); ctx.lineTo(xb, y + amp);
+  }
+  ctx.lineTo(x1 - lead, y); ctx.lineTo(x1, y); ctx.stroke();
+}
+function drawDamper(ctx, x0, x1, y, color) {
+  var len = x1 - x0, cylL = Math.min(28, len * 0.4), cylX = x0 + len * 0.3, h = 7;
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(cylX, y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cylX, y - h); ctx.lineTo(cylX, y + h); ctx.lineTo(cylX + cylL, y + h); ctx.moveTo(cylX, y - h); ctx.lineTo(cylX + cylL, y - h); ctx.stroke();
+  var pistonX = Math.max(cylX + 3, Math.min(cylX + cylL - 3, x1 - (len * 0.35)));
+  ctx.beginPath(); ctx.moveTo(pistonX, y - h + 2); ctx.lineTo(pistonX, y + h - 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pistonX, y); ctx.lineTo(x1, y); ctx.stroke();
+}
+function drawArrow(ctx, x0, y0, x1, y1, color, label) {
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  var ang = Math.atan2(y1 - y0, x1 - x0);
+  ctx.beginPath(); ctx.moveTo(x1, y1);
+  ctx.lineTo(x1 - 8 * Math.cos(ang - 0.4), y1 - 8 * Math.sin(ang - 0.4));
+  ctx.lineTo(x1 - 8 * Math.cos(ang + 0.4), y1 - 8 * Math.sin(ang + 0.4)); ctx.closePath(); ctx.fill();
+  ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(label, (x0 + x1) / 2, y0 - 6);
+}
+
+// =========================================================
+// アニメーション制御
+// =========================================================
+function getSpeed() { return SPEEDS[+$('speed').value]; }
+$('speed').addEventListener('input', function() { $('speed-label').textContent = getSpeed() + 'x'; });
+function togglePlay() {
+  if (!simData) return;
+  if (animPlaying) { stopAnimation(); return; }
+  if (animFrame >= simData.sim.y.length - 1) animFrame = 0;
+  animPlaying = true;
+  $('btn-play').innerHTML = '&#x23F8;';
+  lastAnimTime = performance.now();
+  animRAF = requestAnimationFrame(animStep);
+}
+function stopAnimation() {
+  animPlaying = false;
+  $('btn-play').innerHTML = '&#x25B6;';
+  if (animRAF) { cancelAnimationFrame(animRAF); animRAF = null; }
+}
+function animStep(now) {
+  if (!animPlaying || !simData) return;
+  var dt = simData.params.dt, speed = getSpeed();
+  var elapsed = (now - lastAnimTime) / 1000; lastAnimTime = now;
+  animFrame = Math.min(animFrame + Math.max(1, Math.round(elapsed / dt * speed)), simData.sim.y.length - 1);
+  drawAnimation(animFrame); drawResponse(animFrame); updateAnimInfo();
+  if (animFrame >= simData.sim.y.length - 1) { stopAnimation(); return; }
+  animRAF = requestAnimationFrame(animStep);
+}
+function updateAnimInfo() {
+  if (!simData) return;
+  var t = simData.sim.t[Math.min(animFrame, simData.sim.t.length - 1)];
+  $('anim-info').textContent = 't=' + fN2(t);
+  $('anim-sub').textContent = 't = ' + fN2(t) + ' s';
+}
+
+var resizeTimer;
+window.addEventListener('resize', function() {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(redrawAll, 80);
+});
+
+// 初期実行: 講義の P 制御スイープを表示
+applyPreset();
+</script>
+</body>
+</html>

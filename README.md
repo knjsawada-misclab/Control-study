@@ -33,6 +33,13 @@
 | [等価変換と実現問題](https://knjsawada-misclab.github.io/Control-study/CNTENG/equivalent_transform_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/equivalent_transform_simulator_guide.md) | 座標変換・伝達関数の不変性・可制御正準系の体験 |
 | [オブザーバによる状態推定](https://knjsawada-misclab.github.io/Control-study/CNTENG/observer_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/observer_simulator_guide.md) | 同一次元オブザーバの動作と可観測性の体験 |
 
+## 制御系設計論（大学院 機械工学専攻）
+制御系設計論の講義資料に基づき，シミュレータを構築しています．講義で扱った図をプリセットで再現できます．
+
+| シミュレータ | 解説資料 | 概要 |
+|:--|:--:|:--|
+| [マスバネダンパ系の PID 制御](https://knjsawada-misclab.github.io/Control-study/CSD/pid_control_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CSD/pid_control_simulator_guide.md) | P→PD→PID と PI-D／I-PD の構造比較，閉ループゲイン線図・極零点・外乱抑制 |
+
 ## その他
 
 | シミュレータ | 解説資料 | 概要 |

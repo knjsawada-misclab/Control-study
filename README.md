@@ -8,42 +8,45 @@
 ---
 
 ## 機械情報システム入門（学問の扉）
+
 2026年度の学問の扉にて開講中の機械情報システム入門の講義中で利用した実験器のシミュレータを公開しています．
 
-| シミュレータ | 解説資料 | 概要 |
-|:--|:--:|:--|
-| [空気浮上系の PID 制御](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/air_levitation_pid.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/air_levitation_pid/air_levitation_pid_guide.md) | ファンでピンポン球を浮上させる PID 制御の体験 |
-| [空気浮上系のパラメータ同定](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/identification_sim.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/air_levitation_pid/parameter_identification.md) | 静的・動的実験によるモデルパラメータの推定 |
-| [パケットカプセル化可視化](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/packet_encapsulation_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/air_levitation_pid/packet_encapsulation_simulator_guide.md) | OSI各層のヘッダ積み重ね（封筒の入れ子）をアニメーションで体験 |
-| [プロトコル会話シミュレータ](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/protocol_conversation_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/air_levitation_pid/protocol_conversation_simulator_guide.md) | SMTP/HTTP/DHCP/Modbusの要求・応答を1ステップずつ確認 |
-| [Modbus/TCP制御通信](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/modbus_control_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/air_levitation_pid/modbus_control_simulator_guide.md) | 空気浮上系のHMI⇔PLC通信可視化とDoS/Replay攻撃体験 |
+| シミュレータ                                                                                                                           |                                                            解説資料                                                            | 概要                                                          |
+| :------------------------------------------------------------------------------------------------------------------------------------- | :-----------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------ |
+| [空気浮上系の PID 制御](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/air_levitation_pid.html)                   |       [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/air_levitation_pid/air_levitation_pid_guide.md)       | ファンでピンポン球を浮上させる PID 制御の体験                 |
+| [空気浮上系のパラメータ同定](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/identification_sim.html)              |       [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/air_levitation_pid/parameter_identification.md)       | 静的・動的実験によるモデルパラメータの推定                    |
+| [パケットカプセル化可視化](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/packet_encapsulation_simulator.html)    | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/air_levitation_pid/packet_encapsulation_simulator_guide.md) | OSI各層のヘッダ積み重ね（封筒の入れ子）をアニメーションで体験 |
+| [プロトコル会話シミュレータ](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/protocol_conversation_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/air_levitation_pid/protocol_conversation_simulator_guide.md) | SMTP/HTTP/DHCP/Modbusの要求・応答を1ステップずつ確認          |
+| [Modbus/TCP制御通信](https://knjsawada-misclab.github.io/Control-study/air_levitation_pid/modbus_control_simulator.html)                |    [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/air_levitation_pid/modbus_control_simulator_guide.md)    | 空気浮上系のHMI⇔PLC通信可視化とDoS/Replay攻撃体験            |
 
 ## 制御工学（応用理工学科 機械工学科目 3年）
-制御工学の後半「現代制御編」の講義資料に基づき，シミュレータを構築しています．そのため，幾つかのシミュレータは講義を受けて，かつ，解説を読まないと意味がわからない仕様になっています．
 
-| シミュレータ | 解説資料 | 概要 |
-|:--|:--:|:--|
-| [極の位置と相平面上の応答](https://knjsawada-misclab.github.io/Control-study/CNTENG/state_equation_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/state_equation_simulator_guide.md) | 2次系の固有値・位相面・時間応答の可視化 |
-| [非線形システムの線形近似](https://knjsawada-misclab.github.io/Control-study/CNTENG/linearization_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/linearization_simulator_guide.md) | 振り子の非線形・線形近似の比較とアニメーション |
-| [モデルマッチング制御](https://knjsawada-misclab.github.io/Control-study/CNTENG/model_matching_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/model_matching_simulator_guide.md) | 除振台のPD制御による極配置と応答設計 |
-| [極配置パターン比較](https://knjsawada-misclab.github.io/Control-study/CNTENG/pole_pattern_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/pole_pattern_simulator_guide.md) | Butterworth・臨界減衰・Bessel等の性能比較 |
-| [極配置と初期状態応答](https://knjsawada-misclab.github.io/Control-study/CNTENG/pole_placement.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/pole_placement_guide.md) | 状態フィードバックによる極配置法の体験 |
-| [移動体の位置決め制御](https://knjsawada-misclab.github.io/Control-study/CNTENG/vehicle_positioning_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/vehicle_positioning_simulator_guide.md) | s平面上のドラッグ極配置による位置決め制御 |
-| [可制御性と極配置](https://knjsawada-misclab.github.io/Control-study/CNTENG/controllability_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/controllability_simulator_guide.md) | 可制御・不可制御・可安定の判定と極配置の可否の体験 |
-| [等価変換と実現問題](https://knjsawada-misclab.github.io/Control-study/CNTENG/equivalent_transform_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/equivalent_transform_simulator_guide.md) | 座標変換・伝達関数の不変性・可制御正準系の体験 |
-| [オブザーバによる状態推定](https://knjsawada-misclab.github.io/Control-study/CNTENG/observer_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/observer_simulator_guide.md) | 同一次元オブザーバの動作と可観測性の体験 |
+2026年春夏学期の制御工学の後半「現代制御編」の講義資料に基づき，シミュレータを構築しています．そのため，幾つかのシミュレータは講義を受けて，かつ，解説を読まないと意味がわからない仕様になっています．
 
-## 制御系設計論（大学院 機械工学専攻）
-制御系設計論の講義資料に基づき，シミュレータを構築しています．講義で扱った図をプリセットで再現できます．
+| シミュレータ                                                                                                       |                                                      解説資料                                                      | 概要                                               |
+| :----------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------: | :------------------------------------------------- |
+| [極の位置と相平面上の応答](https://knjsawada-misclab.github.io/Control-study/CNTENG/state_equation_simulator.html)  |    [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/state_equation_simulator_guide.md)    | 2次系の固有値・位相面・時間応答の可視化            |
+| [非線形システムの線形近似](https://knjsawada-misclab.github.io/Control-study/CNTENG/linearization_simulator.html)   |    [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/linearization_simulator_guide.md)    | 振り子の非線形・線形近似の比較とアニメーション     |
+| [モデルマッチング制御](https://knjsawada-misclab.github.io/Control-study/CNTENG/model_matching_simulator.html)      |    [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/model_matching_simulator_guide.md)    | 除振台のPD制御による極配置と応答設計               |
+| [極配置パターン比較](https://knjsawada-misclab.github.io/Control-study/CNTENG/pole_pattern_simulator.html)          |     [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/pole_pattern_simulator_guide.md)     | Butterworth・臨界減衰・Bessel等の性能比較          |
+| [極配置と初期状態応答](https://knjsawada-misclab.github.io/Control-study/CNTENG/pole_placement.html)                |         [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/pole_placement_guide.md)         | 状態フィードバックによる極配置法の体験             |
+| [移動体の位置決め制御](https://knjsawada-misclab.github.io/Control-study/CNTENG/vehicle_positioning_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/vehicle_positioning_simulator_guide.md) | s平面上のドラッグ極配置による位置決め制御          |
+| [可制御性と極配置](https://knjsawada-misclab.github.io/Control-study/CNTENG/controllability_simulator.html)         |   [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/controllability_simulator_guide.md)   | 可制御・不可制御・可安定の判定と極配置の可否の体験 |
+| [等価変換と実現問題](https://knjsawada-misclab.github.io/Control-study/CNTENG/equivalent_transform_simulator.html)  | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/equivalent_transform_simulator_guide.md) | 座標変換・伝達関数の不変性・可制御正準系の体験     |
+| [オブザーバによる状態推定](https://knjsawada-misclab.github.io/Control-study/CNTENG/observer_simulator.html)        |       [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CNTENG/observer_simulator_guide.md)       | 同一次元オブザーバの動作と可観測性の体験           |
 
-| シミュレータ | 解説資料 | 概要 |
-|:--|:--:|:--|
+## 制御系設計論（応用理工学科 機械工学科目 3年）
+
+2026年秋冬学期の制御系設計論の講義資料に基づき，シミュレータを構築しています．講義で扱った図をプリセットで再現できます．
+
+| シミュレータ                                                                                                   |                                                解説資料                                                | 概要                                                                      |
+| :------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------ |
 | [マスバネダンパ系の PID 制御](https://knjsawada-misclab.github.io/Control-study/CSD/pid_control_simulator.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/CSD/pid_control_simulator_guide.md) | P→PD→PID と PI-D／I-PD の構造比較，閉ループゲイン線図・極零点・外乱抑制 |
 
 ## その他
 
-| シミュレータ | 解説資料 | 概要 |
-|:--|:--:|:--|
+| シミュレータ                                                                            |                                       解説資料                                       | 概要                                     |
+| :-------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------: | :--------------------------------------- |
 | [強化学習による迷路探索](https://knjsawada-misclab.github.io/Control-study/rl_maze.html) | [解説](https://github.com/knjsawada-misclab/Control-study/blob/main/rl_maze_guide.md) | Q 学習アルゴリズムによる自律的な経路発見 |
 
 ---
